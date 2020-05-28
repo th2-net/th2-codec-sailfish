@@ -1,0 +1,43 @@
+*.bin
+.gradle
+
+#elcipse files
+.metadata
+.recommenders
+.settings
+.classpath
+.project
+
+RemoteSystemsTempFiles
+Servers
+
+build
+srcgen
+shared
+gen
+bin
+external
+provided
+
+logs
+
+#temp files
+.*.swp
+.~*.*#
+
+#test files
+derby.log
+
+#IntelliJ IDEA files
+*.iml
+*.iws
+.idea
+*/build
+out
+
+#build info file
+buildinfo.htm
+
+#JMH files
+BenchmarkList
+CompilerHints

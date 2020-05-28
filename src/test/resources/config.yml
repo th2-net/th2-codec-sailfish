@@ -1,0 +1,41 @@
+eventStore:
+  host: event-store
+  port: 7878
+codecClassName: com.exactpro.sf.externalapi.codec.impl.ExternalSoupTcpCodecFactory
+rabbitMQ:
+  host: 10.64.66.114
+  vHost: th2
+  port: 5672
+  username: th2
+  password: ahw3AeWa
+dictionary: dictionary/soup_test.xml
+decoding:
+  in:
+    exchangeName: 'codec_exchange'
+    queueName: 'codec_in'
+  out:
+    filters:
+      -
+        exchangeName: 'codec_exchange'
+        queueName: 'codec_out_1'
+        filterType: 'any'
+
+encoding:
+  in:
+    exchangeName: 'in_exchange'
+    queueName: 'in_queue'
+  out:
+    filters:
+      -
+        exchangeName: 'out_exchange'
+        queueName: 'out_queue_1'
+        filterType: 'all'
+        parameters:
+          param1: 'param1_value'
+          param2: 'param2_value'
+      -
+        exchangeName: 'out_exchange_2'
+        queueName: 'out_queue_2'
+        filterType: 'all_2'
+        parameters:
+          param3: 'param3_value'
