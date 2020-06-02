@@ -1,6 +1,9 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.RabbitMqSubscriber
+import com.exactpro.th2.codec.configuration.ApplicationContext
+import com.exactpro.th2.codec.configuration.CodecParameters
+import com.exactpro.th2.codec.configuration.RabbitMQParameters
 import com.exactpro.th2.codec.filter.DefaultFilterFactory
 import com.exactpro.th2.codec.filter.FilterChannelSender
 import com.exactpro.th2.infra.grpc.MessageBatch
@@ -14,10 +17,11 @@ import kotlinx.coroutines.newSingleThreadContext
 import mu.KotlinLogging
 import java.io.IOException
 import java.lang.Runtime.getRuntime
+import java.lang.RuntimeException
 import java.util.concurrent.TimeoutException
 
 @ObsoleteCoroutinesApi
-class Decoder(configuration: Configuration, applicationContext: ApplicationContext) {
+class Decoder(codecParameters: CodecParameters, applicationContext: ApplicationContext) : AutoCloseable {
     private val logger = KotlinLogging.logger {}
     private val coroutineContext = newFixedThreadPoolContext(getRuntime().availableProcessors(), "decoder-context")
     private val coroutineChannel: Channel<Deferred<MessageBatch>> = Channel(Channel.UNLIMITED)
@@ -35,18 +39,18 @@ class Decoder(configuration: Configuration, applicationContext: ApplicationConte
             override fun toProtoMessage(byteArray: ByteArray): RawMessageBatch  = RawMessageBatch.parseFrom(byteArray)
         }
         subscriber = RabbitMqSubscriber(
-                configuration.decoding.inParams.exchangeName,
+                codecParameters.inParams.exchangeName,
                 messageHandler,
                 null, // FIXME handle cancellation
-                configuration.decoding.inParams.queueName
+                codecParameters.inParams.queueName
         )
         rabbitMQConnection = applicationContext.connectionFactory.newConnection()
         val channel = rabbitMQConnection.createChannel()
-        channel.exchangeDeclare(configuration.decoding.inParams.exchangeName, "direct")
+        channel.exchangeDeclare(codecParameters.inParams.exchangeName, "direct")
         messageSender = DecodeMessageSender(
             newSingleThreadContext("sender-context"),
             coroutineChannel,
-            configuration.decoding.outParams.filters.map {
+            codecParameters.outParams.filters.map {
                 FilterChannelSender(
                     rabbitMQConnection.createChannel(),
                     DefaultFilterFactory().create(it),
@@ -76,16 +80,22 @@ class Decoder(configuration: Configuration, applicationContext: ApplicationConte
         }
     }
 
-    fun close() {
-        try {
-            subscriber.close()
-        } catch (exception: IOException) {
-            logger.error(exception) { "could not close subscriber: $exception" }
+    override fun close() {
+        val exceptions = mutableListOf<Exception>()
+        close(subscriber, "subscriber", exceptions)
+        close(messageSender, "messageSender", exceptions)
+        if (exceptions.isNotEmpty()) {
+            throw RuntimeException("could not close decoder").also {
+                exceptions.forEach { exception -> it.addSuppressed(exception) }
+            }
         }
+    }
+
+    private fun close(closeable: AutoCloseable, name: String, exceptions: MutableList<Exception>) {
         try {
-            messageSender.close()
-        } catch (exception: IOException) {
-            logger.error(exception) { "could not close message sender: $exception" }
+            closeable.close()
+        } catch (exception: Exception) {
+            exceptions.add(RuntimeException("could not close '$name'. Reason: ${exception.message}", exception))
         }
     }
 }

@@ -24,7 +24,13 @@ repositories {
         name 'Artifactory'
         url 'http://artifactory5.exp.exactpro.com/artifactory/libs-snapshot'
     }
+
+    configurations.all {
+        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+        resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+    }
 }
+
 
 dependencies {
 
@@ -55,10 +61,10 @@ dockerPrepare {
 }
 
 docker {
-    name "${target_docker_repository}/${docke_image_name}:${dockerImageVersion}"
-    tag 'local-version', "${docke_image_name}:${dockerImageVersion}"
-    tag 'local-latest', "${docke_image_name}:latest"
-    tag 'remote-latest',  "${target_docker_repository}/${docke_image_name}:latest"
+    name "${target_docker_repository}/${docker_image_name}:${dockerImageVersion}"
+    tag 'local-version', "${docker_image_name}:${dockerImageVersion}"
+    tag 'local-latest', "${docker_image_name}:latest"
+    tag 'remote-latest',  "${target_docker_repository}/${docker_image_name}:latest"
     copySpec.from(tarTree("$buildDir/distributions/${archivesBaseName}.tar"))
 }
 
@@ -68,10 +74,5 @@ compileKotlin {
 
 application {
     mainClassName = "com.exactpro.th2.codec.MainKt"
-}
-
-configurations.all {
-    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
-    resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
 }
 

@@ -2,8 +2,6 @@ package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.util.toDebugString
 import com.google.protobuf.GeneratedMessageV3
-import com.google.protobuf.MessageOrBuilder
-import com.google.protobuf.util.JsonFormat
 import com.rabbitmq.client.DeliverCallback
 import com.rabbitmq.client.Delivery
 import kotlinx.coroutines.Deferred

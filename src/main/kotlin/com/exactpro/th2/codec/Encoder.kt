@@ -1,6 +1,9 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.RabbitMqSubscriber
+import com.exactpro.th2.codec.configuration.ApplicationContext
+import com.exactpro.th2.codec.configuration.CodecParameters
+import com.exactpro.th2.codec.configuration.RabbitMQParameters
 import com.exactpro.th2.codec.filter.DefaultFilterFactory
 import com.exactpro.th2.codec.filter.FilterChannelSender
 import com.exactpro.th2.infra.grpc.MessageBatch
@@ -11,9 +14,11 @@ import kotlinx.coroutines.channels.Channel
 import mu.KotlinLogging
 import java.io.IOException
 import java.lang.Runtime.getRuntime
+import java.lang.RuntimeException
+import java.util.concurrent.TimeoutException
 
 @ObsoleteCoroutinesApi
-class Encoder(configuration: Configuration, applicationContext: ApplicationContext) {
+class Encoder(codecParameters: CodecParameters, applicationContext: ApplicationContext) : AutoCloseable {
     private val logger = KotlinLogging.logger {}
     private val coroutineContext = newFixedThreadPoolContext(getRuntime().availableProcessors(), "encoder-context")
     private val coroutineChannel: Channel<Deferred<RawMessageBatch>> = Channel(Channel.UNLIMITED)
@@ -31,16 +36,16 @@ class Encoder(configuration: Configuration, applicationContext: ApplicationConte
             override fun toProtoMessage(byteArray: ByteArray): MessageBatch = MessageBatch.parseFrom(byteArray)
         }
         subscriber = RabbitMqSubscriber(
-            configuration.encoding.inParams.exchangeName,
+            codecParameters.inParams.exchangeName,
             messageHandler,
             null, // FIXME handle cancellation
-            configuration.encoding.inParams.queueName
+            codecParameters.inParams.queueName
         )
         rabbitMQConnection = applicationContext.connectionFactory.newConnection()
         messageSender = EncodeMessageSender(
             newSingleThreadContext("encode-sender-context"),
             coroutineChannel,
-            configuration.encoding.outParams.filters.map {
+            codecParameters.outParams.filters.map {
                 FilterChannelSender(
                     rabbitMQConnection.createChannel(),
                     DefaultFilterFactory().create(it),
@@ -51,11 +56,41 @@ class Encoder(configuration: Configuration, applicationContext: ApplicationConte
         )
     }
 
-    fun close() {
+    fun start(rabbitMQParameters: RabbitMQParameters) {
         try {
-            subscriber.close()
-        } catch (exception: IOException) {
-            logger.error(exception) { "could not close subscriber: $exception" }
+            subscriber.startListening(
+                rabbitMQParameters.host,
+                rabbitMQParameters.vHost,
+                rabbitMQParameters.port,
+                rabbitMQParameters.username,
+                rabbitMQParameters.password
+            )
+            messageSender.start()
+        } catch (exception: Exception) {
+            when(exception) {
+                is IOException,
+                is TimeoutException -> throw DecodeException("could not start rabbit mq subscriber", exception)
+                else -> throw DecodeException("could not start decoder", exception)
+            }
+        }
+    }
+
+    override fun close() {
+        val exceptions = mutableListOf<Exception>()
+        close(subscriber, "subscriber", exceptions)
+        close(messageSender, "messageSender", exceptions)
+        if (exceptions.isNotEmpty()) {
+            throw RuntimeException("could not close decoder").also {
+                exceptions.forEach { exception -> it.addSuppressed(exception) }
+            }
+        }
+    }
+
+    private fun close(closeable: AutoCloseable, name: String, exceptions: MutableList<Exception>) {
+        try {
+            closeable.close()
+        } catch (exception: Exception) {
+            exceptions.add(RuntimeException("could not close '$name'. Reason: ${exception.message}", exception))
         }
     }
 }

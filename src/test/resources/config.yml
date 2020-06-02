@@ -9,7 +9,7 @@ rabbitMQ:
   username: th2
   password: ahw3AeWa
 dictionary: dictionary/soup_test.xml
-decoding:
+decoder:
   in:
     exchangeName: 'codec_exchange'
     queueName: 'codec_in'
@@ -19,8 +19,7 @@ decoding:
         exchangeName: 'codec_exchange'
         queueName: 'codec_out_1'
         filterType: 'any'
-
-encoding:
+encoder:
   in:
     exchangeName: 'in_exchange'
     queueName: 'in_queue'

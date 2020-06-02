@@ -26,7 +26,7 @@ class EncodeProcessor(
                 .setMetadata(toRawMessageMetadataBuilder(protoMessage).also {
                     logger.debug {
                         val jsonRawMessage = JsonFormat.printer().omittingInsignificantWhitespace().print(it)
-                        "raw message: $jsonRawMessage"
+                        "message metadata: $jsonRawMessage"
                     }
                 })
             )
