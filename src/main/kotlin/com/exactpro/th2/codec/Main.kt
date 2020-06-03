@@ -18,18 +18,22 @@ fun main(args: Array<String>) {
 }
 
 class CodecCommand : CliktCommand() {
-    private val configPath: String by option(help = "Path to configuration file").required()
+    private val configPath: String? by option(help = "Path to configuration file")
     override fun run() = runBlocking {
         try {
-            runProgram()
+            runProgram(configPath)
         } catch (exception: Exception) {
             logger.error(exception) { "fatal error. Exit the program" }
         }
     }
 
     @ObsoleteCoroutinesApi
-    private fun runProgram() {
-        val configuration = Configuration.parse(Paths.get(configPath))
+    private fun runProgram(configPath: String? ) {
+        val configuration = if (configPath != null) {
+            Configuration.parse(Paths.get(configPath))
+        } else {
+            Configuration.createFromEnvVariables()
+        }
         logger.debug { "Configuration: $configuration" }
         val applicationContext = ApplicationContext.create(configuration)
         createAndStartCodec(

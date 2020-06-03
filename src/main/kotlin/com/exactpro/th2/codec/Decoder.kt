@@ -6,6 +6,7 @@ import com.exactpro.th2.codec.configuration.CodecParameters
 import com.exactpro.th2.codec.configuration.RabbitMQParameters
 import com.exactpro.th2.codec.filter.DefaultFilterFactory
 import com.exactpro.th2.codec.filter.FilterChannelSender
+import com.exactpro.th2.configuration.RabbitMQConfiguration
 import com.exactpro.th2.infra.grpc.MessageBatch
 import com.exactpro.th2.infra.grpc.RawMessageBatch
 import com.rabbitmq.client.Connection
@@ -61,11 +62,11 @@ class Decoder(codecParameters: CodecParameters, applicationContext: ApplicationC
         )
     }
 
-    fun start(rabbitMQParameters: RabbitMQParameters) {
+    fun start(rabbitMQParameters: RabbitMQConfiguration) {
         try {
             subscriber.startListening(
                 rabbitMQParameters.host,
-                rabbitMQParameters.vHost,
+                rabbitMQParameters.virtualHost,
                 rabbitMQParameters.port,
                 rabbitMQParameters.username,
                 rabbitMQParameters.password
