@@ -8,8 +8,8 @@ ENV RABBITMQ_HOST=rabbitmq \
     EVENT_STORE_PORT=30003 \
     CODEC_DICTIONARY="" \
     DECODER_PARAMETERS="{}" \
-    SF_CODEC_PARAMETERS="{}" \
+    ENCODER_PARAMETERS="{}" \
     CODEC_CLASS_NAME=someClassName
 WORKDIR /home
 COPY ./ .
-ENTRYPOINT ["/home/th2-codec/bin/th2-codec", "run", "com.exactpro.th2.codec.MainKt"]
+ENTRYPOINT ["/home/th2-codec/bin/th2-codec", "--sailfish-codec-config-path=codec_config.yml" , "--config-path=config.yml"]

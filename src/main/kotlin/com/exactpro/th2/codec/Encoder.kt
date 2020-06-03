@@ -3,7 +3,6 @@ package com.exactpro.th2.codec
 import com.exactpro.th2.RabbitMqSubscriber
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.codec.configuration.CodecParameters
-import com.exactpro.th2.codec.configuration.RabbitMQParameters
 import com.exactpro.th2.codec.filter.DefaultFilterFactory
 import com.exactpro.th2.codec.filter.FilterChannelSender
 import com.exactpro.th2.configuration.RabbitMQConfiguration
@@ -47,9 +46,11 @@ class Encoder(codecParameters: CodecParameters, applicationContext: ApplicationC
             newSingleThreadContext("encode-sender-context"),
             coroutineChannel,
             codecParameters.outParams.filters.map {
+                val filter = DefaultFilterFactory().create(it)
+                logger.info { "encode out created with queue '${it.queueName}' and filter '${it.filterType}'" }
                 FilterChannelSender(
                     rabbitMQConnection.createChannel(),
-                    DefaultFilterFactory().create(it),
+                    filter,
                     it.exchangeName,
                     it.queueName
                 )

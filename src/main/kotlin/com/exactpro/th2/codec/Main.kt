@@ -5,11 +5,9 @@ import com.exactpro.th2.codec.configuration.CodecParameters
 import com.exactpro.th2.codec.configuration.Configuration
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
-import java.nio.file.Paths
 
 private val logger = KotlinLogging.logger {}
 
@@ -19,21 +17,18 @@ fun main(args: Array<String>) {
 
 class CodecCommand : CliktCommand() {
     private val configPath: String? by option(help = "Path to configuration file")
+    private val sailfishCodecConfigPath: String? by option(help = "Path to sailfish codec configuration file")
     override fun run() = runBlocking {
         try {
-            runProgram(configPath)
+            runProgram(configPath, sailfishCodecConfigPath)
         } catch (exception: Exception) {
             logger.error(exception) { "fatal error. Exit the program" }
         }
     }
 
     @ObsoleteCoroutinesApi
-    private fun runProgram(configPath: String? ) {
-        val configuration = if (configPath != null) {
-            Configuration.parse(Paths.get(configPath))
-        } else {
-            Configuration.createFromEnvVariables()
-        }
+    private fun runProgram(configPath: String?, sailfishCodecParamsPath: String?) {
+        val configuration = Configuration.create(configPath, sailfishCodecParamsPath)
         logger.debug { "Configuration: $configuration" }
         val applicationContext = ApplicationContext.create(configuration)
         createAndStartCodec(

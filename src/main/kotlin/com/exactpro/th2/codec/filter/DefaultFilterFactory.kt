@@ -7,6 +7,7 @@ class DefaultFilterFactory : FilterFactory {
     override fun create(parameters: FilterParameters): Filter {
         return when (parameters.filterType) {
             DIRECTION_TYPE -> DirectionFilter(parameters)
+            SESSION_ALIAS -> SessionAliasFilter(parameters)
             ANY_TYPE -> AnyFilter()
             else -> throw IllegalArgumentException("unknown filter type '${parameters.filterType}'")
         }
@@ -14,6 +15,7 @@ class DefaultFilterFactory : FilterFactory {
 
     companion object {
         private const val DIRECTION_TYPE = "direction"
+        private const val SESSION_ALIAS = "sessionAlias"
         private const val ANY_TYPE = "any"
     }
 }
