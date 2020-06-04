@@ -42,7 +42,7 @@ data class Configuration(
         private const val ENCODER_PARAMETERS = "ENCODER_PARAMETERS"
 
         fun create(configPath: String?, sailfishCodecParamsPath: String?): Configuration {
-            val configuration = if (configPath == null || Files.exists(Paths.get(configPath))) {
+            val configuration = if (configPath == null || !Files.exists(Paths.get(configPath))) {
                 createFromEnvVariables()
             } else {
                 parse(Paths.get(configPath))
