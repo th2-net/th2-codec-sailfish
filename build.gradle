@@ -7,6 +7,7 @@ plugins {
 
 ext {
     dockerImageVersion = "${version_major}.${version_minor}.${version_maintenance}.${version_build}"
+    dockerImageLastVersion = "${version_major}.${version_minor}-latest"
     genDir             = file('src/gen')
     sharedDir          = file("${project.rootDir}/shared")
 }
@@ -63,6 +64,9 @@ dockerPrepare {
 docker {
     name "${target_docker_repository}/${docker_image_name}:${dockerImageVersion}"
     tag 'local-version', "${docker_image_name}:${dockerImageVersion}"
+    tag 'local-latest', "${docker_image_name}:${dockerImageLastVersion}"
+    tag 'remote-latest',  "${target_docker_repository}/${docker_image_name}:${dockerImageLastVersion}"
+
     copySpec.from(tarTree("$buildDir/distributions/${archivesBaseName}.tar"))
 }
 
