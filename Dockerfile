@@ -7,8 +7,6 @@ ENV RABBITMQ_HOST=rabbitmq \
     EVENT_STORE_HOST=event-store \
     EVENT_STORE_PORT=30003 \
     CODEC_DICTIONARY="" \
-    DECODER_PARAMETERS="{}" \
-    ENCODER_PARAMETERS="{}" \
     CODEC_CLASS_NAME=someClassName
 WORKDIR /home
 COPY ./ .

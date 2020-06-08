@@ -105,6 +105,8 @@ class ApplicationContext(
                     Double::class.javaObjectType -> toDouble(propertyValue)
                     String::class.javaObjectType -> propertyValue
                     else -> throw IllegalArgumentException("unsupported class '${clazz.name}' for '$propertyName' codec parameter")
+                }.also {
+                    logger.info { "codec setting '$propertyName' overridden to '$it'" }
                 }
             }
         }
