@@ -1,0 +1,20 @@
+env variables:
+```
+RABBITMQ_HOST=rabbit-host
+RABBITMQ_PORT=5672
+RABBITMQ_VHOST=some-virtual-host
+RABBITMQ_USER=some-user
+RABBITMQ_PASS=some-pass
+EVENT_STORE_HOST=event-storage-host
+EVENT_STORE_PORT=8080
+CODEC_DICTIONARY=some-dictionary.xml
+DECODER_PARAMETERS={"in":{"exchangeName":"demo_exchange","queueName":"decode_in_raw"},"out":{"filters":[{"exchangeName":"demo_exchange","queueName":"decode_out_target_1","filterType":"sessionAlias","parameters":{"sessionAlias":"target_1_session"}},{"exchangeName":"demo_exchange","queueName":"decode_out_target_2","filterType":"sessionAlias","parameters":{"sessionAlias":"target_2_session"}}]}}
+ENCODER_PARAMETERS={"in":{"exchangeName":"demo_exchange","queueName":"encode_in_raw"},"out":{"filters":[{"exchangeName":"demo_exchange","queueName":"encode_out_target_1","filterType":"sessionAlias","parameters":{"sessionAlias":"target_1_session"}},{"exchangeName":"demo_exchange","queueName":"encode_out_target_2","filterType":"sessionAlias","parameters":{"sessionAlias":"target_2_session"}}]}}
+CODEC_CLASS_NAME=some.codec.ClassName
+```
+
+Decoder or encoder parameters may be omitted (but no both).
+In that case codec will be do decode or encode only.
+Other variables are required.
+
+
