@@ -14,18 +14,20 @@ class FilterChannelSender(
     private val logger = KotlinLogging.logger {  }
 
     fun filterAndSend(sourceBatch: CommonBatch) {
-        logger.debug { "start filtering batch ${sourceBatch.toDebugString()} by filter '${filter.javaClass.simpleName}'" }
+        logger.debug { "${channelInfo()}: start filtering batch ${sourceBatch.toDebugString()}" }
         val filteredBatch = sourceBatch.filterNested(filter)
-        logger.debug { "filtered ${filteredBatch.toDebugString()}" }
         if (filteredBatch.isEmpty()) {
-            logger.warn { "batch is empty after filtering" }
+            logger.warn { "${channelInfo()}: batch is empty after filtering" }
         } else {
             try {
+                logger.debug { "${channelInfo()}: filtered ${filteredBatch.toDebugString()}" }
                 channel.basicPublish(exchangeName, routingKey, null, filteredBatch.toByteArray())
-                logger.info { " batch was sent successfully to '$exchangeName':'$routingKey'" }
+                logger.info { "${channelInfo()}:  batch was sent successfully to '$exchangeName':'$routingKey'" }
             } catch (exception: IOException) {
                 logger.error(exception) { "could not send batch to '$exchangeName':'$routingKey'" }
             }
         }
     }
+
+    private fun channelInfo(): String  = "${filter.getType()}filter('$exchangeName':'$routingKey')"
 }

@@ -1,6 +1,7 @@
 package com.exactpro.th2.codec.filter
 
 import com.exactpro.th2.codec.configuration.FilterParameters
+import com.exactpro.th2.codec.filter.DefaultFilterFactory.Companion.SESSION_ALIAS
 import java.util.regex.Pattern
 
 class SessionAliasFilter(filterParameters: FilterParameters) : Filter {
@@ -19,7 +20,5 @@ class SessionAliasFilter(filterParameters: FilterParameters) : Filter {
         return value.matcher(input.messageMetadata.messageId.connectionId.sessionAlias).matches()
     }
 
-    companion object {
-        private const val SESSION_ALIAS = "sessionAlias"
-    }
+    override fun getType(): String = SESSION_ALIAS
 }

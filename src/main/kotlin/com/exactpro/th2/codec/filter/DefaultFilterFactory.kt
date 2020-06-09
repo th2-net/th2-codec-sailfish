@@ -15,9 +15,9 @@ class DefaultFilterFactory : FilterFactory {
     }
 
     companion object {
-        private const val DIRECTION_TYPE = "direction"
-        private const val SESSION_ALIAS = "sessionAlias"
-        private const val ANY_TYPE = "any"
-        private const val FIELD_VALUES = "fieldValues"
+        const val DIRECTION_TYPE = "direction"
+        const val SESSION_ALIAS = "sessionAlias"
+        const val ANY_TYPE = "any"
+        const val FIELD_VALUES = "fieldValues"
     }
 }

@@ -1,6 +1,7 @@
 package com.exactpro.th2.codec.filter
 
 import com.exactpro.th2.codec.configuration.FilterParameters
+import com.exactpro.th2.codec.filter.DefaultFilterFactory.Companion.FIELD_VALUES
 import com.exactpro.th2.infra.grpc.ListValue
 import com.exactpro.th2.infra.grpc.Value
 import java.util.regex.Pattern
@@ -21,6 +22,8 @@ class MessageFilter(filterParameters: FilterParameters) : Filter {
         }
         return checkFields(input.message.fieldsMap, mutableSetOf())
     }
+
+    override fun getType(): String = FIELD_VALUES
 
     private fun checkFields(fields: Map<String, Value>, matchedValues: MutableSet<String> ): Boolean {
         for (field in fields) {
