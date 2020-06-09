@@ -1,4 +1,5 @@
-env variables:
+= Environment variables
+
 ```
 RABBITMQ_HOST=rabbit-host
 RABBITMQ_PORT=5672
@@ -16,5 +17,13 @@ CODEC_CLASS_NAME=some.codec.ClassName
 Decoder or encoder parameters may be omitted (but no both).
 In that case codec will be do decode or encode only.
 Other variables are required.
+
+= Filter types
+
+any:: no filtering, all data will be sent to out
+sessionAlias:: filtering by session_alias value, has one parameter sessionAlias (for example: "parameters":{"sessionAlias":"some_session"} )
+directions:: filtering by direction value, has list parameter (for example: "parameters":["FIRST", "SECOND"])
+fieldValues:: filtering by field value regexp, has map parameter of <fieldnName, fieldValueReqExp> (for example: {"parameters":{"Order": "someOrder.*", "Instrument":"someInstrument"}})
+
 
 
