@@ -25,7 +25,7 @@ abstract class MessageSender<R : GeneratedMessageV3>(
                 val codecResult = try {
                     codecChannel.receive().await()
                 } catch (exception: CodecException) {
-                    logger.error(exception) { "could not get codec result" }
+                    logger.error(exception) { "exception upon message handling" }
                     continue
                 }
                 val resultBatch = toCommonBatch(codecResult)

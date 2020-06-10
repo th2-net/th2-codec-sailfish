@@ -3,9 +3,11 @@ package com.exactpro.th2.codec
 import com.exactpro.sf.common.messages.IMessage
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.th2.IMessageToProtoConverter
+import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.codec.util.toHexString
 import com.exactpro.th2.infra.grpc.*
 import mu.KotlinLogging
+import java.lang.RuntimeException
 
 class DecodeProcessor(
     private val codec: IExternalCodec,
@@ -15,18 +17,23 @@ class DecodeProcessor(
     private val logger = KotlinLogging.logger {  }
 
     override fun process(source: RawMessageBatch): MessageBatch {
-        val batchData = joinBatchData(source)
-        val messageBatchBuilder = MessageBatch.newBuilder()
-        val decodedMessageList = codec.decode(batchData)
-        if (checkSizeAndContext(source, decodedMessageList)) {
-            for (pair in source.messagesList.zip(decodedMessageList)) {
-                val metadataBuilder = toMessageMetadataBuilder(pair.first)
-                val protoMessageBuilder = messageToProtoConverter.toProtoMessage(pair.second)
-                protoMessageBuilder.metadata = metadataBuilder.setMessageType(pair.second.name).build()
-                messageBatchBuilder.addMessages(protoMessageBuilder)
+        try {
+            val batchData = joinBatchData(source)
+            val messageBatchBuilder = MessageBatch.newBuilder()
+            val decodedMessageList = codec.decode(batchData)
+            if (checkSizeAndContext(source, decodedMessageList)) {
+                for (pair in source.messagesList.zip(decodedMessageList)) {
+                    val metadataBuilder = toMessageMetadataBuilder(pair.first)
+                    val protoMessageBuilder = messageToProtoConverter.toProtoMessage(pair.second)
+                    protoMessageBuilder.metadata = metadataBuilder.setMessageType(pair.second.name).build()
+                    messageBatchBuilder.addMessages(protoMessageBuilder)
+                }
             }
+            return messageBatchBuilder.build()
+        } catch (exception: Exception) {
+            logger.error(exception) { "could not process ${source.toDebugString()}" }
+            return MessageBatch.newBuilder().build()
         }
-        return messageBatchBuilder.build()
     }
 
     private fun checkSizeAndContext(source: RawMessageBatch, decodedMessageList: List<IMessage>): Boolean {
