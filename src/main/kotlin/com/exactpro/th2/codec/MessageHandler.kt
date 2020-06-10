@@ -25,7 +25,7 @@ abstract class MessageHandler<T : GeneratedMessageV3, R>(
                 val protoSource = parse(message)
                 processor.process(protoSource)
             }
-            channel.offer(deferred)
+            channel.send(deferred)
         }
     }
 

@@ -24,7 +24,7 @@ import java.util.concurrent.TimeoutException
 class Decoder(codecParameters: CodecParameters, applicationContext: ApplicationContext) : AutoCloseable {
     private val logger = KotlinLogging.logger {}
     private val coroutineContext = newFixedThreadPoolContext(getRuntime().availableProcessors(), "decoder-context")
-    private val coroutineChannel: Channel<Deferred<MessageBatch>> = Channel(Channel.UNLIMITED)
+    private val coroutineChannel: Channel<Deferred<MessageBatch>> = Channel(CHANNEL_SIZE)
     private val messageHandler: MessageHandler<RawMessageBatch, MessageBatch>
     private val subscriber: RabbitMqSubscriber
     private val messageSender: MessageSender<MessageBatch>
@@ -53,12 +53,7 @@ class Decoder(codecParameters: CodecParameters, applicationContext: ApplicationC
             codecParameters.outParams.filters.map {
                 val filter = DefaultFilterFactory().create(it)
                 logger.info { "decode out created with queue '${it.queueName}' and filter '${it.filterType}'" }
-                FilterChannelSender(
-                    rabbitMQConnection.createChannel(),
-                        filter,
-                    it.exchangeName,
-                    it.queueName
-                )
+                FilterChannelSender(channel, filter, it.exchangeName, it.queueName)
             }
         )
     }
@@ -99,5 +94,9 @@ class Decoder(codecParameters: CodecParameters, applicationContext: ApplicationC
         } catch (exception: Exception) {
             exceptions.add(RuntimeException("could not close '$name'. Reason: ${exception.message}", exception))
         }
+    }
+
+    companion object {
+        const val CHANNEL_SIZE = 100
     }
 }
