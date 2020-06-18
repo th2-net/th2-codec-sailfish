@@ -29,7 +29,11 @@ class Encoder(codecParameters: CodecParameters, applicationContext: ApplicationC
 
     init {
         messageHandler = object : MessageHandler<MessageBatch, RawMessageBatch>(
-            EncodeProcessor(applicationContext.codec, applicationContext.protoToIMessageConverter),
+            EncodeProcessor(
+                applicationContext.codecFactory,
+                applicationContext.codecSettings,
+                applicationContext.protoToIMessageConverter
+            ),
             coroutineContext,
             coroutineChannel
         ) {

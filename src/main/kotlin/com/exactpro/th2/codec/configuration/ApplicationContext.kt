@@ -27,6 +27,7 @@ import java.util.*
 
 class ApplicationContext(
     val codec: IExternalCodec,
+    val codecFactory: IExternalCodecFactory,
     val codecSettings: IExternalCodecSettings,
     val dictionary: IDictionaryStructure,
     val protoToIMessageConverter: ProtoToIMessageConverter,
@@ -61,6 +62,7 @@ class ApplicationContext(
                 )
             return ApplicationContext(
                 codec,
+                codecFactory,
                 codecSettings,
                 dictionary,
                 protoConverter,

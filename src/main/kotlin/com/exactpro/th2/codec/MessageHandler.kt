@@ -4,10 +4,8 @@ import com.exactpro.th2.codec.util.toDebugString
 import com.google.protobuf.GeneratedMessageV3
 import com.rabbitmq.client.DeliverCallback
 import com.rabbitmq.client.Delivery
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import kotlin.coroutines.CoroutineContext
 
@@ -18,10 +16,11 @@ abstract class MessageHandler<T : GeneratedMessageV3, R>(
 ): DeliverCallback {
 
     private val logger = KotlinLogging.logger {}
+    private val customScope: CoroutineScope = CoroutineScope(context)
 
     override fun handle(consumerTag: String, message: Delivery) {
-        runBlocking(context) {
-            val deferred = async {
+        customScope.launch {
+            val deferred = async(context) {
                 val protoSource = parse(message)
                 processor.process(protoSource)
             }

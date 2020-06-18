@@ -1,6 +1,7 @@
 package com.exactpro.th2.codec
 
-import com.exactpro.sf.externalapi.codec.IExternalCodec
+import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
+import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.ProtoToIMessageConverter
 import com.exactpro.th2.infra.grpc.*
 import com.google.protobuf.ByteString
@@ -8,9 +9,10 @@ import com.google.protobuf.util.JsonFormat
 import mu.KotlinLogging
 
 class EncodeProcessor(
-    private val codec: IExternalCodec,
+    codecFactory: IExternalCodecFactory,
+    codecSettings: IExternalCodecSettings,
     private val converter: ProtoToIMessageConverter
-) : MessageProcessor<MessageBatch, RawMessageBatch> {
+) : AbstractCodecProcessor<MessageBatch, RawMessageBatch>(codecFactory, codecSettings) {
 
     private val logger = KotlinLogging.logger {  }
 
@@ -20,7 +22,7 @@ class EncodeProcessor(
             val convertedSourceMessage = converter.fromProtoMessage(protoMessage, true).also {
                 logger.debug { "converted source message '${it.name}': $it" }
             }
-            val encodedMessageData = codec.encode(convertedSourceMessage)
+            val encodedMessageData = getCodec().encode(convertedSourceMessage)
             rawMessageBatchBuilder.addMessages(RawMessage.newBuilder()
                 .setBody(ByteString.copyFrom(encodedMessageData))
                 .setMetadata(toRawMessageMetadataBuilder(protoMessage).also {

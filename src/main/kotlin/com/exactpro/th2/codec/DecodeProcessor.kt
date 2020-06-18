@@ -1,18 +1,19 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.sf.common.messages.IMessage
-import com.exactpro.sf.externalapi.codec.IExternalCodec
+import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
+import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.IMessageToProtoConverter
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.codec.util.toHexString
 import com.exactpro.th2.infra.grpc.*
 import mu.KotlinLogging
-import java.lang.RuntimeException
 
 class DecodeProcessor(
-    private val codec: IExternalCodec,
+    codecFactory: IExternalCodecFactory,
+    codecSettings: IExternalCodecSettings,
     private val messageToProtoConverter: IMessageToProtoConverter
-) : MessageProcessor<RawMessageBatch, MessageBatch> {
+) : AbstractCodecProcessor<RawMessageBatch, MessageBatch>(codecFactory, codecSettings) {
 
     private val logger = KotlinLogging.logger { }
 
@@ -20,7 +21,7 @@ class DecodeProcessor(
         try {
             val batchData = joinBatchData(source)
             val messageBatchBuilder = MessageBatch.newBuilder()
-            val decodedMessageList = codec.decode(batchData)
+            val decodedMessageList = getCodec().decode(batchData)
             logger.debug {
                 "decoded messages: {${decodedMessageList.joinToString { message -> "${message.name}: $message" }}}"
             }

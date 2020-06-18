@@ -23,7 +23,7 @@ import java.util.concurrent.TimeoutException
 @ObsoleteCoroutinesApi
 class Decoder(codecParameters: CodecParameters, applicationContext: ApplicationContext) : AutoCloseable {
     private val logger = KotlinLogging.logger {}
-    private val coroutineContext = newFixedThreadPoolContext(getRuntime().availableProcessors(), "decoder-context")
+    private val coroutineContext = newFixedThreadPoolContext(getRuntime().availableProcessors() * 2, "decoder-context")
     private val coroutineChannel: Channel<Deferred<MessageBatch>> = Channel(CHANNEL_SIZE)
     private val messageHandler: MessageHandler<RawMessageBatch, MessageBatch>
     private val subscriber: RabbitMqSubscriber
@@ -32,7 +32,11 @@ class Decoder(codecParameters: CodecParameters, applicationContext: ApplicationC
 
     init {
         messageHandler = object : MessageHandler<RawMessageBatch, MessageBatch>(
-            DecodeProcessor(applicationContext.codec, applicationContext.messageToProtoConverter),
+            DecodeProcessor(
+                applicationContext.codecFactory,
+                applicationContext.codecSettings,
+                applicationContext.messageToProtoConverter
+            ),
             coroutineContext,
             coroutineChannel
         ) {
@@ -97,6 +101,6 @@ class Decoder(codecParameters: CodecParameters, applicationContext: ApplicationC
     }
 
     companion object {
-        const val CHANNEL_SIZE = 100
+        const val CHANNEL_SIZE = 10000
     }
 }
