@@ -36,7 +36,7 @@ class CodecCommand : CliktCommand() {
             "decoder",
             applicationContext
         ) { config: CodecParameters, context: ApplicationContext ->
-            Decoder(config, context).also { it.start(configuration.rabbitMQ) }
+            SyncDecoder(config, context).also { it.start(configuration.rabbitMQ) }
         }
         createAndStartCodec(
             configuration.encoder,

@@ -19,8 +19,8 @@ abstract class MessageHandler<T : GeneratedMessageV3, R>(
     private val customScope: CoroutineScope = CoroutineScope(context)
 
     override fun handle(consumerTag: String, message: Delivery) {
-        customScope.launch {
-            val deferred = async(context) {
+        runBlocking {
+            val deferred = customScope.async {
                 val protoSource = parse(message)
                 processor.process(protoSource)
             }
