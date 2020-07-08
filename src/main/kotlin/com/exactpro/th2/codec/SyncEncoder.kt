@@ -16,18 +16,19 @@
 
 package com.exactpro.th2.codec
 
+import com.exactpro.th2.codec.EncodeMessageSender.EncodeCommonBatch
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.codec.configuration.CodecParameters
 import com.exactpro.th2.infra.grpc.EventID
 import com.exactpro.th2.infra.grpc.MessageBatch
 import com.exactpro.th2.infra.grpc.RawMessageBatch
 
-class SyncDecoder(
+class SyncEncoder(
     codecParameters: CodecParameters,
     applicationContext: ApplicationContext,
-    processor: AbstractCodecProcessor<RawMessageBatch, MessageBatch>,
+    processor: AbstractCodecProcessor<MessageBatch, RawMessageBatch>,
     codecRootID: EventID?
-): AbstractSyncCodec<RawMessageBatch, MessageBatch>(
+): AbstractSyncCodec<MessageBatch, RawMessageBatch>(
     codecParameters,
     applicationContext,
     processor,
@@ -35,15 +36,19 @@ class SyncDecoder(
 ) {
     override fun getParentEventId(
         codecRootID: EventID?,
-        protoSource: RawMessageBatch?,
-        protoResult: MessageBatch?
+        protoSource: MessageBatch?,
+        protoResult: RawMessageBatch?
     ): EventID? {
+        if (protoSource != null && protoSource.messagesCount != 0
+            && protoSource.getMessages(0).hasParentEventId()) {
+            return protoSource.getMessages(0).parentEventId
+        }
         return codecRootID
     }
 
-    override fun parseProtoSourceFrom(data: ByteArray): RawMessageBatch = RawMessageBatch.parseFrom(data)
+    override fun parseProtoSourceFrom(data: ByteArray): MessageBatch = MessageBatch.parseFrom(data)
 
-    override fun checkResult(protoResult: MessageBatch): Boolean = protoResult.messagesCount != 0
+    override fun checkResult(protoResult: RawMessageBatch): Boolean = protoResult.messagesCount != 0
 
-    override fun toCommonBatch(protoResult: MessageBatch): CommonBatch = DecodeCommonBatch(protoResult)
+    override fun toCommonBatch(protoResult: RawMessageBatch): CommonBatch = EncodeCommonBatch(protoResult)
 }
