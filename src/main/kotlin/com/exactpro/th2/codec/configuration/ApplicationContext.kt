@@ -1,3 +1,19 @@
+/*
+ *  Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package com.exactpro.th2.codec.configuration
 
 import com.exactpro.sf.common.messages.structures.IDictionaryStructure
@@ -24,6 +40,7 @@ import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
+import kotlin.streams.asSequence
 
 class ApplicationContext(
     val codec: IExternalCodec,
@@ -77,12 +94,23 @@ class ApplicationContext(
             codecParameters: Map<String, String>?
         ): IExternalCodecSettings {
             val settings = codecFactory.createSettings(dictionary)
+            setDictionaryFiles(settings)
             if (codecParameters != null) {
                 for ((key, value) in codecParameters) {
                     convertAndSet(settings, key, value)
                 }
             }
             return settings
+        }
+
+        private fun setDictionaryFiles(settings: IExternalCodecSettings) {
+            try {
+                settings.dictionaryFiles.putAll(Files.walk(Paths.get(DICTIONARIES_PATH)).asSequence()
+                    .filter { !Files.isDirectory(it) }
+                    .associate { Pair(SailfishURI.unsafeParse(it.fileName.toString()), it.toFile()) })
+            } catch (exception: IOException) {
+                logger.warn(exception) { "could not add dictionary files to codec settings" }
+            }
         }
 
         private fun convertAndSet(settings: IExternalCodecSettings, propertyName: String, propertyValue: String) {
