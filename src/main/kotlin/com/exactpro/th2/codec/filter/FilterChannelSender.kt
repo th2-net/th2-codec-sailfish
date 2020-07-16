@@ -45,5 +45,5 @@ class FilterChannelSender(
         }
     }
 
-    private fun channelInfo(): String  = "${filter.getType()}filter('$exchangeName':'$routingKey')"
+    private fun channelInfo(): String  = "out('$exchangeName':'$routingKey')"
 }

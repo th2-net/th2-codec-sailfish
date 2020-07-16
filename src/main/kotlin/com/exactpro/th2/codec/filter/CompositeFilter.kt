@@ -16,6 +16,13 @@
 
 package com.exactpro.th2.codec.filter
 
-class AnyFilter : Filter {
-    override fun filter(input: FilterInput) = true
+class CompositeFilter(private val filters: List<Filter>) : Filter {
+    override fun filter(input: FilterInput): Boolean {
+        for (filter in filters) {
+            if (!filter.filter(input)) {
+                return false
+            }
+        }
+        return true
+    }
 }

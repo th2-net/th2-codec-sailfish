@@ -18,7 +18,7 @@ package com.exactpro.th2.codec
 
 import java.lang.RuntimeException
 
-class CodecException : RuntimeException {
+open class CodecException : RuntimeException {
     constructor() : super()
     constructor(message: String?) : super(message)
     constructor(message: String?, cause: Throwable?) : super(message, cause)
@@ -29,4 +29,16 @@ class CodecException : RuntimeException {
         enableSuppression,
         writableStackTrace
     )
+
+    fun getAllMessages(): String = getMessage(this)
+
+    private fun getMessage(exception: Throwable?): String {
+        return when {
+            exception?.cause != null && exception.cause != exception ->
+                "${exception.message}. Caused by: ${getMessage(exception.cause)}"
+            exception?.message != null ->
+                "${exception.message}."
+            else -> ""
+        }
+    }
 }

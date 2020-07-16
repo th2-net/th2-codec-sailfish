@@ -16,20 +16,21 @@
 
 package com.exactpro.th2.codec.filter
 
-import com.exactpro.th2.codec.configuration.FilterParameters
-import com.exactpro.th2.codec.filter.DefaultFilterFactory.Companion.FIELD_VALUES
 import com.exactpro.th2.infra.grpc.ListValue
 import com.exactpro.th2.infra.grpc.Value
 import java.util.regex.Pattern
 
-class MessageFilter(filterParameters: FilterParameters) : Filter {
+class MessageFilter(parameterName: String, parameterValue: Any) : Filter {
 
     private val fieldPatternMap: Map<String, Pattern>
 
     init {
-        val params: Map<String, String> = filterParameters.parameters
-            ?: throw IllegalArgumentException("filter parameters is missing")
-        fieldPatternMap = params.mapValues { Pattern.compile(it.value) }
+        if (parameterValue !is Map<*,*>) {
+            throw IllegalArgumentException("$parameterName must be instance of Map<String, String>")
+        }
+        fieldPatternMap = parameterValue
+            .mapKeys { it.toString() }
+            .mapValues { Pattern.compile(it.value.toString()) }
     }
 
     override fun filter(input: FilterInput): Boolean {
@@ -38,8 +39,6 @@ class MessageFilter(filterParameters: FilterParameters) : Filter {
         }
         return checkFields(input.message.fieldsMap, mutableSetOf())
     }
-
-    override fun getType(): String = FIELD_VALUES
 
     private fun checkFields(fields: Map<String, Value>, matchedValues: MutableSet<String> ): Boolean {
         for (field in fields) {

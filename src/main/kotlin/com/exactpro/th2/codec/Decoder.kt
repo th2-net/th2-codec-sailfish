@@ -19,6 +19,7 @@ package com.exactpro.th2.codec
 import com.exactpro.th2.RabbitMqSubscriber
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.codec.configuration.CodecParameters
+import com.exactpro.th2.codec.filter.AnyFilter
 import com.exactpro.th2.codec.filter.DefaultFilterFactory
 import com.exactpro.th2.codec.filter.FilterChannelSender
 import com.exactpro.th2.configuration.RabbitMQConfiguration
@@ -71,8 +72,12 @@ class Decoder(codecParameters: CodecParameters, applicationContext: ApplicationC
             newSingleThreadContext("sender-context"),
             coroutineChannel,
             codecParameters.outParams.filters.map {
-                val filter = DefaultFilterFactory().create(it)
-                logger.info { "decode out created with queue '${it.queueName}' and filter '${it.filterType}'" }
+                val filter = if (it.parameters != null) {
+                    DefaultFilterFactory().create(it.parameters!!)
+                } else {
+                    AnyFilter()
+                }
+                logger.info { "decode out created with queue '${it.queueName}'" }
                 FilterChannelSender(channel, filter, it.exchangeName, it.queueName)
             }
         )

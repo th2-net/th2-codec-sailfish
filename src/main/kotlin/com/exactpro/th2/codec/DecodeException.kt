@@ -16,7 +16,7 @@
 
 package com.exactpro.th2.codec
 
-class DecodeException : RuntimeException {
+class DecodeException : CodecException {
     constructor() : super()
     constructor(message: String?) : super(message)
     constructor(message: String?, cause: Throwable?) : super(message, cause)

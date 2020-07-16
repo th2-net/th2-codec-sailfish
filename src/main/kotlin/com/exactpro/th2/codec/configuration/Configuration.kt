@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.type.TypeReference
+import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
@@ -37,6 +38,11 @@ import java.nio.file.Paths
 data class Configuration(
         var eventStore: EventStoreParameters,
         var codecClassName: String,
+        var generalExchangeName: String,
+        var generalDecodeInQueue: String,
+        var generalDecodeOutQueue: String,
+        var generalEncodeInQueue: String,
+        var generalEncodeOutQueue: String,
         @JsonIgnore
         var codecParameters: Map<String, String>? = null,
         var rabbitMQ: RabbitMQConfiguration,
@@ -49,6 +55,7 @@ data class Configuration(
 
     companion object {
         private val objectMapper = ObjectMapper(YAMLFactory()).apply { registerModule(KotlinModule()) }
+            .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
         private const val EVENT_STORE_HOST = "EVENT_STORE_HOST"
         private const val EVENT_STORE_PORT = "EVENT_STORE_PORT"
@@ -56,6 +63,11 @@ data class Configuration(
         private const val CODEC_DICTIONARY = "CODEC_DICTIONARY"
         private const val DECODER_PARAMETERS = "DECODER_PARAMETERS"
         private const val ENCODER_PARAMETERS = "ENCODER_PARAMETERS"
+        private const val GENERAL_EXCHANGE_NAME = "GENERAL_EXCHANGE_NAME"
+        private const val GENERAL_DECODE_IN_QUEUE = "GENERAL_DECODE_IN_QUEUE"
+        private const val GENERAL_DECODE_OUT_QUEUE = "GENERAL_DECODE_OUT_QUEUE"
+        private const val GENERAL_ENCODE_IN_QUEUE = "GENERAL_ENCODE_IN_QUEUE"
+        private const val GENERAL_ENCODE_OUT_QUEUE = "GENERAL_ENCODE_OUT_QUEUE"
 
         fun create(configPath: String?, sailfishCodecParamsPath: String?): Configuration {
             val configuration = if (configPath == null || !Files.exists(Paths.get(configPath))) {
@@ -98,7 +110,12 @@ data class Configuration(
                                 it,
                                 object : TypeReference<CodecParameters>() {}
                         )
-                    }
+                    },
+                    generalExchangeName = getEnvOrException(GENERAL_EXCHANGE_NAME),
+                    generalDecodeInQueue = getEnvOrException(GENERAL_DECODE_IN_QUEUE),
+                    generalDecodeOutQueue = getEnvOrException(GENERAL_DECODE_OUT_QUEUE),
+                    generalEncodeInQueue = getEnvOrException(GENERAL_ENCODE_IN_QUEUE),
+                    generalEncodeOutQueue = getEnvOrException(GENERAL_ENCODE_OUT_QUEUE)
             )
         }
 
@@ -146,10 +163,6 @@ data class Configuration(
             return getenv(variableName) ?: throw IllegalArgumentException("'$variableName' env variable is not set")
         }
 
-        private fun getEnvOrDefault(variableName: String, defaultValue: String): String {
-            return getenv(variableName) ?: defaultValue
-        }
-
         private fun <T> parseJsonValue(
                 objectMapper: ObjectMapper,
                 variableName: String,
@@ -174,27 +187,58 @@ data class Configuration(
 }
 
 data class EventStoreParameters(
-        var host: String,
-        var port: Int
+    var host: String,
+    var port: Int
 )
 
 data class CodecParameters(
-        @JsonProperty("in") var inParams: InputParameters,
-        @JsonProperty("out") var outParams: OutputParameters
+    @JsonProperty("in") var inParams: InputParameters,
+    @JsonProperty("out") var outParams: OutputParameters
 )
 
 data class InputParameters(
-        var exchangeName: String,
-        var queueName: String
+    var exchangeName: String,
+    var queueName: String
 )
 
 data class OutputParameters(
-        var filters: List<FilterParameters>
+    var filters: List<Filter>
+)
+
+data class Filter(
+    var exchangeName: String,
+    var queueName: String,
+    var parameters: FilterParameters?
 )
 
 data class FilterParameters(
-        var exchangeName: String,
-        var queueName: String,
-        var filterType: String,
-        var parameters: Map<String, String>? = emptyMap()
-)
+    var sessionAlias: String?,
+    var directions: Array<String>?,
+    var messageType: String?,
+    var fieldValues: Map<String, String>?
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as FilterParameters
+
+        if (sessionAlias != other.sessionAlias) return false
+        if (directions != null) {
+            if (other.directions == null) return false
+            if (!directions!!.contentEquals(other.directions!!)) return false
+        } else if (other.directions != null) return false
+        if (messageType != other.messageType) return false
+        if (fieldValues != other.fieldValues) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = sessionAlias?.hashCode() ?: 0
+        result = 31 * result + (directions?.contentHashCode() ?: 0)
+        result = 31 * result + (messageType?.hashCode() ?: 0)
+        result = 31 * result + (fieldValues?.hashCode() ?: 0)
+        return result
+    }
+}

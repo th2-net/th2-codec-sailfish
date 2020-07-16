@@ -16,6 +16,20 @@
 
 package com.exactpro.th2.codec.filter
 
-class AnyFilter : Filter {
-    override fun filter(input: FilterInput) = true
+import java.util.regex.Pattern
+
+class MessageTypeFilter(parameterName: String, parametersValue: Any) : Filter {
+
+    private val value: Pattern
+
+    init {
+        if (parametersValue !is String) {
+            throw IllegalArgumentException("$parameterName must be instance of String")
+        }
+        value = Pattern.compile(parametersValue)
+    }
+
+    override fun filter(input: FilterInput): Boolean {
+        return input.messageMetadata.messageType != null && value.matcher(input.messageMetadata.messageType).matches()
+    }
 }

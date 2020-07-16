@@ -16,25 +16,20 @@
 
 package com.exactpro.th2.codec.filter
 
-import com.exactpro.th2.codec.configuration.FilterParameters
-import com.exactpro.th2.codec.filter.DefaultFilterFactory.Companion.SESSION_ALIAS
 import java.util.regex.Pattern
 
-class SessionAliasFilter(filterParameters: FilterParameters) : Filter {
+class SessionAliasFilter(parameterName: String, parametersValue: Any) : Filter {
 
     private val value: Pattern
 
     init {
-        val parameters = filterParameters.parameters
-            ?: throw IllegalArgumentException("parameters is missing")
-        val patternValue = parameters[SESSION_ALIAS]
-            ?: throw IllegalArgumentException("'$SESSION_ALIAS' parameter is missing")
-        value = Pattern.compile(patternValue)
+        if (parametersValue !is String) {
+            throw IllegalArgumentException("$parameterName must be instance of String")
+        }
+        value = Pattern.compile(parametersValue)
     }
 
     override fun filter(input: FilterInput): Boolean {
         return value.matcher(input.messageMetadata.messageId.connectionId.sessionAlias).matches()
     }
-
-    override fun getType(): String = SESSION_ALIAS
 }

@@ -21,19 +21,24 @@ import com.exactpro.th2.codec.configuration.FilterParameters
 class DefaultFilterFactory : FilterFactory {
 
     override fun create(parameters: FilterParameters): Filter {
-        return when (parameters.filterType) {
-            DIRECTION_TYPE -> DirectionFilter(parameters)
-            SESSION_ALIAS -> SessionAliasFilter(parameters)
-            ANY_TYPE -> AnyFilter()
-            FIELD_VALUES -> MessageFilter(parameters)
-            else -> throw IllegalArgumentException("unknown filter type '${parameters.filterType}'")
+        val filters = mutableListOf<Filter>()
+        when {
+            parameters.directions != null -> filters.add(
+                DirectionFilter(DIRECTION_TYPE, parameters.directions!!))
+            parameters.sessionAlias != null -> filters.add(
+                SessionAliasFilter(SESSION_ALIAS, parameters.sessionAlias!!))
+            parameters.messageType != null -> filters.add(
+                MessageTypeFilter(MESSAGE_TYPE, parameters.messageType!!))
+            parameters.fieldValues != null -> filters.add(
+                MessageFilter(FIELD_VALUES, parameters.fieldValues!!))
         }
+        return CompositeFilter(filters)
     }
 
     companion object {
         const val DIRECTION_TYPE = "direction"
         const val SESSION_ALIAS = "sessionAlias"
-        const val ANY_TYPE = "any"
+        const val MESSAGE_TYPE = "messageType"
         const val FIELD_VALUES = "fieldValues"
     }
 }

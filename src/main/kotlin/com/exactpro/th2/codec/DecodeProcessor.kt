@@ -68,7 +68,7 @@ class DecodeProcessor(
         for ((index, pair) in source.messagesList.zip(decodedMessageList).withIndex()) {
             val sourceMessageData = pair.first.body.toByteArray()
             val decodedMessageData = pair.second.metaData.rawMessage
-            if (!(sourceMessageData contentEquals decodedMessageData!!)) {
+            if (decodedMessageData != null && !(sourceMessageData contentEquals decodedMessageData)) {
                 logger.error {
                     "content mismatch by position $index in the batch: " +
                             "source hex: '${sourceMessageData.toHexString()}', " +
