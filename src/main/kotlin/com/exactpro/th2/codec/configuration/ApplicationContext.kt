@@ -1,17 +1,14 @@
 /*
- *  Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.exactpro.th2.codec.configuration
@@ -26,10 +23,8 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.IMessageToProtoConverter
 import com.exactpro.th2.ProtoToIMessageConverter
 import com.exactpro.th2.codec.DefaultMessageFactoryProxy
-import com.exactpro.th2.eventstore.grpc.EventStoreServiceGrpc.EventStoreServiceFutureStub
-import com.exactpro.th2.eventstore.grpc.EventStoreServiceGrpc.newFutureStub
-import com.rabbitmq.client.ConnectionFactory
-import io.grpc.ManagedChannelBuilder.forAddress
+import com.exactpro.th2.eventstore.grpc.AsyncEventStoreServiceService
+import com.exactpro.th2.schema.factory.CommonFactory
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
@@ -43,14 +38,14 @@ import java.util.*
 import kotlin.streams.asSequence
 
 class ApplicationContext(
+    val commonFactory: CommonFactory,
     val codec: IExternalCodec,
     val codecFactory: IExternalCodecFactory,
     val codecSettings: IExternalCodecSettings,
     val dictionary: IDictionaryStructure,
     val protoToIMessageConverter: ProtoToIMessageConverter,
     val messageToProtoConverter: IMessageToProtoConverter,
-    val connectionFactory: ConnectionFactory,
-    val eventConnector: EventStoreServiceFutureStub?
+    val eventStoreService: AsyncEventStoreServiceService?
 ) {
 
     companion object {
@@ -59,34 +54,30 @@ class ApplicationContext(
 
         private val logger = KotlinLogging.logger { }
 
-        fun create(configuration: Configuration): ApplicationContext {
-            val codecFactory =
-                loadFactory(
-                    configuration.codecClassName
-                )
-            val dictionary =
-                loadDictionary(
-                    configuration.dictionary
-                )
+        fun create(configuration: Configuration, commonFactory: CommonFactory): ApplicationContext {
+            val codecFactory = loadFactory(configuration.codecClassName)
+            val dictionary = loadDictionary(configuration.dictionary)
+
+            val commonFactory = commonFactory
+            val eventStoreService = commonFactory.grpcRouter.getService(AsyncEventStoreServiceService::class.java)
+
             val codecSettings = createSettings(codecFactory, dictionary, configuration.codecParameters)
             val codec = codecFactory.createCodec(codecSettings)
             val protoConverter = ProtoToIMessageConverter(
                 DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
             )
             val iMessageConverter = IMessageToProtoConverter()
-            val connectionFactory =
-                createConnectionFactory(
-                    configuration
-                )
+
+
             return ApplicationContext(
+                commonFactory,
                 codec,
                 codecFactory,
                 codecSettings,
                 dictionary,
                 protoConverter,
                 iMessageConverter,
-                connectionFactory,
-                createEventStoreConnector(configuration.eventStore)
+                eventStoreService
             )
         }
 
@@ -143,17 +134,8 @@ class ApplicationContext(
             }
         }
 
-        private fun createConnectionFactory(configuration: Configuration): ConnectionFactory {
-            val connectionFactory = ConnectionFactory()
-            connectionFactory.host = configuration.rabbitMQ.host
-            connectionFactory.virtualHost = configuration.rabbitMQ.virtualHost
-            connectionFactory.port = configuration.rabbitMQ.port
-            connectionFactory.username = configuration.rabbitMQ.username
-            connectionFactory.password = configuration.rabbitMQ.password
-            return connectionFactory
-        }
 
-        private fun loadDictionary(dictionaryPath: String): IDictionaryStructure {
+        private fun loadDictionary(dictionaryPath: String?): IDictionaryStructure {
             try {
                 return XmlDictionaryStructureLoader().load(
                     Files.newInputStream(Paths.get(DICTIONARIES_PATH, dictionaryPath))
@@ -168,7 +150,7 @@ class ApplicationContext(
             }
         }
 
-        private fun loadFactory(className: String): IExternalCodecFactory {
+        private fun loadFactory(className: String?): IExternalCodecFactory {
             val jarList = FileUtils.listFiles(
                 File(CODEC_IMPLEMENTATION_PATH),
                 arrayOf("jar"),
@@ -183,13 +165,5 @@ class ApplicationContext(
                 )
         }
 
-        private fun createEventStoreConnector(eventStoreParameters: EventStoreParameters): EventStoreServiceFutureStub? {
-            return try {
-                newFutureStub(forAddress(eventStoreParameters.host, eventStoreParameters.port).usePlaintext().build())
-            } catch (exception: Exception) {
-                logger.warn(exception) { "could not create event store connector" }
-                null
-            }
-        }
     }
 }

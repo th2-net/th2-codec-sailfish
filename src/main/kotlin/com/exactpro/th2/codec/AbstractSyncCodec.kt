@@ -1,88 +1,57 @@
 /*
- *  Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.exactpro.th2.codec
 
-import com.exactpro.th2.RabbitMqSubscriber
 import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.codec.configuration.CodecParameters
-import com.exactpro.th2.codec.filter.AnyFilter
-import com.exactpro.th2.codec.filter.DefaultFilterFactory
-import com.exactpro.th2.codec.filter.FilterChannelSender
 import com.exactpro.th2.codec.util.toDebugString
-import com.exactpro.th2.configuration.RabbitMQConfiguration
-import com.exactpro.th2.eventstore.grpc.EventStoreServiceGrpc.EventStoreServiceFutureStub
+import com.exactpro.th2.eventstore.grpc.AsyncEventStoreServiceService
+import com.exactpro.th2.eventstore.grpc.Response
 import com.exactpro.th2.eventstore.grpc.StoreEventRequest
 import com.exactpro.th2.infra.grpc.Event
 import com.exactpro.th2.infra.grpc.EventID
 import com.exactpro.th2.infra.grpc.EventStatus
+import com.exactpro.th2.schema.message.MessageListener
+import com.exactpro.th2.schema.message.MessageRouter
 import com.google.protobuf.ByteString.copyFrom
 import com.google.protobuf.GeneratedMessageV3
 import com.google.protobuf.InvalidProtocolBufferException
-import com.rabbitmq.client.Connection
-import com.rabbitmq.client.DeliverCallback
 import com.rabbitmq.client.Delivery
+import io.grpc.stub.StreamObserver
 import mu.KotlinLogging
 import java.io.IOException
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.TimeoutException
 
 abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
-    codecParameters: CodecParameters,
+    protected val sourceRouter: MessageRouter<T>,
+    protected val targetRouter: MessageRouter<R>,
     applicationContext: ApplicationContext,
     protected val processor: AbstractCodecProcessor<T, R>,
     protected val codecRootEvent: EventID?
-): AutoCloseable {
+): AutoCloseable, MessageListener<T> {
 
     protected val logger = KotlinLogging.logger {}
-    protected val consumers: List<FilterChannelSender>
-    protected val subscriber: RabbitMqSubscriber
-    protected val rabbitMQConnection: Connection
-    protected val eventStoreConnector: EventStoreServiceFutureStub? = applicationContext.eventConnector
+    protected val eventStoreService: AsyncEventStoreServiceService? = applicationContext.eventStoreService
+    protected val context = applicationContext;
 
-    init {
-        subscriber = RabbitMqSubscriber(
-            codecParameters.inParams.exchangeName,
-            DeliverCallback(this::handle),
-            null, // FIXME handle cancellation
-            codecParameters.inParams.queueName
-        )
-        rabbitMQConnection = applicationContext.connectionFactory.newConnection()
-        val channel = rabbitMQConnection.createChannel()
-        channel.exchangeDeclare(codecParameters.inParams.exchangeName, "direct")
-        consumers = codecParameters.outParams.filters.map {
-            val filter = if (it.parameters != null) {
-                DefaultFilterFactory().create(it.parameters!!)
-            } else {
-                AnyFilter()
-            }
-            logger.info { "decode out created with queue '${it.queueName}'" }
-            FilterChannelSender(channel, filter, it.exchangeName, it.queueName)
-        }
-    }
+    protected var tagretAttributes : String = ""
 
-    fun start(rabbitMQParameters: RabbitMQConfiguration) {
+
+    fun start(sourceAttributes: String, targetAttributes: String) {
         try {
-            subscriber.startListening(
-                rabbitMQParameters.host,
-                rabbitMQParameters.virtualHost,
-                rabbitMQParameters.port,
-                rabbitMQParameters.username,
-                rabbitMQParameters.password
-            )
+            this.tagretAttributes = targetAttributes
+            sourceRouter.subscribeAll(this, sourceAttributes)
         } catch (exception: Exception) {
             when(exception) {
                 is IOException,
@@ -94,8 +63,8 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
 
     override fun close() {
         val exceptions = mutableListOf<Exception>()
-        close(subscriber, "subscriber", exceptions)
-        close(rabbitMQConnection, "senderMqConnection", exceptions)
+
+        sourceRouter.unsubscribeAll()
         if (exceptions.isNotEmpty()) {
             throw RuntimeException("could not close decoder").also {
                 exceptions.forEach { exception -> it.addSuppressed(exception) }
@@ -111,19 +80,18 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
         }
     }
 
-    private fun handle(consumerTag: String, message: Delivery) {
-        var protoSource: T? = null
+    override fun handler(consumerTag: String?, message: T) {
         var protoResult: R? = null
         try {
-            protoSource = toProtoSource(message)
-            protoResult = processor.process(protoSource)
-            if (checkResult(protoResult)) {
-                for (consumer in consumers) {
-                    consumer.filterAndSend(toCommonBatch(protoResult))
-                }
-            }
+
+            protoResult = processor.process(message)
+
+            if (checkResult(protoResult))
+                targetRouter.sendAll(protoResult, this.tagretAttributes)
+
+
         } catch (exception: CodecException) {
-            val parentEventId = getParentEventId(codecRootEvent, protoSource, protoResult)
+            val parentEventId = getParentEventId(codecRootEvent, message, protoResult)
             if (parentEventId != null) {
                 createAndStoreErrorEvent(exception, parentEventId)
             }
@@ -131,10 +99,14 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
         }
     }
 
+    override fun onClose() {
+        super.onClose()
+    }
+
     private fun createAndStoreErrorEvent(exception: CodecException, parentEventID: EventID) {
-        if (eventStoreConnector != null) {
+        if (eventStoreService != null) {
             try {
-                eventStoreConnector.storeEvent(
+                eventStoreService.storeEvent(
                     StoreEventRequest.newBuilder()
                         .setEvent(
                             Event.newBuilder()
@@ -145,7 +117,15 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
                                 .setBody(copyFrom("{\"message\":\"${exception.getAllMessages()}\"}", UTF_8))
                                 .build()
                         )
-                        .build()
+                        .build(),
+                    object : StreamObserver<Response>
+                    {
+                        override fun onCompleted() {}
+                        override fun onNext(r : Response) {}
+                        override fun onError(e: Throwable?) {
+                            throw (e!!)
+                        }
+                    }
                 )
             } catch (exception: Exception) {
                 logger.warn(exception) { "could not send codec error event" }
@@ -171,5 +151,4 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
     abstract fun getParentEventId(codecRootID: EventID?, protoSource: T?, protoResult: R?): EventID?
     abstract fun parseProtoSourceFrom(data: ByteArray): T
     abstract fun checkResult(protoResult: R): Boolean
-    abstract fun toCommonBatch(protoResult: R): CommonBatch
 }
