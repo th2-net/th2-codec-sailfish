@@ -34,8 +34,8 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.TimeoutException
 
 abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
-    protected val sourceRouter: MessageRouter<T>,
-    protected val targetRouter: MessageRouter<R>,
+    protected val sourceRouter: MessageRouter<out T>,
+    protected val targetRouter: MessageRouter<out R>,
     applicationContext: ApplicationContext,
     protected val processor: AbstractCodecProcessor<T, R>,
     protected val codecRootEvent: EventID?
@@ -51,7 +51,7 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
     fun start(sourceAttributes: String, targetAttributes: String) {
         try {
             this.tagretAttributes = targetAttributes
-            sourceRouter.subscribeAll(this, sourceAttributes)
+            (sourceRouter as MessageRouter<T>).subscribeAll(this, sourceAttributes)
         } catch (exception: Exception) {
             when(exception) {
                 is IOException,
@@ -87,7 +87,7 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
             protoResult = processor.process(message)
 
             if (checkResult(protoResult))
-                targetRouter.sendAll(protoResult, this.tagretAttributes)
+                (targetRouter as MessageRouter<R>).sendAll(protoResult, this.tagretAttributes)
 
 
         } catch (exception: CodecException) {
