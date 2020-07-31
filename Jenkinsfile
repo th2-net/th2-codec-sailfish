@@ -9,8 +9,8 @@ pipeline {
                             returnStdout: true,
                             script: 'git rev-list --count VERSION-1.1..HEAD'
                             ).trim()}""" //TODO: Calculate revision from a specific tag instead of a root commit
-        TH2_REGISTRY = credentials('TH2_REGISTRY_USER')
-        TH2_REGISTRY_URL = credentials('TH2_REGISTRY')
+        TH2_SCHEMA_REGISTRY = credentials('TH2_SCHEMA_REGISTRY_USER')
+        TH2_SCHEMA_REGISTRY_URL = credentials('TH2_SCHEMA_REGISTRY')
         GRADLE_SWITCHES = " -Pversion_build=${BUILD_NUMBER} -Pversion_maintenance=${VERSION_MAINTENANCE}"
         GCHAT_WEB_HOOK = credentials('th2-dev-environment-web-hook')
         GCHAT_THREAD_NAME = credentials('th2-dev-environment-release-docker-images-thread')
@@ -27,9 +27,9 @@ pipeline {
             steps {
                 // publish via docker cli image to Nexus
                 sh """
-                    docker login -u ${TH2_REGISTRY_USR} -p ${TH2_REGISTRY_PSW} ${TH2_REGISTRY_URL}
+                    docker login -u ${TH2_SCHEMA_REGISTRY_USR} -p ${TH2_SCHEMA_REGISTRY_PSW} ${TH2_SCHEMA_REGISTRY_URL}
                     ./gradlew dockerPush dockerPushRemote-latest ${GRADLE_SWITCHES} \
-                    -Ptarget_docker_repository=${TH2_REGISTRY_URL}
+                    -Ptarget_docker_repository=${TH2_SCHEMA_REGISTRY_URL}
                 """ // TODO: Exec from root repository
             }
         }
