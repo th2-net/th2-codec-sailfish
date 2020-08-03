@@ -38,11 +38,11 @@ import java.nio.file.Paths
 data class Configuration(
         var eventStore: EventStoreParameters,
         var codecClassName: String,
-        var generalExchangeName: String,
-        var generalDecodeInQueue: String,
-        var generalDecodeOutQueue: String,
-        var generalEncodeInQueue: String,
-        var generalEncodeOutQueue: String,
+        var generalExchangeName: String = DEFAULT_GENERAL_EXCHANGE_NAME,
+        var generalDecodeInQueue: String = DEFAULT_GENERAL_DECODE_IN_QUEUE,
+        var generalDecodeOutQueue: String =  DEFAULT_GENERAL_DECODE_OUT_QUEUE,
+        var generalEncodeInQueue: String = DEFAULT_GENERAL_ENCODE_IN_QUEUE,
+        var generalEncodeOutQueue: String = DEFAULT_GENERAL_ENCODE_OUT_QUEUE,
         @JsonIgnore
         var codecParameters: Map<String, String>? = null,
         var rabbitMQ: RabbitMQConfiguration,
@@ -68,6 +68,11 @@ data class Configuration(
         private const val GENERAL_DECODE_OUT_QUEUE = "GENERAL_DECODE_OUT_QUEUE"
         private const val GENERAL_ENCODE_IN_QUEUE = "GENERAL_ENCODE_IN_QUEUE"
         private const val GENERAL_ENCODE_OUT_QUEUE = "GENERAL_ENCODE_OUT_QUEUE"
+        private const val DEFAULT_GENERAL_EXCHANGE_NAME = "default_general_exchange"
+        private const val DEFAULT_GENERAL_DECODE_IN_QUEUE = "default_general_decode_in"
+        private const val DEFAULT_GENERAL_DECODE_OUT_QUEUE= "default_general_decode_out"
+        private const val DEFAULT_GENERAL_ENCODE_IN_QUEUE = "default_general_encode_in"
+        private const val DEFAULT_GENERAL_ENCODE_OUT_QUEUE= "default_general_encode_out"
 
         fun create(configPath: String?, sailfishCodecParamsPath: String?): Configuration {
             val configuration = if (configPath == null || !Files.exists(Paths.get(configPath))) {
@@ -87,6 +92,7 @@ data class Configuration(
 
         private fun createFromEnvVariables(): Configuration {
             val objectMapper = ObjectMapper().apply { registerModule(KotlinModule()) }
+                .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
             return Configuration(
                     eventStore = EventStoreParameters(
                             getEnvOrException(EVENT_STORE_HOST),
@@ -111,11 +117,11 @@ data class Configuration(
                                 object : TypeReference<CodecParameters>() {}
                         )
                     },
-                    generalExchangeName = getEnvOrException(GENERAL_EXCHANGE_NAME),
-                    generalDecodeInQueue = getEnvOrException(GENERAL_DECODE_IN_QUEUE),
-                    generalDecodeOutQueue = getEnvOrException(GENERAL_DECODE_OUT_QUEUE),
-                    generalEncodeInQueue = getEnvOrException(GENERAL_ENCODE_IN_QUEUE),
-                    generalEncodeOutQueue = getEnvOrException(GENERAL_ENCODE_OUT_QUEUE)
+                    generalExchangeName = getEnvOrDefault(GENERAL_EXCHANGE_NAME, DEFAULT_GENERAL_EXCHANGE_NAME),
+                    generalDecodeInQueue = getEnvOrDefault(GENERAL_DECODE_IN_QUEUE, DEFAULT_GENERAL_DECODE_IN_QUEUE),
+                    generalDecodeOutQueue = getEnvOrDefault(GENERAL_DECODE_OUT_QUEUE, DEFAULT_GENERAL_DECODE_OUT_QUEUE),
+                    generalEncodeInQueue = getEnvOrDefault(GENERAL_ENCODE_IN_QUEUE, DEFAULT_GENERAL_ENCODE_IN_QUEUE),
+                    generalEncodeOutQueue = getEnvOrDefault(GENERAL_ENCODE_OUT_QUEUE, DEFAULT_GENERAL_ENCODE_OUT_QUEUE)
             )
         }
 
@@ -161,6 +167,10 @@ data class Configuration(
 
         private fun getEnvOrException(variableName: String): String {
             return getenv(variableName) ?: throw IllegalArgumentException("'$variableName' env variable is not set")
+        }
+
+        private fun getEnvOrDefault(variableName: String, defaultValue: String): String {
+            return getenv(variableName) ?: defaultValue
         }
 
         private fun <T> parseJsonValue(
