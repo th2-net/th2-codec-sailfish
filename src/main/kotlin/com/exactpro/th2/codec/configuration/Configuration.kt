@@ -223,7 +223,7 @@ data class Filter(
 
 data class FilterParameters(
     var sessionAlias: String?,
-    var directions: Array<String>?,
+    var directions: List<String>?,
     var messageType: String?,
     var fieldValues: Map<String, String>?
 ) {
@@ -234,10 +234,7 @@ data class FilterParameters(
         other as FilterParameters
 
         if (sessionAlias != other.sessionAlias) return false
-        if (directions != null) {
-            if (other.directions == null) return false
-            if (!directions!!.contentEquals(other.directions!!)) return false
-        } else if (other.directions != null) return false
+        if (directions != other.directions) return false
         if (messageType != other.messageType) return false
         if (fieldValues != other.fieldValues) return false
 
@@ -246,7 +243,7 @@ data class FilterParameters(
 
     override fun hashCode(): Int {
         var result = sessionAlias?.hashCode() ?: 0
-        result = 31 * result + (directions?.contentHashCode() ?: 0)
+        result = 31 * result + (directions?.hashCode() ?: 0)
         result = 31 * result + (messageType?.hashCode() ?: 0)
         result = 31 * result + (fieldValues?.hashCode() ?: 0)
         return result
