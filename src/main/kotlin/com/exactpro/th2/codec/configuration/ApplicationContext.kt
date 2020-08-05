@@ -32,12 +32,16 @@ import com.rabbitmq.client.ConnectionFactory
 import io.grpc.ManagedChannelBuilder.forAddress
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
+import org.apache.commons.io.FilenameUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
+import org.apache.commons.lang3.RegExUtils
+import org.apache.commons.lang3.StringUtils
 import org.apache.commons.lang3.math.NumberUtils.*
 import java.io.File
 import java.io.IOException
 import java.net.URLClassLoader
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 import kotlin.streams.asSequence
@@ -109,10 +113,15 @@ class ApplicationContext(
             try {
                 settings.dictionaryFiles.putAll(Files.walk(Paths.get(DICTIONARIES_PATH)).asSequence()
                     .filter { !Files.isDirectory(it) }
-                    .associate { Pair(SailfishURI.unsafeParse(it.fileName.toString()), it.toFile()) })
+                    .associate { Pair(toSailfishURI(it), it.toFile()) })
             } catch (exception: IOException) {
                 logger.warn(exception) { "could not add dictionary files to codec settings" }
             }
+        }
+
+        private fun toSailfishURI(it: Path?): SailfishURI {
+            val baseName = FilenameUtils.getBaseName(it?.fileName?.toString())
+            return SailfishURI.unsafeParse(RegExUtils.replaceAll(baseName, "[.]", "_"))
         }
 
         private fun convertAndSet(settings: IExternalCodecSettings, propertyName: String, propertyValue: String) {
