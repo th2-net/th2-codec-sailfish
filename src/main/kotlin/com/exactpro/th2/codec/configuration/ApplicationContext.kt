@@ -13,10 +13,10 @@
 
 package com.exactpro.th2.codec.configuration
 
-import com.exactpro.sf.common.messages.structures.IDictionaryStructure
 import com.exactpro.sf.common.messages.structures.loaders.XmlDictionaryStructureLoader
-import com.exactpro.sf.common.util.EPSCommonException
 import com.exactpro.sf.configuration.suri.SailfishURI
+import com.exactpro.sf.externalapi.DictionaryType.MAIN
+import com.exactpro.sf.externalapi.DictionaryType.OUTGOING
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
@@ -24,29 +24,21 @@ import com.exactpro.th2.IMessageToProtoConverter
 import com.exactpro.th2.ProtoToIMessageConverter
 import com.exactpro.th2.codec.DefaultMessageFactoryProxy
 import com.exactpro.th2.eventstore.grpc.AsyncEventStoreServiceService
+import com.exactpro.th2.schema.dictionary.DictionaryType
 import com.exactpro.th2.schema.factory.CommonFactory
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
-import org.apache.commons.io.FilenameUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
-import org.apache.commons.lang3.RegExUtils
-import org.apache.commons.lang3.StringUtils
 import org.apache.commons.lang3.math.NumberUtils.*
 import java.io.File
-import java.io.IOException
 import java.net.URLClassLoader
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.*
-import kotlin.streams.asSequence
 
 class ApplicationContext(
     val commonFactory: CommonFactory,
     val codec: IExternalCodec,
     val codecFactory: IExternalCodecFactory,
     val codecSettings: IExternalCodecSettings,
-    val dictionary: IDictionaryStructure,
     val protoToIMessageConverter: ProtoToIMessageConverter,
     val messageToProtoConverter: IMessageToProtoConverter,
     val eventStoreService: AsyncEventStoreServiceService?
@@ -60,25 +52,21 @@ class ApplicationContext(
 
         fun create(configuration: Configuration, commonFactory: CommonFactory): ApplicationContext {
             val codecFactory = loadFactory(configuration.codecClassName)
-            val dictionary = loadDictionary(configuration.dictionary)
-
-            val commonFactory = commonFactory
             val eventStoreService = commonFactory.grpcRouter.getService(AsyncEventStoreServiceService::class.java)
-
-            val codecSettings = createSettings(codecFactory, dictionary, configuration.codecParameters)
+            val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
             val codec = codecFactory.createCodec(codecSettings)
+            val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
+            val dictionary = checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
             val protoConverter = ProtoToIMessageConverter(
                 DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
             )
             val iMessageConverter = IMessageToProtoConverter()
-
 
             return ApplicationContext(
                 commonFactory,
                 codec,
                 codecFactory,
                 codecSettings,
-                dictionary,
                 protoConverter,
                 iMessageConverter,
                 eventStoreService
@@ -86,33 +74,25 @@ class ApplicationContext(
         }
 
         private fun createSettings(
+            commonFactory: CommonFactory,
             codecFactory: IExternalCodecFactory,
-            dictionary: IDictionaryStructure,
             codecParameters: Map<String, String>?
         ): IExternalCodecSettings {
-            val settings = codecFactory.createSettings(dictionary)
-            setDictionaryFiles(settings)
+            val settings = codecFactory.createSettings()
+
             if (codecParameters != null) {
                 for ((key, value) in codecParameters) {
                     convertAndSet(settings, key, value)
                 }
             }
-            return settings
-        }
 
-        private fun setDictionaryFiles(settings: IExternalCodecSettings) {
-            try {
-                settings.dictionaryFiles.putAll(Files.walk(Paths.get(DICTIONARIES_PATH)).asSequence()
-                    .filter { !Files.isDirectory(it) }
-                    .associate { Pair(toSailfishURI(it), it.toFile()) })
-            } catch (exception: IOException) {
-                logger.warn(exception) { "could not add dictionary files to codec settings" }
+            settings.dictionaryTypes.forEach { type ->
+                commonFactory.readDictionary(DictionaryType.valueOf(type.name)).use { stream ->
+                    settings[type] = XmlDictionaryStructureLoader().load(stream)
+                }
             }
-        }
 
-        private fun toSailfishURI(it: Path?): SailfishURI {
-            val baseName = FilenameUtils.getBaseName(it?.fileName?.toString())
-            return SailfishURI.unsafeParse(RegExUtils.replaceAll(baseName, "[.]", "_"))
+            return settings
         }
 
         private fun convertAndSet(settings: IExternalCodecSettings, propertyName: String, propertyValue: String) {
@@ -140,22 +120,6 @@ class ApplicationContext(
                     else -> throw IllegalArgumentException("unsupported class '${clazz.name}' for '$propertyName' codec parameter")
                 }.also {
                     logger.info { "codec setting '$propertyName' overridden to '$it'" }
-                }
-            }
-        }
-
-
-        private fun loadDictionary(dictionaryPath: String?): IDictionaryStructure {
-            try {
-                return XmlDictionaryStructureLoader().load(
-                    Files.newInputStream(Paths.get(DICTIONARIES_PATH, dictionaryPath))
-                )
-            } catch (exception: Exception) {
-                when (exception) {
-                    is IOException,
-                    is EPSCommonException ->
-                        throw RuntimeException("could not load dictionary by $dictionaryPath path", exception)
-                    else -> throw exception
                 }
             }
         }

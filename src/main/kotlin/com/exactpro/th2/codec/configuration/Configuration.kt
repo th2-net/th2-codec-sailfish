@@ -31,7 +31,6 @@ class Configuration() {
     var codecClassName: String? = null
 
     var codecParameters: Map<String, String>? = null
-    var dictionary: String? = null
 
     var decoderInputAttribute: String = "decoder_in"
     var decoderOutputAttribute: String = "decoder_out"
