@@ -1,3 +1,8 @@
+FROM gradle:6.6-jdk11 AS build
+ARG app_version=0.0.0
+COPY ./ .
+RUN gradle dockerPrepare -Prelease_version=${app_version}
+
 FROM openjdk:12-alpine
 ENV RABBITMQ_HOST=rabbitmq \
     RABBITMQ_PORT=5672 \
@@ -9,5 +14,5 @@ ENV RABBITMQ_HOST=rabbitmq \
     CODEC_DICTIONARY="" \
     CODEC_CLASS_NAME=someClassName
 WORKDIR /home
-COPY ./ .
-ENTRYPOINT ["/home/th2-codec/bin/th2-codec", "--sailfish-codec-config-path=codec_config.yml" , "--config-path=config.yml"]
+COPY --from=build /home/gradle/build/docker .
+ENTRYPOINT ["/home/service/bin/service", "--sailfish-codec-config-path=codec_config.yml" , "--config-path=config.yml"]

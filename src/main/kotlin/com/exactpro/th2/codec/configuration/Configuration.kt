@@ -151,7 +151,7 @@ data class Configuration(
             try {
                 return objectMapper.readValue(
                         newInputStream(codecParameterFile),
-                        object : TypeReference<LinkedHashMap<String, String>?>() {}
+                        object : TypeReference<LinkedHashMap<String, String>>() {}
                 )
             } catch (exception: Exception) {
                 when (exception) {
