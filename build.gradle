@@ -22,14 +22,12 @@ plugins {
 }
 
 ext {
-    dockerImageVersion = "${version_major}.${version_minor}.${version_maintenance}.${version_build}"
-    dockerImageLastVersion = "${version_major}.${version_minor}-latest"
     genDir             = file('src/gen')
     sharedDir          = file("${project.rootDir}/shared")
 }
 
 group 'com.exactpro.th2'
-version "${version_major}.${version_minor}.${version_maintenance}"
+version release_version
 
 repositories {
     maven {
@@ -41,6 +39,11 @@ repositories {
         name 'Artifactory'
         url 'http://artifactory5.exp.exactpro.com/artifactory/libs-snapshot'
     }
+    maven {
+        name 'Artifactory release'
+        url 'http://artifactory5.exp.exactpro.com/artifactory/libs-release'
+    }
+    mavenLocal()
 
     configurations.all {
         resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
@@ -50,6 +53,11 @@ repositories {
 
 
 dependencies {
+    api platform('com.exactpro.th2:th2-bom:1.0.4')
+    implementation 'com.exactpro.th2:th2-grpc-infra'
+    implementation 'com.exactpro.th2:th2-common'
+    implementation "com.exactpro.th2:th2-grpc-event-store"
+    implementation "com.exactpro.th2:th2-sailfish-utils"
 
     implementation 'io.github.microutils:kotlin-logging:1.7.+'
 
@@ -62,17 +70,31 @@ dependencies {
     implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7'
 
-    implementation 'com.exactpro.th2:th2-grpc-infra:1.1-SNAPSHOT'
-    implementation 'com.exactpro.th2:th2-common:1.1-SNAPSHOT'
-
-    implementation "com.exactpro.th2:th2-grpc-event-store:1.1-SNAPSHOT"
     implementation("com.github.ajalt:clikt:2.7.0")
 
     implementation 'com.google.protobuf:protobuf-java-util:3.12.+'
+
+    implementation "com.exactpro.sf:sailfish-core:3.2-SNAPSHOT"
 }
 
+jar {
+    manifest {
+        attributes(
+                'Created-By':               "${System.getProperty('java.version')} (${System.getProperty('java.vendor')})",
+                'Specification-Title':      '',
+                'Specification-Vendor':     'Exactpro Systems LLC',
+                'Implementation-Title':     project.archivesBaseName,
+                'Implementation-Vendor':    'Exactpro Systems LLC',
+                'Implementation-Vendor-Id': 'com.exactpro',
+                'Implementation-Version':   project.version
+        )
+    }
+}
+
+applicationName = 'service'
+
 distTar {
-    archiveName "${archivesBaseName}.tar"
+    archiveName "${applicationName}.tar"
 }
 
 dockerPrepare {
@@ -80,12 +102,7 @@ dockerPrepare {
 }
 
 docker {
-    name "${target_docker_repository}/${docker_image_name}:${dockerImageVersion}"
-    tag 'local-version', "${docker_image_name}:${dockerImageVersion}"
-    tag 'local-latest', "${docker_image_name}:${dockerImageLastVersion}"
-    tag 'remote-latest',  "${target_docker_repository}/${docker_image_name}:${dockerImageLastVersion}"
-
-    copySpec.from(tarTree("$buildDir/distributions/${archivesBaseName}.tar"))
+    copySpec.from(tarTree("$buildDir/distributions/${applicationName}.tar"))
 }
 
 compileKotlin {
