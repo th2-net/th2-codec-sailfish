@@ -49,7 +49,7 @@ class CodecCommand : CliktCommand() {
 
     @ObsoleteCoroutinesApi
     private fun runProgram(configs: String?, sailfishCodecParamsPath: String?) {
-        var commonFactory =  if (configs == null)
+        var commonFactory =  if (configs == null) //FIXME:Close at the end of programm
             CommonFactory()
          else
             CommonFactory.createFromArguments("--configs=" + configs)

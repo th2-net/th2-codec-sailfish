@@ -50,6 +50,7 @@ class TestApplicationContext {
         val commonFactory = Mockito.mock(CommonFactory::class.java)
 
         `when`(commonFactory.grpcRouter).thenReturn(object : GrpcRouter {
+            override fun close(): Unit = TODO("Not yet implemented")
             override fun init(p0: GrpcRouterConfiguration?): Unit = TODO("Not yet implemented")
             override fun <T : Any?> getService(p0: Class<T>): T? = null
             override fun startServer(vararg p0: BindableService?): Server = TODO("Not yet implemented")

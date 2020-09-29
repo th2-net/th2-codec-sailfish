@@ -64,7 +64,7 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
     override fun close() {
         val exceptions = mutableListOf<Exception>()
 
-        sourceRouter.unsubscribeAll()
+        sourceRouter.close()
         if (exceptions.isNotEmpty()) {
             throw RuntimeException("could not close decoder").also {
                 exceptions.forEach { exception -> it.addSuppressed(exception) }

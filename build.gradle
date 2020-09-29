@@ -60,7 +60,7 @@ dependencies {
     api platform('com.exactpro.th2:th2-bom:1.0.0-schema-ci.+')
     implementation 'com.exactpro.th2:th2-grpc-infra'
     implementation 'com.exactpro.th2:th2-common'
-    implementation "com.exactpro.th2:th2-grpc-event-store"
+    implementation "com.exactpro.th2:th2-grpc-event-store:1.4.2-schema.+"
     implementation "com.exactpro.th2:th2-sailfish-utils"
 
     implementation 'io.github.microutils:kotlin-logging:1.7.+'
