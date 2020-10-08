@@ -56,6 +56,7 @@ class EncodeProcessor(
         return RawMessageMetadata.newBuilder()
             .setId(sourceMessage.metadata.id)
             .setTimestamp(sourceMessage.metadata.timestamp)
+            .putAllProperties(sourceMessage.metadata.propertiesMap)
             .build()
     }
 }

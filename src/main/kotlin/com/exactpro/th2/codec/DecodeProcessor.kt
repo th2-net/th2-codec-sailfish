@@ -84,6 +84,7 @@ class DecodeProcessor(
         return MessageMetadata.newBuilder()
             .setId(sourceMessage.metadata.id)
             .setTimestamp(sourceMessage.metadata.timestamp)
+            .putAllProperties(sourceMessage.metadata.propertiesMap)
     }
 
     private fun joinBatchData(rawMessageBatch: RawMessageBatch): ByteArray {
