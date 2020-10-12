@@ -20,9 +20,13 @@ import com.exactpro.sf.common.messages.IMessage
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.IMessageToProtoConverter
+import com.exactpro.th2.codec.util.codecContext
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.codec.util.toHexString
-import com.exactpro.th2.infra.grpc.*
+import com.exactpro.th2.infra.grpc.MessageBatch
+import com.exactpro.th2.infra.grpc.MessageMetadata
+import com.exactpro.th2.infra.grpc.RawMessage
+import com.exactpro.th2.infra.grpc.RawMessageBatch
 import mu.KotlinLogging
 
 class DecodeProcessor(
@@ -37,7 +41,7 @@ class DecodeProcessor(
         try {
             val batchData = joinBatchData(source)
             val messageBatchBuilder = MessageBatch.newBuilder()
-            val decodedMessageList = getCodec().decode(batchData)
+            val decodedMessageList = getCodec().decode(batchData, source.codecContext)
             logger.debug {
                 "decoded messages: {${decodedMessageList.joinToString { message -> "${message.name}: $message" }}}"
             }
