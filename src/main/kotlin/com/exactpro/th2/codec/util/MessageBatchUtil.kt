@@ -15,7 +15,7 @@
  */
 package com.exactpro.th2.codec.util
 
-import com.exactpro.sf.externalapi.codec.ExternalCodecContextProperty
+import com.exactpro.sf.externalapi.codec.ExternalCodecContextProperty.MESSAGE_PROPERTIES
 import com.exactpro.sf.externalapi.codec.IExternalCodecContext
 import com.exactpro.sf.externalapi.codec.IExternalCodecContext.Role
 import com.exactpro.sf.externalapi.codec.impl.ExternalCodecContext
@@ -43,14 +43,14 @@ val MessageBatch.codecContext: IExternalCodecContext
 
 fun RawMessage.toCodecContext(): IExternalCodecContext {
     val properties = mapOf(
-        ExternalCodecContextProperty.MESSAGE_PROPERTIES.propertyName to metadata.propertiesMap
+        MESSAGE_PROPERTIES.propertyName to metadata.propertiesMap
     )
     return metadata.id.direction.toRole().toContext(properties)
 }
 
 fun Message.toCodecContext(): IExternalCodecContext {
     val properties = mapOf(
-        ExternalCodecContextProperty.MESSAGE_PROPERTIES.propertyName to metadata.propertiesMap
+        MESSAGE_PROPERTIES.propertyName to metadata.propertiesMap
     )
     return metadata.id.direction.toRole().toContext(properties)
 }

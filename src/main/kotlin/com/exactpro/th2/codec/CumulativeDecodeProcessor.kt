@@ -32,7 +32,7 @@ import mu.KotlinLogging
  * This processor joins data from all messages in [RawMessageBatch] to a single buffer.
  * After that, it decodes the cumulated buffer using [com.exactpro.sf.externalapi.codec.IExternalCodec].
  * The result of the decoding must produce the same number of messages as [RawMessageBatch] has.
- * Also, the raw data from decoded messages must match the data from corresponded [RawMessage].
+ * Also, the raw data from decoded messages must match the data from corresponding [RawMessage].
  */
 class CumulativeDecodeProcessor(
     codecFactory: IExternalCodecFactory,

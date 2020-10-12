@@ -28,8 +28,8 @@ import com.exactpro.th2.infra.grpc.RawMessageBatch
 import mu.KotlinLogging
 
 /**
- * This processor decoded each [RawMessage] from [RawMessageBatch] separately.
- * The raw data of the decoded message must
+ * This processor decodes each [RawMessage] from [RawMessageBatch] separately.
+ * The raw data of the decoded message must be equal to the original data from [RawMessage].
  */
 class SequentialDecodeProcessor(
     codecFactory: IExternalCodecFactory,
@@ -80,7 +80,7 @@ class SequentialDecodeProcessor(
         val decodedMessage = when {
             decodedMessages.size == 1 -> decodedMessages[0]
             decodedMessages.isEmpty() -> throw DecodeException("No message was decoded")
-            else -> throw DecodeException("More than one message is decoded: ${decodedMessages.size}")
+            else -> throw DecodeException("More than one message was decoded: ${decodedMessages.size}")
         }
         val rawMessage = decodedMessage.metaData.rawMessage
             ?: throw DecodeException("Raw data is null for message: ${decodedMessage.name}")
