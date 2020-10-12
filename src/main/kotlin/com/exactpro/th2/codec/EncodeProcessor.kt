@@ -19,6 +19,7 @@ package com.exactpro.th2.codec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.ProtoToIMessageConverter
+import com.exactpro.th2.codec.util.codecContext
 import com.exactpro.th2.infra.grpc.*
 import com.google.protobuf.ByteString
 import com.google.protobuf.util.JsonFormat
@@ -38,7 +39,7 @@ class EncodeProcessor(
             val convertedSourceMessage = converter.fromProtoMessage(protoMessage, true).also {
                 logger.debug { "converted source message '${it.name}': $it" }
             }
-            val encodedMessageData = getCodec().encode(convertedSourceMessage)
+            val encodedMessageData = getCodec().encode(convertedSourceMessage, source.codecContext)
             rawMessageBatchBuilder.addMessages(RawMessage.newBuilder()
                 .setBody(ByteString.copyFrom(encodedMessageData))
                 .setMetadata(toRawMessageMetadataBuilder(protoMessage).also {
