@@ -15,4 +15,4 @@ ENV RABBITMQ_HOST=rabbitmq \
     CODEC_CLASS_NAME=someClassName
 WORKDIR /home
 COPY --from=build /home/gradle/build/docker .
-ENTRYPOINT ["/home/service/bin/service", "--sailfish-codec-config-path=codec_config.yml" , "--config-path=config.yml"]
+ENTRYPOINT ["/home/service/bin/service", "--sailfish-codec-config-path=codec_config.yml" , "--config-path=config.yml", "--application-properties-path=application_properties.yml"]

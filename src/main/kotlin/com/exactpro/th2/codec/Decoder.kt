@@ -49,7 +49,7 @@ class Decoder(codecParameters: CodecParameters, applicationContext: ApplicationC
 
     init {
         messageHandler = object : MessageHandler<RawMessageBatch, MessageBatch>(
-            DecodeProcessor(
+            CumulativeDecodeProcessor(
                 applicationContext.codecFactory,
                 applicationContext.codecSettings,
                 applicationContext.messageToProtoConverter

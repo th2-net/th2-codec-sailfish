@@ -15,15 +15,15 @@
  */
 package com.exactpro.th2.codec.util
 
+import com.exactpro.sf.externalapi.codec.ExternalCodecContextProperty.MESSAGE_PROPERTIES
 import com.exactpro.sf.externalapi.codec.IExternalCodecContext
 import com.exactpro.sf.externalapi.codec.IExternalCodecContext.Role
 import com.exactpro.sf.externalapi.codec.impl.ExternalCodecContext
 import com.exactpro.th2.infra.grpc.Direction
+import com.exactpro.th2.infra.grpc.Message
 import com.exactpro.th2.infra.grpc.MessageBatch
+import com.exactpro.th2.infra.grpc.RawMessage
 import com.exactpro.th2.infra.grpc.RawMessageBatch
-
-private val RECEIVER_CONTEXT = ExternalCodecContext(Role.RECEIVER)
-private val SENDER_CONTEXT = ExternalCodecContext(Role.SENDER)
 
 private fun Direction.toRole(): Role = when (this) {
     Direction.FIRST -> Role.RECEIVER
@@ -31,10 +31,7 @@ private fun Direction.toRole(): Role = when (this) {
     else -> throw IllegalStateException("Unsupported direction: $this")
 }
 
-private fun Role.toContext(): IExternalCodecContext = when (this) {
-    Role.RECEIVER -> RECEIVER_CONTEXT
-    Role.SENDER -> SENDER_CONTEXT
-}
+private fun Role.toContext(properties: Map<String, Any> = emptyMap()): IExternalCodecContext = ExternalCodecContext(this, properties)
 
 val RawMessageBatch.codecContext: IExternalCodecContext
     // assuming that we wouldn't have messages with different directions in a single batch
@@ -43,3 +40,17 @@ val RawMessageBatch.codecContext: IExternalCodecContext
 val MessageBatch.codecContext: IExternalCodecContext
     // assuming that we wouldn't have messages with different directions in a single batch
     get() = messagesList.first().metadata.id.direction.toRole().toContext()
+
+fun RawMessage.toCodecContext(): IExternalCodecContext {
+    val properties = mapOf(
+        MESSAGE_PROPERTIES.propertyName to metadata.propertiesMap
+    )
+    return metadata.id.direction.toRole().toContext(properties)
+}
+
+fun Message.toCodecContext(): IExternalCodecContext {
+    val properties = mapOf(
+        MESSAGE_PROPERTIES.propertyName to metadata.propertiesMap
+    )
+    return metadata.id.direction.toRole().toContext(properties)
+}

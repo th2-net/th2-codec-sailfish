@@ -24,16 +24,21 @@ import com.exactpro.th2.codec.util.codecContext
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.codec.util.toHexString
 import com.exactpro.th2.infra.grpc.MessageBatch
-import com.exactpro.th2.infra.grpc.MessageMetadata
 import com.exactpro.th2.infra.grpc.RawMessage
 import com.exactpro.th2.infra.grpc.RawMessageBatch
 import mu.KotlinLogging
 
-class DecodeProcessor(
+/**
+ * This processor joins data from all messages in [RawMessageBatch] to a single buffer.
+ * After that, it decodes the cumulated buffer using [com.exactpro.sf.externalapi.codec.IExternalCodec].
+ * The result of the decoding must produce the same number of messages as [RawMessageBatch] has.
+ * Also, the raw data from decoded messages must match the data from corresponding [RawMessage].
+ */
+class CumulativeDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    private val messageToProtoConverter: IMessageToProtoConverter
-) : AbstractCodecProcessor<RawMessageBatch, MessageBatch>(codecFactory, codecSettings) {
+    messageToProtoConverter: IMessageToProtoConverter
+) : RawBatchDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter) {
 
     private val logger = KotlinLogging.logger { }
 
@@ -82,13 +87,6 @@ class DecodeProcessor(
             }
         }
         return true
-    }
-
-    private fun toMessageMetadataBuilder(sourceMessage: RawMessage): MessageMetadata.Builder {
-        return MessageMetadata.newBuilder()
-            .setId(sourceMessage.metadata.id)
-            .setTimestamp(sourceMessage.metadata.timestamp)
-            .putAllProperties(sourceMessage.metadata.propertiesMap)
     }
 
     private fun joinBatchData(rawMessageBatch: RawMessageBatch): ByteArray {
