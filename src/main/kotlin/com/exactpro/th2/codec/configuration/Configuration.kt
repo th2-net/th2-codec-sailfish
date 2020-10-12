@@ -35,6 +35,9 @@ import java.nio.file.Files.newInputStream
 import java.nio.file.Path
 import java.nio.file.Paths
 
+internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(YAMLFactory()).apply { registerModule(KotlinModule()) }
+    .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
+
 data class Configuration(
         var eventStore: EventStoreParameters,
         var codecClassName: String,
@@ -54,9 +57,6 @@ data class Configuration(
     val logger = KotlinLogging.logger { }
 
     companion object {
-        private val objectMapper = ObjectMapper(YAMLFactory()).apply { registerModule(KotlinModule()) }
-            .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
-
         private const val EVENT_STORE_HOST = "EVENT_STORE_HOST"
         private const val EVENT_STORE_PORT = "EVENT_STORE_PORT"
         private const val CODEC_CLASS_NAME = "CODEC_CLASS_NAME"
@@ -127,7 +127,7 @@ data class Configuration(
 
         private fun parse(file: Path): Configuration {
             try {
-                return objectMapper.readValue(newInputStream(file), Configuration::class.java)
+                return OBJECT_MAPPER.readValue(newInputStream(file), Configuration::class.java)
             } catch (exception: Exception) {
                 when (exception) {
                     is IOException,
@@ -149,7 +149,7 @@ data class Configuration(
                 return mapOf()
             }
             try {
-                return objectMapper.readValue(
+                return OBJECT_MAPPER.readValue(
                         newInputStream(codecParameterFile),
                         object : TypeReference<LinkedHashMap<String, String>>() {}
                 )

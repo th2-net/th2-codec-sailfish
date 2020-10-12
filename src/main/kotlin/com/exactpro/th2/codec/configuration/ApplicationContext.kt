@@ -25,9 +25,14 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.IMessageToProtoConverter
 import com.exactpro.th2.ProtoToIMessageConverter
+import com.exactpro.th2.codec.AbstractCodecProcessor
+import com.exactpro.th2.codec.CumulativeDecodeProcessor
 import com.exactpro.th2.codec.DefaultMessageFactoryProxy
+import com.exactpro.th2.codec.SequentialDecodeProcessor
 import com.exactpro.th2.eventstore.grpc.EventStoreServiceGrpc.EventStoreServiceFutureStub
 import com.exactpro.th2.eventstore.grpc.EventStoreServiceGrpc.newFutureStub
+import com.exactpro.th2.infra.grpc.MessageBatch
+import com.exactpro.th2.infra.grpc.RawMessageBatch
 import com.rabbitmq.client.ConnectionFactory
 import io.grpc.ManagedChannelBuilder.forAddress
 import mu.KotlinLogging
@@ -56,6 +61,12 @@ class ApplicationContext(
     val connectionFactory: ConnectionFactory,
     val eventConnector: EventStoreServiceFutureStub?
 ) {
+    fun createDecodeProcessor(type: ProcessorType): AbstractCodecProcessor<RawMessageBatch, MessageBatch> {
+        return when (type) {
+            ProcessorType.CUMULATIVE -> CumulativeDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter)
+            ProcessorType.SEQUENTIAL -> SequentialDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter)
+        }
+    }
 
     companion object {
         private const val CODEC_IMPLEMENTATION_PATH = "codec_implementation"

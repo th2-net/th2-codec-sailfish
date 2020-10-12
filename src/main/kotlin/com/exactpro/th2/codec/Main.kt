@@ -26,6 +26,7 @@ import com.github.ajalt.clikt.parameters.options.option
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
+import java.nio.file.Paths
 import java.time.LocalDateTime
 
 private val logger = KotlinLogging.logger {}
@@ -37,19 +38,26 @@ fun main(args: Array<String>) {
 class CodecCommand : CliktCommand() {
     private val configPath: String? by option(help = "Path to configuration file")
     private val sailfishCodecConfigPath: String? by option(help = "Path to sailfish codec configuration file")
+    private val applicationPropertiesPath: String? by option(help = "Path to file with application configuration")
     override fun run() = runBlocking {
         try {
-            runProgram(configPath, sailfishCodecConfigPath)
+            runProgram(configPath, sailfishCodecConfigPath, applicationPropertiesPath)
         } catch (exception: Exception) {
             logger.error(exception) { "fatal error. Exit the program" }
         }
     }
 
     @ObsoleteCoroutinesApi
-    private fun runProgram(configPath: String?, sailfishCodecParamsPath: String?) {
+    private fun runProgram(configPath: String?, sailfishCodecParamsPath: String?, applicationPropertiesPath: String?) {
         val configuration = Configuration.create(configPath, sailfishCodecParamsPath)
         logger.debug { "Configuration: $configuration" }
         val applicationContext = ApplicationContext.create(configuration)
+
+        val applicationProperties = applicationPropertiesPath?.let {
+            ApplicationProperties.load(Paths.get(it))
+        } ?: ApplicationProperties()
+        logger.debug { "Application properties: $applicationProperties" }
+
         val rootEventId = createAndStoreRootEvent(applicationContext)
         if (configuration.decoder == null) {
             logger.info { "'decoder' element is not set in the configuration. Skip creating 'decoder" }
@@ -57,11 +65,7 @@ class CodecCommand : CliktCommand() {
             createAndStartCodec(configuration.decoder!!, "decoder", applicationContext, rootEventId)
             { _: CodecParameters, _: ApplicationContext, _: EventID? ->
                 SyncDecoder(configuration.decoder!!, applicationContext,
-                    DecodeProcessor(
-                        applicationContext.codecFactory,
-                        applicationContext.codecSettings,
-                        applicationContext.messageToProtoConverter
-                    ),
+                    applicationContext.createDecodeProcessor(applicationProperties.decodeProcessorType),
                     rootEventId).also { it.start(configuration.rabbitMQ) }
             }
         }
@@ -79,12 +83,17 @@ class CodecCommand : CliktCommand() {
                     rootEventId).also { it.start(configuration.rabbitMQ) }
             }
         }
-        createGeneralDecoder(applicationContext, configuration, rootEventId)
-        createGeneralEncoder(applicationContext, configuration, rootEventId)
+        createGeneralDecoder(applicationContext, configuration, applicationProperties, rootEventId)
+        createGeneralEncoder(applicationContext, configuration, applicationProperties, rootEventId)
         logger.info { "codec started" }
     }
 
-    private fun createGeneralEncoder(context: ApplicationContext, configuration: Configuration, rootEventId: EventID?) {
+    private fun createGeneralEncoder(
+        context: ApplicationContext,
+        configuration: Configuration,
+        applicationProperties: ApplicationProperties,
+        rootEventId: EventID?
+    ) {
         val generalEncodeParameters = createGeneralEncodeParameters(configuration)
         createAndStartCodec (generalEncodeParameters, "general-encoder", context, rootEventId
         )
@@ -101,18 +110,19 @@ class CodecCommand : CliktCommand() {
         }
     }
 
-    private fun createGeneralDecoder(context: ApplicationContext, configuration: Configuration, rootEventId: EventID?) {
+    private fun createGeneralDecoder(
+        context: ApplicationContext,
+        configuration: Configuration,
+        applicationProperties: ApplicationProperties,
+        rootEventId: EventID?
+    ) {
         val generalDecodeParameters = createGeneralDecodeParameters(configuration)
         createAndStartCodec (generalDecodeParameters, "general-decoder", context, rootEventId
         )
         { _: CodecParameters, _: ApplicationContext, _: EventID? ->
             SyncDecoder(
                 generalDecodeParameters, context,
-                DecodeProcessor(
-                    context.codecFactory,
-                    context.codecSettings,
-                    context.messageToProtoConverter
-                ),
+                context.createDecodeProcessor(applicationProperties.decodeProcessorType),
                 rootEventId
             ).also { it.start(configuration.rabbitMQ) }
         }
