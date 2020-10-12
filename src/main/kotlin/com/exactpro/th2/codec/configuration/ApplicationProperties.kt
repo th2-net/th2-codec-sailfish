@@ -17,6 +17,7 @@
 package com.exactpro.th2.codec.configuration
 
 import com.fasterxml.jackson.module.kotlin.readValue
+import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -28,7 +29,8 @@ data class ApplicationProperties(
 ) {
     companion object {
         @JvmStatic
-        fun load(path: Path): ApplicationProperties = OBJECT_MAPPER.readValue(path.toFile())
+        fun load(path: Path): ApplicationProperties =
+            if (Files.exists(path)) OBJECT_MAPPER.readValue(path.toFile()) else ApplicationProperties()
     }
 }
 
