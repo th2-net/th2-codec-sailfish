@@ -42,5 +42,20 @@ directions:: filtering by direction value, has list parameter; for example: "par
 directions:: filtering by direction value, has list parameter; for example: "parameters": { "directions": ["FIRST", "SECOND"]}
 messageType:: filtering by message type; for example: "parameters":{ "messageType": "SomeMessageName"}
 
+= Application properties
 
+Use application parameter *--application-properties-path* to specify the path to file with application properties.
+They are used to switching the behavior of the codec during the decoding.
+*NOTE:* it is probably the temporal solution and in the future is will be removed.
 
+== Format
+```yaml
+---
+decodeProcessorType: CUMULATIVE # SEQUENTIAL
+```
+
+*decodeProcessorType* - defines the behavior for codec during decoding.
+
+_CUMULATIVE_ - join all data from received batch and try to decode it as one piece (default).
+
+_SEQUENTIAL_ - decodes each message in received batch seperatly.
