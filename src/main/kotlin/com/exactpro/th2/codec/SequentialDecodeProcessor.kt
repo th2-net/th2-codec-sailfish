@@ -21,6 +21,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.IMessageToProtoConverter
 import com.exactpro.th2.codec.util.toCodecContext
+import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.infra.grpc.Message
 import com.exactpro.th2.infra.grpc.MessageBatch
 import com.exactpro.th2.infra.grpc.RawMessage
@@ -56,7 +57,8 @@ class SequentialDecodeProcessor(
 
     private fun processSingle(rawMessage: RawMessage): Message? {
         try {
-            val data = rawMessage.toByteArray()
+            val data: ByteArray = rawMessage.body.toByteArray()
+            logger.debug { "Decoding message: ${rawMessage.toDebugString()}" }
             val decodedMessages = getCodec().decode(data, rawMessage.toCodecContext())
             logger.debug { "Decoded messages: $decodedMessages" }
             val decodedMessage: IMessage = checkCountAndRawData(decodedMessages, data)
