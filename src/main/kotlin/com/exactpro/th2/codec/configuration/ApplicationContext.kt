@@ -23,9 +23,11 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.IMessageToProtoConverter
 import com.exactpro.th2.ProtoToIMessageConverter
 import com.exactpro.th2.codec.DefaultMessageFactoryProxy
-import com.exactpro.th2.eventstore.grpc.AsyncEventStoreServiceService
+import com.exactpro.th2.infra.grpc.EventBatch
 import com.exactpro.th2.schema.dictionary.DictionaryType
+import com.exactpro.th2.schema.event.EventBatchRouter
 import com.exactpro.th2.schema.factory.CommonFactory
+import com.exactpro.th2.schema.message.MessageRouter
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
@@ -41,7 +43,7 @@ class ApplicationContext(
     val codecSettings: IExternalCodecSettings,
     val protoToIMessageConverter: ProtoToIMessageConverter,
     val messageToProtoConverter: IMessageToProtoConverter,
-    val eventStoreService: AsyncEventStoreServiceService?
+    val eventBatchRouter: MessageRouter<EventBatch>?
 ) {
 
     companion object {
@@ -52,7 +54,8 @@ class ApplicationContext(
 
         fun create(configuration: Configuration, commonFactory: CommonFactory): ApplicationContext {
             val codecFactory = loadFactory(configuration.codecClassName)
-            val eventStoreService = commonFactory.grpcRouter.getService(AsyncEventStoreServiceService::class.java)
+
+            val eventBatchRouter = commonFactory.eventBatchRouter
             val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
             val codec = codecFactory.createCodec(codecSettings)
             val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
@@ -69,7 +72,7 @@ class ApplicationContext(
                 codecSettings,
                 protoConverter,
                 iMessageConverter,
-                eventStoreService
+                eventBatchRouter
             )
         }
 

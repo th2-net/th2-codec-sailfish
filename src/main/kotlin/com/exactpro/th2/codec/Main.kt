@@ -18,6 +18,7 @@ import com.exactpro.th2.codec.configuration.Configuration
 import com.exactpro.th2.eventstore.grpc.Response
 import com.exactpro.th2.eventstore.grpc.StoreEventRequest
 import com.exactpro.th2.infra.grpc.Event
+import com.exactpro.th2.infra.grpc.EventBatch
 import com.exactpro.th2.infra.grpc.EventID
 import com.exactpro.th2.infra.grpc.EventStatus.SUCCESS
 import com.exactpro.th2.schema.factory.CommonFactory
@@ -148,46 +149,26 @@ class CodecCommand : CliktCommand() {
 
 
     private fun createAndStoreRootEvent(applicationContext: ApplicationContext): EventID? {
-        val eventStoreService = applicationContext.eventStoreService
-        if (eventStoreService != null) {
+        val eventBatchRouter = applicationContext.eventBatchRouter
+        if (eventBatchRouter != null) {
             try {
+                val eventId = EventID.newBuilder().setId(UUID.randomUUID().toString()).build()
 
-                var response: Response? = null
-
-                eventStoreService.storeEvent(
-                    StoreEventRequest.newBuilder()
-                        .setEvent(
-                            Event.newBuilder()
-                                .setId(EventID.newBuilder().setId(UUID.randomUUID().toString()))
-                                .setStatus(SUCCESS)
-                                .setName("Codec_${applicationContext.codec::class.java.simpleName}" +
-                                        "_${LocalDateTime.now()}")
-                                .setType("CodecRoot")
-                                .build()
-                        )
-                        .build(),
-                    object : StreamObserver<Response> {
-                        override fun onCompleted() {}
-                        override fun onNext(r : Response) {
-                            response = r
-                        }
-                        override fun onError(e: Throwable?) {
-                            throw(e!!)
-                        }
-                    }
+                eventBatchRouter.send(
+                    EventBatch.newBuilder().addEvents(
+                        Event.newBuilder()
+                            .setId(eventId)
+                            .setStatus(SUCCESS)
+                            .setName(
+                                "Codec_${applicationContext.codec::class.java.simpleName}" +
+                                        "_${LocalDateTime.now()}"
+                            )
+                            .setType("CodecRoot")
+                            .build()
+                    ).build(),
+                    "publish", "event"
                 )
-
-                val timeout = System.currentTimeMillis() + 5000
-                while (System.currentTimeMillis() < timeout && response == null) {
-                    Thread.sleep(100)
-                }
-
-                var eventId = if (response == null) null else EventID.newBuilder().setId(response?.id?.value).build()
-                if (eventId != null)
-                    logger.info("stored root event, $eventId")
-                else
-                    logger.warn("timeout storing root event" )
-
+                logger.info("stored root event, $eventId")
                 return eventId
             } catch (exception: Exception) {
                 logger.warn(exception) { "could not store root event" }

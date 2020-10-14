@@ -15,10 +15,8 @@ package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.codec.util.toDebugString
-import com.exactpro.th2.eventstore.grpc.AsyncEventStoreServiceService
-import com.exactpro.th2.eventstore.grpc.Response
-import com.exactpro.th2.eventstore.grpc.StoreEventRequest
 import com.exactpro.th2.infra.grpc.Event
+import com.exactpro.th2.infra.grpc.EventBatch
 import com.exactpro.th2.infra.grpc.EventID
 import com.exactpro.th2.infra.grpc.EventStatus
 import com.exactpro.th2.schema.message.MessageListener
@@ -27,7 +25,6 @@ import com.google.protobuf.ByteString.copyFrom
 import com.google.protobuf.GeneratedMessageV3
 import com.google.protobuf.InvalidProtocolBufferException
 import com.rabbitmq.client.Delivery
-import io.grpc.stub.StreamObserver
 import mu.KotlinLogging
 import java.io.IOException
 import java.nio.charset.StandardCharsets.UTF_8
@@ -42,7 +39,7 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
 ): AutoCloseable, MessageListener<T> {
 
     protected val logger = KotlinLogging.logger {}
-    protected val eventStoreService: AsyncEventStoreServiceService? = applicationContext.eventStoreService
+    protected val eventBatchRouter: MessageRouter<EventBatch>? = applicationContext.eventBatchRouter
     protected val context = applicationContext;
 
     protected var tagretAttributes : String = ""
@@ -104,28 +101,18 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
     }
 
     private fun createAndStoreErrorEvent(exception: CodecException, parentEventID: EventID) {
-        if (eventStoreService != null) {
+        if (eventBatchRouter != null) {
             try {
-                eventStoreService.storeEvent(
-                    StoreEventRequest.newBuilder()
-                        .setEvent(
-                            Event.newBuilder()
-                                .setName("Codec error")
-                                .setType("CodecError")
-                                .setStatus(EventStatus.FAILED)
-                                .setParentId(parentEventID)
-                                .setBody(copyFrom("{\"message\":\"${exception.getAllMessages()}\"}", UTF_8))
-                                .build()
-                        )
-                        .build(),
-                    object : StreamObserver<Response>
-                    {
-                        override fun onCompleted() {}
-                        override fun onNext(r : Response) {}
-                        override fun onError(e: Throwable?) {
-                            throw (e!!)
-                        }
-                    }
+                eventBatchRouter.send(EventBatch.newBuilder().addEvents(
+                    Event.newBuilder()
+                        .setName("Codec error")
+                        .setType("CodecError")
+                        .setStatus(EventStatus.FAILED)
+                        .setParentId(parentEventID)
+                        .setBody(copyFrom("{\"message\":\"${exception.getAllMessages()}\"}", UTF_8))
+                        .build()
+                ).build(),
+                    "publish", "event"
                 )
             } catch (exception: Exception) {
                 logger.warn(exception) { "could not send codec error event" }
