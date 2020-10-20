@@ -15,7 +15,9 @@ package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.codec.util.toDebugString
-import com.exactpro.th2.infra.grpc.Event
+import com.exactpro.th2.common.event.Event
+import com.exactpro.th2.common.event.Event.Status.FAILED
+import com.exactpro.th2.common.event.bean.Message
 import com.exactpro.th2.infra.grpc.EventBatch
 import com.exactpro.th2.infra.grpc.EventID
 import com.exactpro.th2.infra.grpc.EventStatus
@@ -104,13 +106,14 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
         if (eventBatchRouter != null) {
             try {
                 eventBatchRouter.send(EventBatch.newBuilder().addEvents(
-                    Event.newBuilder()
-                        .setName("Codec error")
-                        .setType("CodecError")
-                        .setStatus(EventStatus.FAILED)
-                        .setParentId(parentEventID)
-                        .setBody(copyFrom("{\"message\":\"${exception.getAllMessages()}\"}", UTF_8))
-                        .build()
+                    Event.start()
+                        .name("Codec error")
+                        .type("CodecError")
+                        .status(FAILED)
+                        .bodyData(Message().apply {
+                            data = exception.getAllMessages()
+                        })
+                        .toProtoEvent(parentEventID.id)
                 ).build(),
                     "publish", "event"
                 )

@@ -15,21 +15,16 @@ package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.codec.configuration.Configuration
-import com.exactpro.th2.eventstore.grpc.Response
-import com.exactpro.th2.eventstore.grpc.StoreEventRequest
-import com.exactpro.th2.infra.grpc.Event
+import com.exactpro.th2.common.event.Event
 import com.exactpro.th2.infra.grpc.EventBatch
 import com.exactpro.th2.infra.grpc.EventID
-import com.exactpro.th2.infra.grpc.EventStatus.SUCCESS
 import com.exactpro.th2.schema.factory.CommonFactory
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
-import io.grpc.stub.StreamObserver
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import java.time.LocalDateTime
-import java.util.*
 
 private val logger = KotlinLogging.logger {}
 
@@ -152,24 +147,19 @@ class CodecCommand : CliktCommand() {
         val eventBatchRouter = applicationContext.eventBatchRouter
         if (eventBatchRouter != null) {
             try {
-                val eventId = EventID.newBuilder().setId(UUID.randomUUID().toString()).build()
+                var event = Event.start()
+                    .name("Codec_${applicationContext.codec::class.java.simpleName}_${LocalDateTime.now()}")
+                    .type("CodecRoot")
+                    .toProtoEvent(null)
 
                 eventBatchRouter.send(
-                    EventBatch.newBuilder().addEvents(
-                        Event.newBuilder()
-                            .setId(eventId)
-                            .setStatus(SUCCESS)
-                            .setName(
-                                "Codec_${applicationContext.codec::class.java.simpleName}" +
-                                        "_${LocalDateTime.now()}"
-                            )
-                            .setType("CodecRoot")
-                            .build()
-                    ).build(),
+                    EventBatch.newBuilder()
+                        .addEvents(event)
+                        .build(),
                     "publish", "event"
                 )
-                logger.info("stored root event, $eventId")
-                return eventId
+                logger.info("stored root event, {}", event.id)
+                return event.id
             } catch (exception: Exception) {
                 logger.warn(exception) { "could not store root event" }
             }
