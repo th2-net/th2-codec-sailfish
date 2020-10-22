@@ -11,6 +11,72 @@ Codec operates with arrays of messages (parsed batch to raw batch in case of enc
 
 To start a codec it is required to place external codec api implementation jar with dependencies to 'codec_implementation' folder and dictionaries in xml format to 'dictionaries' folder. These folder must be placed in the working directory of codec  application.
 
+= Configuration
+== Message Router
+Example of `mq.json` config file:
+
+[source]
+----
+{
+    "queues": {
+        "encodeQueueIn":{
+            "name": "encodeQueueIn",
+            "queue": "encodeQueueIn",
+            "exchange": "exchange",
+            "attributes": ["subscribe", "parsed", "encode_in"]
+        },
+        "encodeQueueOut": {
+            "name": "encodeQueueOut",
+            "queue": "encodeQueueOut",
+            "exchange": "exchange",
+            "attributes": ["publish", "raw", "encode_out"]
+        },
+        "decodeQueueIn": {
+            "name": "decodeQueueIn",
+            "queue": "decodeQueueIn",
+            "exchange": "exchange",
+            "attributes": ["subscribe", "raw", "decode_in"]
+        },
+        "decodeQueueOut": {
+            "name": "decodeQueueOut",
+            "queue": "decodeQueueOut",
+            "exchange": "exchange",
+            "attributes": ["publish", "parsed", "decode_out"]
+        },
+        "generalEncodeQueueIn":{
+            "name": "generalEncodeQueueIn",
+            "queue": "generalEncodeQueueIn",
+            "exchange": "exchange",
+            "attributes": ["subscribe", "parsed", "general_encode_in"]
+        },
+        "generalEncodeQueueOut": {
+            "name": "generalEncodeQueueOut",
+            "queue": "generalEncodeQueueOut",
+            "exchange": "exchange",
+            "attributes": ["publish", "raw", "general_encode_out"]
+        },
+        "generalDecodeQueueIn": {
+            "name": "generalDecodeQueueIn",
+            "queue": "generalDecodeQueueIn",
+            "exchange": "exchange",
+            "attributes": ["subscribe", "raw", "general_decode_in"]
+        },
+        "generalDecodeQueueOut": {
+            "name": "generalDecodeQueueOut",
+            "queue": "generalDecodeQueueOut",
+            "exchange": "exchange",
+            "attributes": ["publish", "parsed", "general_decode_out"]
+        },
+        "eventQueue": {
+            "name": "eventQueue",
+            "queue": "eventQueue",
+            "exchange": "exchange",
+            "attributes": ["publish", "event"]
+        }
+    }
+}
+----
+
 = Environment variables
 
 ```
