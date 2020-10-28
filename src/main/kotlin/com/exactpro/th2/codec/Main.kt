@@ -26,6 +26,7 @@ import mu.KotlinLogging
 import java.time.LocalDateTime
 import java.util.Deque
 import java.util.concurrent.ConcurrentLinkedDeque
+import kotlin.concurrent.thread
 import kotlin.system.exitProcess
 
 private val logger = KotlinLogging.logger {}
@@ -41,24 +42,19 @@ class CodecCommand : CliktCommand() {
     private val resources: Deque<() -> Unit> = ConcurrentLinkedDeque()
 
     init {
-        Runtime.getRuntime().addShutdownHook(object : Thread() {
-            override fun run() {
+        Runtime.getRuntime().addShutdownHook(thread(start = false, name = "shutdown") {
                 try {
                     logger.info { "Shutdown start" }
-                    var unit: (() -> Unit)? = resources.pollLast()
-                    with(unit != null) {
+                    for (action in resources.descendingIterator()) {
                         try {
-                            unit?.invoke()
+                            action.invoke()
                         } catch (e: RuntimeException) {
                             logger.error(e.message, e)
-                        } finally {
-                            unit = resources.pollLast()
                         }
                     }
                 } finally {
                     logger.info { "Shutdown end" }
                 }
-            }
         })
     }
 
