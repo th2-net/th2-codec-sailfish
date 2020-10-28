@@ -45,12 +45,8 @@ class CodecCommand : CliktCommand() {
         Runtime.getRuntime().addShutdownHook(thread(start = false, name = "shutdown") {
                 try {
                     logger.info { "Shutdown start" }
-                    for (action in resources.descendingIterator()) {
-                        try {
-                            action.invoke()
-                        } catch (e: RuntimeException) {
-                            logger.error(e.message, e)
-                        }
+                    resources.descendingIterator().forEach { action ->
+                        runCatching(action).onFailure { logger.error(it.message, it) }
                     }
                 } finally {
                     logger.info { "Shutdown end" }
