@@ -61,3 +61,40 @@ spec:
       connection-type: mq
       attributes: ['general_decoder_out', 'parsed', 'publish']
 ```
+
+## Message routing
+
+Schema API allows configuring routing streams of messages via links between connections and filters on pins.
+Let's consider some examples of routing in codec box.
+
+### Split on 'publish' pins
+
+For example, you have got big source data stream, and you want to split them on some pins via session alias.
+You can declare multiple pins with attributes ['decoder_out', 'parsed', 'publish'] and filters instead of common pin or in addition to it.
+Every decoded messages will be direct to all declared pins and will send to MQ only if pass filter.
+
+```yaml
+apiVersion: th2.exactpro.com/v1
+kind: Th2GenericBox
+metadata:
+  name: codec
+spec:
+  pins:
+    # decoder
+    - name: out_codec_decode_first_session_alias
+      connection-type: mq
+      attributes: ['decoder_out', 'parsed', 'publish', 'first_session_alias']
+      filters:
+        - metadata:
+            - field-name: session_alias
+              expected-value: first_session_alias
+              operation: EQUAL
+    - name: out_codec_decode_secon_session_alias
+      connection-type: mq
+      attributes: ['decoder_out', 'parsed', 'publish', 'second_session_alias']
+      filters:
+        - metadata:
+            - field-name: session_alias
+              expected-value: second_session_alias
+              operation: EQUAL
+```
