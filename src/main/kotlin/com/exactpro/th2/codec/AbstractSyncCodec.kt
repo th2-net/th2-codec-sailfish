@@ -18,18 +18,15 @@ import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.Event
 import com.exactpro.th2.common.event.Event.Status.FAILED
 import com.exactpro.th2.common.event.bean.Message
-import com.exactpro.th2.infra.grpc.EventBatch
-import com.exactpro.th2.infra.grpc.EventID
-import com.exactpro.th2.infra.grpc.EventStatus
-import com.exactpro.th2.schema.message.MessageListener
-import com.exactpro.th2.schema.message.MessageRouter
-import com.google.protobuf.ByteString.copyFrom
+import com.exactpro.th2.common.grpc.EventBatch
+import com.exactpro.th2.common.grpc.EventID
+import com.exactpro.th2.common.schema.message.MessageListener
+import com.exactpro.th2.common.schema.message.MessageRouter
 import com.google.protobuf.GeneratedMessageV3
 import com.google.protobuf.InvalidProtocolBufferException
 import com.rabbitmq.client.Delivery
 import mu.KotlinLogging
 import java.io.IOException
-import java.nio.charset.StandardCharsets.UTF_8
 import java.util.concurrent.TimeoutException
 
 abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
@@ -105,7 +102,8 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
     private fun createAndStoreErrorEvent(exception: CodecException, parentEventID: EventID) {
         if (eventBatchRouter != null) {
             try {
-                eventBatchRouter.send(EventBatch.newBuilder().addEvents(
+                eventBatchRouter.send(
+                    EventBatch.newBuilder().addEvents(
                     Event.start()
                         .name("Codec error")
                         .type("CodecError")

@@ -18,8 +18,8 @@ package com.exactpro.th2.codec
 
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
-import com.exactpro.th2.ProtoToIMessageConverter
-import com.exactpro.th2.infra.grpc.*
+import com.exactpro.th2.common.grpc.*
+import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.google.protobuf.ByteString
 import com.google.protobuf.util.JsonFormat
 import mu.KotlinLogging
@@ -39,7 +39,8 @@ class EncodeProcessor(
                 logger.debug { "converted source message '${it.name}': $it" }
             }
             val encodedMessageData = getCodec().encode(convertedSourceMessage)
-            rawMessageBatchBuilder.addMessages(RawMessage.newBuilder()
+            rawMessageBatchBuilder.addMessages(
+                RawMessage.newBuilder()
                 .setBody(ByteString.copyFrom(encodedMessageData))
                 .setMetadata(toRawMessageMetadataBuilder(protoMessage).also {
                     logger.debug {

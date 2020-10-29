@@ -14,10 +14,10 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.infra.grpc.EventID
-import com.exactpro.th2.infra.grpc.MessageBatch
-import com.exactpro.th2.infra.grpc.RawMessageBatch
-import com.exactpro.th2.schema.message.MessageRouter
+import com.exactpro.th2.common.grpc.EventID
+import com.exactpro.th2.common.grpc.MessageBatch
+import com.exactpro.th2.common.grpc.RawMessageBatch
+import com.exactpro.th2.common.schema.message.MessageRouter
 
 class SyncDecoder(
     sourceRouter: MessageRouter<out RawMessageBatch>,

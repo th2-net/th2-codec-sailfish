@@ -13,7 +13,7 @@
 
 package com.exactpro.th2.codec.configuration
 
-import com.exactpro.th2.schema.factory.CommonFactory
+import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES

@@ -21,11 +21,10 @@ import com.exactpro.sf.common.messages.structures.loaders.XmlDictionaryStructure
 import com.exactpro.sf.configuration.suri.SailfishURI
 import com.exactpro.sf.configuration.workspace.FolderType
 import com.exactpro.sf.externalapi.codec.*
-import com.exactpro.th2.schema.dictionary.DictionaryType.LEVEL1
-import com.exactpro.th2.schema.dictionary.DictionaryType.MAIN
-import com.exactpro.th2.schema.factory.CommonFactory
-import com.exactpro.th2.schema.grpc.configuration.GrpcRouterConfiguration
-import com.exactpro.th2.schema.grpc.router.GrpcRouter
+import com.exactpro.th2.common.schema.dictionary.DictionaryType
+import com.exactpro.th2.common.schema.factory.CommonFactory
+import com.exactpro.th2.common.schema.grpc.configuration.GrpcRouterConfiguration
+import com.exactpro.th2.common.schema.grpc.router.GrpcRouter
 import com.google.common.collect.HashBasedTable
 import com.google.common.collect.Table
 import io.grpc.BindableService
@@ -62,8 +61,8 @@ class TestApplicationContext {
         val mainDictionaryStructure = mainDictionary.byteInputStream().use(XmlDictionaryStructureLoader()::load)
         val level1DictionaryStructure = level1Dictionary.byteInputStream().use(XmlDictionaryStructureLoader()::load)
 
-        `when`(commonFactory.readDictionary(eq(MAIN))).thenReturn(mainDictionary.byteInputStream())
-        `when`(commonFactory.readDictionary(eq(LEVEL1))).thenReturn(level1Dictionary.byteInputStream())
+        `when`(commonFactory.readDictionary(eq(DictionaryType.MAIN))).thenReturn(mainDictionary.byteInputStream())
+        `when`(commonFactory.readDictionary(eq(DictionaryType.LEVEL1))).thenReturn(level1Dictionary.byteInputStream())
 
         val codecLoader = Mockito.mock(ServiceLoader::class.java).apply {
             `when`(iterator()).thenReturn(arrayListOf(CodecFactory()).iterator())
