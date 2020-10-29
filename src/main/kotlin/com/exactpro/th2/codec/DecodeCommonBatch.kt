@@ -20,8 +20,8 @@ import com.exactpro.th2.codec.filter.Filter
 import com.exactpro.th2.codec.filter.FilterInput
 import com.exactpro.th2.codec.filter.MessageMetadata
 import com.exactpro.th2.codec.util.toDebugString
-import com.exactpro.th2.infra.grpc.Message
-import com.exactpro.th2.infra.grpc.MessageBatch
+import com.exactpro.th2.common.grpc.Message
+import com.exactpro.th2.common.grpc.MessageBatch
 
 class DecodeCommonBatch(private val delegateBatch: MessageBatch) : CommonBatch {
     override fun filterNested(filter: Filter): CommonBatch {

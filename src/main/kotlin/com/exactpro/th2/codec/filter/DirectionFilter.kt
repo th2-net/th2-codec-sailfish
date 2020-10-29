@@ -16,9 +16,8 @@
 
 package com.exactpro.th2.codec.filter
 
-import com.exactpro.th2.codec.configuration.FilterParameters
-import com.exactpro.th2.infra.grpc.Direction
-import java.util.*
+import com.exactpro.th2.common.grpc.Direction
+import java.util.EnumSet
 
 class DirectionFilter(parameterName: String, directionsValue: Any) : Filter {
 

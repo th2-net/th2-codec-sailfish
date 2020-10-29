@@ -16,11 +16,17 @@
 
 package com.exactpro.th2.codec
 
-import com.exactpro.th2.codec.configuration.*
-import com.exactpro.th2.eventstore.grpc.StoreEventRequest
-import com.exactpro.th2.infra.grpc.Event
-import com.exactpro.th2.infra.grpc.EventID
-import com.exactpro.th2.infra.grpc.EventStatus.SUCCESS
+import com.exactpro.th2.codec.configuration.ApplicationContext
+import com.exactpro.th2.codec.configuration.ApplicationProperties
+import com.exactpro.th2.codec.configuration.CodecParameters
+import com.exactpro.th2.codec.configuration.Configuration
+import com.exactpro.th2.codec.configuration.Filter
+import com.exactpro.th2.codec.configuration.InputParameters
+import com.exactpro.th2.codec.configuration.OutputParameters
+import com.exactpro.th2.common.grpc.Event
+import com.exactpro.th2.common.grpc.EventID
+import com.exactpro.th2.common.grpc.EventStatus.SUCCESS
+import com.exactpro.th2.estore.grpc.StoreEventRequest
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import kotlinx.coroutines.ObsoleteCoroutinesApi

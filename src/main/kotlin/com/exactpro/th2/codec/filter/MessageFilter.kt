@@ -16,8 +16,8 @@
 
 package com.exactpro.th2.codec.filter
 
-import com.exactpro.th2.infra.grpc.ListValue
-import com.exactpro.th2.infra.grpc.Value
+import com.exactpro.th2.common.grpc.ListValue
+import com.exactpro.th2.common.grpc.Value
 import java.util.regex.Pattern
 
 class MessageFilter(parameterName: String, parameterValue: Any) : Filter {

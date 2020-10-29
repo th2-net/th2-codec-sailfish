@@ -16,11 +16,8 @@
 
 package com.exactpro.th2.codec
 
-import com.exactpro.th2.codec.filter.*
-import com.exactpro.th2.codec.util.toDebugString
-import com.exactpro.th2.infra.grpc.Message
-import com.exactpro.th2.infra.grpc.MessageBatch
-import com.google.protobuf.util.JsonFormat
+import com.exactpro.th2.codec.filter.FilterChannelSender
+import com.exactpro.th2.common.grpc.MessageBatch
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.channels.Channel
 import kotlin.coroutines.CoroutineContext
