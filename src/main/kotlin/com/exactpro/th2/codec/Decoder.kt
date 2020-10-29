@@ -22,9 +22,9 @@ import com.exactpro.th2.codec.configuration.CodecParameters
 import com.exactpro.th2.codec.filter.AnyFilter
 import com.exactpro.th2.codec.filter.DefaultFilterFactory
 import com.exactpro.th2.codec.filter.FilterChannelSender
+import com.exactpro.th2.common.grpc.MessageBatch
+import com.exactpro.th2.common.grpc.RawMessageBatch
 import com.exactpro.th2.configuration.RabbitMQConfiguration
-import com.exactpro.th2.infra.grpc.MessageBatch
-import com.exactpro.th2.infra.grpc.RawMessageBatch
 import com.rabbitmq.client.Connection
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -34,7 +34,6 @@ import kotlinx.coroutines.newSingleThreadContext
 import mu.KotlinLogging
 import java.io.IOException
 import java.lang.Runtime.getRuntime
-import java.lang.RuntimeException
 import java.util.concurrent.TimeoutException
 
 @ObsoleteCoroutinesApi

@@ -16,11 +16,13 @@
 
 package com.exactpro.th2.codec
 
-import com.exactpro.th2.codec.filter.*
+import com.exactpro.th2.codec.filter.Filter
+import com.exactpro.th2.codec.filter.FilterChannelSender
+import com.exactpro.th2.codec.filter.FilterInput
+import com.exactpro.th2.codec.filter.MessageMetadata
 import com.exactpro.th2.codec.util.toDebugString
-import com.exactpro.th2.infra.grpc.RawMessage
-import com.exactpro.th2.infra.grpc.RawMessageBatch
-import com.google.protobuf.util.JsonFormat
+import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.grpc.RawMessageBatch
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.channels.Channel
 import kotlin.coroutines.CoroutineContext

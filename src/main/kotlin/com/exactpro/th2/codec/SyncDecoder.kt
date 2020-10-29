@@ -18,9 +18,9 @@ package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.codec.configuration.CodecParameters
-import com.exactpro.th2.infra.grpc.EventID
-import com.exactpro.th2.infra.grpc.MessageBatch
-import com.exactpro.th2.infra.grpc.RawMessageBatch
+import com.exactpro.th2.common.grpc.EventID
+import com.exactpro.th2.common.grpc.MessageBatch
+import com.exactpro.th2.common.grpc.RawMessageBatch
 
 class SyncDecoder(
     codecParameters: CodecParameters,

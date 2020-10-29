@@ -18,11 +18,11 @@ package com.exactpro.th2.codec
 
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
-import com.exactpro.th2.IMessageToProtoConverter
-import com.exactpro.th2.infra.grpc.MessageBatch
-import com.exactpro.th2.infra.grpc.MessageMetadata
-import com.exactpro.th2.infra.grpc.RawMessage
-import com.exactpro.th2.infra.grpc.RawMessageBatch
+import com.exactpro.th2.common.grpc.MessageBatch
+import com.exactpro.th2.common.grpc.MessageMetadata
+import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.grpc.RawMessageBatch
+import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 
 abstract class RawBatchDecodeProcessor(
     codecFactory: IExternalCodecFactory,

@@ -23,12 +23,12 @@ import com.exactpro.th2.codec.filter.AnyFilter
 import com.exactpro.th2.codec.filter.DefaultFilterFactory
 import com.exactpro.th2.codec.filter.FilterChannelSender
 import com.exactpro.th2.codec.util.toDebugString
+import com.exactpro.th2.common.grpc.Event
+import com.exactpro.th2.common.grpc.EventID
+import com.exactpro.th2.common.grpc.EventStatus
 import com.exactpro.th2.configuration.RabbitMQConfiguration
-import com.exactpro.th2.eventstore.grpc.EventStoreServiceGrpc.EventStoreServiceFutureStub
-import com.exactpro.th2.eventstore.grpc.StoreEventRequest
-import com.exactpro.th2.infra.grpc.Event
-import com.exactpro.th2.infra.grpc.EventID
-import com.exactpro.th2.infra.grpc.EventStatus
+import com.exactpro.th2.estore.grpc.EventStoreServiceGrpc.EventStoreServiceFutureStub
+import com.exactpro.th2.estore.grpc.StoreEventRequest
 import com.google.protobuf.ByteString.copyFrom
 import com.google.protobuf.GeneratedMessageV3
 import com.google.protobuf.InvalidProtocolBufferException

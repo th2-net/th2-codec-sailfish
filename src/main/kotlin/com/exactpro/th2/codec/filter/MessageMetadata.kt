@@ -16,7 +16,7 @@
 
 package com.exactpro.th2.codec.filter
 
-import com.exactpro.th2.infra.grpc.MessageID
+import com.exactpro.th2.common.grpc.MessageID
 import com.google.protobuf.Timestamp
 
 data class MessageMetadata(
