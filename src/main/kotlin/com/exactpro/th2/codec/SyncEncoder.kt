@@ -20,8 +20,8 @@ import com.exactpro.th2.common.grpc.RawMessageBatch
 import com.exactpro.th2.common.schema.message.MessageRouter
 
 class SyncEncoder(
-    sourceRouter: MessageRouter<out MessageBatch>,
-    targetRouter: MessageRouter<out RawMessageBatch>,
+    sourceRouter: MessageRouter<MessageBatch>,
+    targetRouter: MessageRouter<RawMessageBatch>,
     applicationContext: ApplicationContext,
     processor: AbstractCodecProcessor<MessageBatch, RawMessageBatch>,
     codecRootID: EventID?

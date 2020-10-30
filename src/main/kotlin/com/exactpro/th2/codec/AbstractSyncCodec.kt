@@ -14,7 +14,6 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.Event
 import com.exactpro.th2.common.event.Event.Status.FAILED
 import com.exactpro.th2.common.event.bean.Message
@@ -23,15 +22,13 @@ import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.schema.message.MessageListener
 import com.exactpro.th2.common.schema.message.MessageRouter
 import com.google.protobuf.GeneratedMessageV3
-import com.google.protobuf.InvalidProtocolBufferException
-import com.rabbitmq.client.Delivery
 import mu.KotlinLogging
 import java.io.IOException
 import java.util.concurrent.TimeoutException
 
 abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
-    protected val sourceRouter: MessageRouter<out T>,
-    protected val targetRouter: MessageRouter<out R>,
+    protected val sourceRouter: MessageRouter<T>,
+    protected val targetRouter: MessageRouter<R>,
     applicationContext: ApplicationContext,
     protected val processor: AbstractCodecProcessor<T, R>,
     protected val codecRootEvent: EventID?
@@ -47,7 +44,7 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
     fun start(sourceAttributes: String, targetAttributes: String) {
         try {
             this.tagretAttributes = targetAttributes
-            (sourceRouter as MessageRouter<T>).subscribeAll(this, sourceAttributes)
+            sourceRouter.subscribeAll(this, sourceAttributes)
         } catch (exception: Exception) {
             when(exception) {
                 is IOException,
@@ -83,7 +80,7 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
             protoResult = processor.process(message)
 
             if (checkResult(protoResult))
-                (targetRouter as MessageRouter<R>).sendAll(protoResult, this.tagretAttributes)
+                targetRouter.sendAll(protoResult, this.tagretAttributes)
 
 
         } catch (exception: CodecException) {
@@ -93,10 +90,6 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
             }
             logger.error(exception) {}
         }
-    }
-
-    override fun onClose() {
-        super.onClose()
     }
 
     private fun createAndStoreErrorEvent(exception: CodecException, parentEventID: EventID) {
@@ -118,21 +111,6 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
             } catch (exception: Exception) {
                 logger.warn(exception) { "could not send codec error event" }
             }
-        }
-    }
-
-    private fun toProtoSource(message: Delivery): T {
-        try {
-            val protoMessage = parseProtoSourceFrom(message.body)
-            logger.debug {
-                val debugMessage = protoMessage.toDebugString()
-                "received ${protoMessage::class.java.simpleName} from " +
-                        "'${message.envelope.exchange}':'${message.envelope.routingKey}': $debugMessage"
-            }
-            return protoMessage
-        } catch (exception: InvalidProtocolBufferException) {
-            throw CodecException("'${message.envelope.exchange}':'${message.envelope.routingKey}': " +
-                    "could not parse message body to proto", exception)
         }
     }
 
