@@ -49,7 +49,7 @@ class Configuration() {
     var generalEncoderInputAttribute: String = "general_encoder_in"
     var generalEncoderOutputAttribute: String = "general_encoder_out"
 
-    val decodeProcessorType: ProcessorType = ProcessorType.CUMULATIVE
+    var decodeProcessorType: ProcessorType = ProcessorType.CUMULATIVE
 
     companion object {
 
