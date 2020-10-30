@@ -1,25 +1,22 @@
 /*
- *  Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.exactpro.th2.codec.configuration
 
-import com.exactpro.sf.common.messages.structures.IDictionaryStructure
 import com.exactpro.sf.common.messages.structures.loaders.XmlDictionaryStructureLoader
-import com.exactpro.sf.common.util.EPSCommonException
 import com.exactpro.sf.configuration.suri.SailfishURI
+import com.exactpro.sf.externalapi.DictionaryType.MAIN
+import com.exactpro.sf.externalapi.DictionaryType.OUTGOING
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
@@ -27,43 +24,30 @@ import com.exactpro.th2.codec.AbstractCodecProcessor
 import com.exactpro.th2.codec.CumulativeDecodeProcessor
 import com.exactpro.th2.codec.DefaultMessageFactoryProxy
 import com.exactpro.th2.codec.SequentialDecodeProcessor
+import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.grpc.MessageBatch
 import com.exactpro.th2.common.grpc.RawMessageBatch
-import com.exactpro.th2.estore.grpc.EventStoreServiceGrpc.EventStoreServiceFutureStub
-import com.exactpro.th2.estore.grpc.EventStoreServiceGrpc.newFutureStub
+import com.exactpro.th2.common.schema.dictionary.DictionaryType
+import com.exactpro.th2.common.schema.factory.CommonFactory
+import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
-import com.rabbitmq.client.ConnectionFactory
-import io.grpc.ManagedChannelBuilder.forAddress
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
-import org.apache.commons.io.FilenameUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
-import org.apache.commons.lang3.RegExUtils
-import org.apache.commons.lang3.math.NumberUtils.toByte
-import org.apache.commons.lang3.math.NumberUtils.toDouble
-import org.apache.commons.lang3.math.NumberUtils.toFloat
-import org.apache.commons.lang3.math.NumberUtils.toInt
-import org.apache.commons.lang3.math.NumberUtils.toLong
-import org.apache.commons.lang3.math.NumberUtils.toShort
+import org.apache.commons.lang3.math.NumberUtils.*
 import java.io.File
-import java.io.IOException
 import java.net.URLClassLoader
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.util.ServiceLoader
-import kotlin.streams.asSequence
+import java.util.*
 
 class ApplicationContext(
+    val commonFactory: CommonFactory,
     val codec: IExternalCodec,
     val codecFactory: IExternalCodecFactory,
     val codecSettings: IExternalCodecSettings,
-    val dictionary: IDictionaryStructure,
     val protoToIMessageConverter: ProtoToIMessageConverter,
     val messageToProtoConverter: IMessageToProtoConverter,
-    val connectionFactory: ConnectionFactory,
-    val eventConnector: EventStoreServiceFutureStub?
+    val eventBatchRouter: MessageRouter<EventBatch>?
 ) {
     fun createDecodeProcessor(type: ProcessorType): AbstractCodecProcessor<RawMessageBatch, MessageBatch> {
         return when (type) {
@@ -74,69 +58,53 @@ class ApplicationContext(
 
     companion object {
         private const val CODEC_IMPLEMENTATION_PATH = "codec_implementation"
-        private const val DICTIONARIES_PATH = "dictionaries"
 
         private val logger = KotlinLogging.logger { }
 
-        fun create(configuration: Configuration): ApplicationContext {
-            val codecFactory =
-                loadFactory(
-                    configuration.codecClassName
-                )
-            val dictionary =
-                loadDictionary(
-                    configuration.dictionary
-                )
-            val codecSettings = createSettings(codecFactory, dictionary, configuration.codecParameters)
+        fun create(configuration: Configuration, commonFactory: CommonFactory): ApplicationContext {
+            val codecFactory = loadFactory(configuration.codecClassName)
+
+            val eventBatchRouter = commonFactory.eventBatchRouter
+            val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
             val codec = codecFactory.createCodec(codecSettings)
+            val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
+            val dictionary = checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
             val protoConverter = ProtoToIMessageConverter(
                 DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
             )
             val iMessageConverter = IMessageToProtoConverter()
-            val connectionFactory =
-                createConnectionFactory(
-                    configuration
-                )
+
             return ApplicationContext(
+                commonFactory,
                 codec,
                 codecFactory,
                 codecSettings,
-                dictionary,
                 protoConverter,
                 iMessageConverter,
-                connectionFactory,
-                createEventStoreConnector(configuration.eventStore)
+                eventBatchRouter
             )
         }
 
         private fun createSettings(
+            commonFactory: CommonFactory,
             codecFactory: IExternalCodecFactory,
-            dictionary: IDictionaryStructure,
             codecParameters: Map<String, String>?
         ): IExternalCodecSettings {
-            val settings = codecFactory.createSettings(dictionary)
-            setDictionaryFiles(settings)
+            val settings = codecFactory.createSettings()
+
             if (codecParameters != null) {
                 for ((key, value) in codecParameters) {
                     convertAndSet(settings, key, value)
                 }
             }
-            return settings
-        }
 
-        private fun setDictionaryFiles(settings: IExternalCodecSettings) {
-            try {
-                settings.dictionaryFiles.putAll(Files.walk(Paths.get(DICTIONARIES_PATH)).asSequence()
-                    .filter { !Files.isDirectory(it) }
-                    .associate { Pair(toSailfishURI(it), it.toFile()) })
-            } catch (exception: IOException) {
-                logger.warn(exception) { "could not add dictionary files to codec settings" }
+            settings.dictionaryTypes.forEach { type ->
+                commonFactory.readDictionary(DictionaryType.valueOf(type.name)).use { stream ->
+                    settings[type] = XmlDictionaryStructureLoader().load(stream)
+                }
             }
-        }
 
-        private fun toSailfishURI(it: Path?): SailfishURI {
-            val baseName = FilenameUtils.getBaseName(it?.fileName?.toString())
-            return SailfishURI.unsafeParse(RegExUtils.replaceAll(baseName, "[.]", "_"))
+            return settings
         }
 
         private fun convertAndSet(settings: IExternalCodecSettings, propertyName: String, propertyValue: String) {
@@ -168,32 +136,7 @@ class ApplicationContext(
             }
         }
 
-        private fun createConnectionFactory(configuration: Configuration): ConnectionFactory {
-            val connectionFactory = ConnectionFactory()
-            connectionFactory.host = configuration.rabbitMQ.host
-            connectionFactory.virtualHost = configuration.rabbitMQ.virtualHost
-            connectionFactory.port = configuration.rabbitMQ.port
-            connectionFactory.username = configuration.rabbitMQ.username
-            connectionFactory.password = configuration.rabbitMQ.password
-            return connectionFactory
-        }
-
-        private fun loadDictionary(dictionaryPath: String): IDictionaryStructure {
-            try {
-                return XmlDictionaryStructureLoader().load(
-                    Files.newInputStream(Paths.get(DICTIONARIES_PATH, dictionaryPath))
-                )
-            } catch (exception: Exception) {
-                when (exception) {
-                    is IOException,
-                    is EPSCommonException ->
-                        throw RuntimeException("could not load dictionary by $dictionaryPath path", exception)
-                    else -> throw exception
-                }
-            }
-        }
-
-        private fun loadFactory(className: String): IExternalCodecFactory {
+        private fun loadFactory(className: String?): IExternalCodecFactory {
             val jarList = FileUtils.listFiles(
                 File(CODEC_IMPLEMENTATION_PATH),
                 arrayOf("jar"),
@@ -208,13 +151,5 @@ class ApplicationContext(
                 )
         }
 
-        private fun createEventStoreConnector(eventStoreParameters: EventStoreParameters): EventStoreServiceFutureStub? {
-            return try {
-                newFutureStub(forAddress(eventStoreParameters.host, eventStoreParameters.port).usePlaintext().build())
-            } catch (exception: Exception) {
-                logger.warn(exception) { "could not create event store connector" }
-                null
-            }
-        }
     }
 }
