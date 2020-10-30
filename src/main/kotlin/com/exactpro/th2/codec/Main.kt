@@ -14,7 +14,6 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.codec.configuration.ApplicationProperties
 import com.exactpro.th2.codec.configuration.Configuration
 import com.exactpro.th2.common.event.Event
 import com.exactpro.th2.common.grpc.EventBatch
@@ -24,7 +23,6 @@ import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
-import java.nio.file.Paths
 import java.time.LocalDateTime
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedDeque
@@ -40,7 +38,6 @@ fun main(args: Array<String>) {
 class CodecCommand : CliktCommand() {
     private val configs: String? by option(help = "Directory containing schema files")
     private val sailfishCodecConfig: String? by option(help = "Path to sailfish codec configuration file")
-    private val applicationPropertiesConfig: String? by option(help = "Path to file with application configuration")
 
     private val resources: Deque<() -> Unit> = ConcurrentLinkedDeque()
 
@@ -71,15 +68,7 @@ class CodecCommand : CliktCommand() {
                 }
 
             val configuration = Configuration.create(commonFactory, sailfishCodecConfig)
-
             val applicationContext = ApplicationContext.create(configuration, commonFactory)
-
-            val applicationProperties = applicationPropertiesConfig?.let {
-                ApplicationProperties.load(Paths.get(it))
-            } ?: ApplicationProperties()
-            logger.debug { "Application properties: $applicationProperties" }
-
-
             val parsedRouter= applicationContext.commonFactory.messageRouterParsedBatch
             val rawRouter = applicationContext.commonFactory.messageRouterRawBatch
 
@@ -88,7 +77,7 @@ class CodecCommand : CliktCommand() {
             createAndStartCodec("decoder", applicationContext, rootEventId)
             { _: ApplicationContext, _: EventID? ->
                 SyncDecoder(rawRouter, parsedRouter, applicationContext,
-                    applicationContext.createDecodeProcessor(applicationProperties.decodeProcessorType),
+                    applicationContext.createDecodeProcessor(configuration.decodeProcessorType),
                     rootEventId).also { it.start(configuration.decoderInputAttribute, configuration.decoderOutputAttribute) }
             }
 
@@ -105,8 +94,8 @@ class CodecCommand : CliktCommand() {
                 ).also { it.start(configuration.encoderInputAttribute, configuration.encoderOutputAttribute) }
             }
 
-            createGeneralDecoder(applicationContext, configuration, applicationProperties, rootEventId)
-            createGeneralEncoder(applicationContext, configuration, applicationProperties, rootEventId)
+            createGeneralDecoder(applicationContext, configuration, rootEventId)
+            createGeneralEncoder(applicationContext, configuration, rootEventId)
             logger.info { "codec started" }
         } catch (exception: Exception) {
             logger.error(exception) { "fatal error. Exit the program" }
@@ -117,7 +106,6 @@ class CodecCommand : CliktCommand() {
     private fun createGeneralEncoder(
         context: ApplicationContext,
         configuration: Configuration,
-        applicationProperties: ApplicationProperties,
         rootEventId: EventID?
     ) {
         createAndStartCodec("general-encoder", context, rootEventId)
@@ -139,7 +127,6 @@ class CodecCommand : CliktCommand() {
     private fun createGeneralDecoder(
         context: ApplicationContext,
         configuration: Configuration,
-        applicationProperties: ApplicationProperties,
         rootEventId: EventID?
     ) {
         createAndStartCodec("general-decoder", context, rootEventId)
@@ -148,7 +135,7 @@ class CodecCommand : CliktCommand() {
             val rawRouter = context.commonFactory.messageRouterRawBatch
             SyncDecoder(
                 rawRouter, parsedRouter, context,
-                context.createDecodeProcessor(applicationProperties.decodeProcessorType),
+                context.createDecodeProcessor(configuration.decodeProcessorType),
                 rootEventId
             ).also { it.start(configuration.generalDecoderInputAttribute, configuration.generalDecoderOutputAttribute) }
         }

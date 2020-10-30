@@ -30,6 +30,8 @@ import java.nio.file.Paths
 internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(YAMLFactory()).apply { registerModule(KotlinModule()) }
     .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
+enum class ProcessorType { CUMULATIVE, SEQUENTIAL }
+
 class Configuration() {
     var codecClassName: String? = null
 
@@ -46,6 +48,8 @@ class Configuration() {
 
     var generalEncoderInputAttribute: String = "general_encoder_in"
     var generalEncoderOutputAttribute: String = "general_encoder_out"
+
+    val decodeProcessorType: ProcessorType = ProcessorType.CUMULATIVE
 
     companion object {
 
