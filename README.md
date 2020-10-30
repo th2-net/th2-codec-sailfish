@@ -20,6 +20,12 @@ Codec has got four types of connection: stream and general for encode and decode
 
 Messages in stream and general connections are never mixed. 
 
+Decoding can work in two different modes:
++ CUMULATIVE (default) - all raw messages in batch will be joined together and decoded. After decoding, content and count of the decoded messages will be compared with the original messages in the batch.
++ SEQUENTIAL - each message in the batch will be decoded as separate message.
+
+This setting can be overridden in a custom config for the application using `decodeProcessorType` parameter.
+
 ## Requried pins
 
 Every type of connections is presented two subscribe and publish pins. 
