@@ -24,6 +24,7 @@ plugins {
 ext {
     genDir             = file('src/gen')
     sharedDir          = file("${project.rootDir}/shared")
+    sailfishVersion     = '3.2'
 }
 
 group 'com.exactpro.th2'
@@ -36,12 +37,12 @@ repositories {
     }
     mavenCentral()
     maven {
-        name 'Artifactory'
-        url 'http://artifactory5.exp.exactpro.com/artifactory/libs-snapshot'
+        name 'Bintray'
+        url 'https://dl.bintray.com/exactpro/th2'
     }
     maven {
-        name 'Artifactory release'
-        url 'http://artifactory5.exp.exactpro.com/artifactory/libs-release'
+        name 'Bintray'
+        url 'https://dl.bintray.com/exactpro/sailfish'
     }
     mavenLocal()
 
@@ -53,10 +54,10 @@ repositories {
 
 
 dependencies {
-    api platform('com.exactpro.th2:bom:2.1.+')
+    api platform('com.exactpro.th2:bom:2.7.+')
     implementation 'com.exactpro.th2:grpc-common'
     implementation 'com.exactpro.th2:common'
-    implementation 'com.exactpro.th2:grpc-estore'
+    // implementation 'com.exactpro.th2:grpc-estore'
     implementation 'com.exactpro.th2:sailfish-utils'
 
     implementation 'io.github.microutils:kotlin-logging:1.7.+'
@@ -74,7 +75,7 @@ dependencies {
 
     implementation 'com.google.protobuf:protobuf-java-util'
 
-    implementation "com.exactpro.sf:sailfish-core:3.2-SNAPSHOT"
+    implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
 
     implementation 'io.grpc:grpc-core'
     implementation 'io.grpc:grpc-stub'
