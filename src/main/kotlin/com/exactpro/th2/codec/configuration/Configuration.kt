@@ -56,7 +56,8 @@ class Configuration() {
         fun create(commonFactory : CommonFactory, sailfishCodecParamsPath: String?) : Configuration{
 
             val configuration = commonFactory.getCustomConfiguration(Configuration::class.java)
-            configuration.codecParameters = readSailfishParameters(sailfishCodecParamsPath)
+            val implementationParams = readSailfishParameters(sailfishCodecParamsPath)
+            configuration.codecParameters = implementationParams.merge(configuration.codecParameters)
             return configuration
         }
 
@@ -86,6 +87,13 @@ class Configuration() {
             }
         }
 
+        private fun <K, V> Map<K, V>.merge(userParameters: Map<K, V>?): Map<K, V> {
+            return if (userParameters == null) {
+                this
+            } else {
+                toMutableMap().apply { putAll(userParameters) }
+            }
+        }
     }
 }
 
