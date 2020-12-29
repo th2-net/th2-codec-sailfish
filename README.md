@@ -79,6 +79,25 @@ param2: value2
 ```
 The set of parameters depends on the codec implementation that is used.
 
+The parameters from that file are static and will be loaded during the codec start up. You can use them to provide the defaults for some implementations' parameters.
+
+You can set those parameters in `custom-config` as well. You can use the `codecParameters` section in that config.
+
+Example:
+```yaml
+apiVersion: th2.exactpro.com/v1
+kind: Th2Box
+metadata:
+  name: codec
+spec:
+  custom-config:
+    codecClassName: fully.qualified.class.name.for.Factory
+    decodeProcessorType: CUMULATIVE
+    codecParameters:
+      param1: value1
+      param2: value2
+```
+
 ## Required pins
 
 Every type of connection has two `subscribe` and `publish` pins.
