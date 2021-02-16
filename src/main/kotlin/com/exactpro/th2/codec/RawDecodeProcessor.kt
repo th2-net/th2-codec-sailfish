@@ -18,17 +18,14 @@ package com.exactpro.th2.codec
 
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
-import com.exactpro.th2.common.grpc.MessageBatch
-import com.exactpro.th2.common.grpc.MessageMetadata
-import com.exactpro.th2.common.grpc.RawMessage
-import com.exactpro.th2.common.grpc.RawMessageBatch
+import com.exactpro.th2.common.grpc.*
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 
-abstract class RawBatchDecodeProcessor(
+abstract class RawDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
     protected val messageToProtoConverter: IMessageToProtoConverter
-) : AbstractCodecProcessor<RawMessageBatch, MessageBatch>(codecFactory, codecSettings) {
+) : AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
 
     protected fun toMessageMetadataBuilder(sourceMessage: RawMessage): MessageMetadata.Builder {
         return MessageMetadata.newBuilder()

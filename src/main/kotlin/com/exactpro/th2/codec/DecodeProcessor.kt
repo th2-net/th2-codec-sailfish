@@ -1,19 +1,3 @@
-/*
- *  Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
- *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
- */
-
 package com.exactpro.th2.codec
 
 import com.exactpro.sf.common.messages.IMessage
@@ -22,40 +6,27 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.grpc.Message
-import com.exactpro.th2.common.grpc.MessageBatch
 import com.exactpro.th2.common.grpc.RawMessage
-import com.exactpro.th2.common.grpc.RawMessageBatch
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import mu.KotlinLogging
 
-/**
- * This processor decodes each [RawMessage] from [RawMessageBatch] separately.
- * The raw data of the decoded message must be equal to the original data from [RawMessage].
- */
-class SequentialDecodeProcessor(
+class DecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
     messageToProtoConverter: IMessageToProtoConverter
-) : RawBatchDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter) {
+) : RawDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter) {
     private val logger = KotlinLogging.logger { }
 
-    override fun process(source: RawMessageBatch): MessageBatch {
-        val messageBatch: MessageBatch.Builder = MessageBatch.newBuilder()
-        for (rawMessage in source.messagesList) {
-            processSingle(rawMessage)?.also {
-                messageBatch.addMessages(it)
-            }
-        }
-        return messageBatch.build().also {
-            val sourceCount = source.messagesCount
-            val resultCount = it.messagesCount
-            if (sourceCount != resultCount) {
-                logger.warn { "The size of the input batch and output batch are not equal (Source: $sourceCount, Result: $resultCount)" }
-            }
+    override fun process(source: RawMessage): List<Message.Builder> {
+        val processSingle = processSingle(source)
+        return if (processSingle != null) {
+            listOf(processSingle)
+        } else {
+            emptyList()
         }
     }
 
-    private fun processSingle(rawMessage: RawMessage): Message? {
+    private fun processSingle(rawMessage: RawMessage): Message.Builder? {
         try {
             val data: ByteArray = rawMessage.body.toByteArray()
             logger.debug { "Decoding message: ${rawMessage.toDebugString()}" }
@@ -68,7 +39,6 @@ class SequentialDecodeProcessor(
                 .build()
             return messageToProtoConverter.toProtoMessage(decodedMessage)
                 .setMetadata(messageMetadata)
-                .build()
         } catch (ex: Exception) {
             logger.error(ex) { "Cannot decode message from $rawMessage" }
             return null

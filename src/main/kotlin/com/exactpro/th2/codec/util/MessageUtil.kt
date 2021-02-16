@@ -33,14 +33,6 @@ private fun Direction.toRole(): Role = when (this) {
 
 private fun Role.toContext(properties: Map<String, Any> = emptyMap()): IExternalCodecContext = ExternalCodecContext(this, properties)
 
-val RawMessageBatch.codecContext: IExternalCodecContext
-    // assuming that we wouldn't have messages with different directions in a single batch
-    get() = messagesList.first().metadata.id.direction.toRole().toContext()
-
-val MessageBatch.codecContext: IExternalCodecContext
-    // assuming that we wouldn't have messages with different directions in a single batch
-    get() = messagesList.first().metadata.id.direction.toRole().toContext()
-
 fun RawMessage.toCodecContext(): IExternalCodecContext {
     val properties = mapOf(
         MESSAGE_PROPERTIES.propertyName to metadata.propertiesMap

@@ -69,22 +69,24 @@ class CodecCommand : CliktCommand() {
 
             val configuration = Configuration.create(commonFactory, sailfishCodecConfig)
             val applicationContext = ApplicationContext.create(configuration, commonFactory)
-            val parsedRouter= applicationContext.commonFactory.messageRouterParsedBatch
-            val rawRouter = applicationContext.commonFactory.messageRouterRawBatch
+            val groupRouter = applicationContext.commonFactory.messageRouterMessageGroupBatch
 
             val rootEventId = createAndStoreRootEvent(applicationContext)
 
             createAndStartCodec("decoder", applicationContext, rootEventId)
             { _: ApplicationContext, _: EventID? ->
-                SyncDecoder(rawRouter, parsedRouter, applicationContext,
-                    applicationContext.createDecodeProcessor(configuration.decodeProcessorType),
+                SyncDecoder(groupRouter, applicationContext,
+                    DecodeProcessor(
+                        applicationContext.codecFactory,
+                        applicationContext.codecSettings,
+                        applicationContext.messageToProtoConverter),
                     rootEventId).also { it.start(configuration.decoderInputAttribute, configuration.decoderOutputAttribute) }
             }
 
             createAndStartCodec("encoder", applicationContext, rootEventId)
             { _: ApplicationContext, _: EventID? ->
                 SyncEncoder(
-                    parsedRouter, rawRouter, applicationContext,
+                    groupRouter, applicationContext,
                     EncodeProcessor(
                         applicationContext.codecFactory,
                         applicationContext.codecSettings,
@@ -110,10 +112,8 @@ class CodecCommand : CliktCommand() {
     ) {
         createAndStartCodec("general-encoder", context, rootEventId)
         { _: ApplicationContext, _: EventID? ->
-            val parsedRouter= context.commonFactory.messageRouterParsedBatch
-            val rawRouter = context.commonFactory.messageRouterRawBatch
-            SyncEncoder(
-                parsedRouter, rawRouter, context,
+            val router = context.commonFactory.messageRouterMessageGroupBatch
+            SyncEncoder(router, context,
                 EncodeProcessor(
                     context.codecFactory,
                     context.codecSettings,
@@ -131,11 +131,12 @@ class CodecCommand : CliktCommand() {
     ) {
         createAndStartCodec("general-decoder", context, rootEventId)
         { _: ApplicationContext, _: EventID? ->
-            val parsedRouter= context.commonFactory.messageRouterParsedBatch
-            val rawRouter = context.commonFactory.messageRouterRawBatch
-            SyncDecoder(
-                rawRouter, parsedRouter, context,
-                context.createDecodeProcessor(configuration.decodeProcessorType),
+            val router = context.commonFactory.messageRouterMessageGroupBatch
+            SyncDecoder(router, context,
+                DecodeProcessor(
+                    context.codecFactory,
+                    context.codecSettings,
+                    context.messageToProtoConverter),
                 rootEventId
             ).also { it.start(configuration.generalDecoderInputAttribute, configuration.generalDecoderOutputAttribute) }
         }

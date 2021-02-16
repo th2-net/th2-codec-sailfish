@@ -33,28 +33,24 @@ class EncodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
     private val converter: ProtoToIMessageConverter
-) : AbstractCodecProcessor<MessageBatch, RawMessageBatch>(codecFactory, codecSettings) {
+) : AbstractCodecProcessor<Message, RawMessage.Builder>(codecFactory, codecSettings) {
 
     private val logger = KotlinLogging.logger {  }
 
-    override fun process(source: MessageBatch): RawMessageBatch {
-        val rawMessageBatchBuilder = RawMessageBatch.newBuilder()
-        for (protoMessage in source.messagesList) {
-            val convertedSourceMessage = converter.fromProtoMessage(protoMessage, true).also {
-                logger.debug { "converted source message '${it.name}': $it" }
-            }
-            val encodedMessageData = getCodec().encode(convertedSourceMessage, protoMessage.toCodecContext())
-            rawMessageBatchBuilder.addMessages(RawMessage.newBuilder()
-                .setBody(ByteString.copyFrom(encodedMessageData))
-                .setMetadata(toRawMessageMetadataBuilder(protoMessage).also {
-                    logger.debug {
-                        val jsonRawMessage = JsonFormat.printer().omittingInsignificantWhitespace().print(it)
-                        "message metadata: $jsonRawMessage"
-                    }
-                })
-            )
+    override fun process(source: Message): RawMessage.Builder {
+        val convertedSourceMessage = converter.fromProtoMessage(source, true).also {
+            logger.debug { "converted source message '${it.name}': $it" }
         }
-        return rawMessageBatchBuilder.build()
+
+        val encodedMessageData = getCodec().encode(convertedSourceMessage, source.toCodecContext())
+        return RawMessage.newBuilder()
+            .setBody(ByteString.copyFrom(encodedMessageData))
+            .setMetadata(toRawMessageMetadataBuilder(source).also {
+                logger.debug {
+                    val jsonRawMessage = JsonFormat.printer().omittingInsignificantWhitespace().print(it)
+                    "message metadata: $jsonRawMessage"
+                }
+            })
     }
 
     private fun toRawMessageMetadataBuilder(sourceMessage: Message): RawMessageMetadata {

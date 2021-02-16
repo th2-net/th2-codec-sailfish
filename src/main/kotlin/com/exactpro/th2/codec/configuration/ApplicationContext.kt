@@ -20,13 +20,8 @@ import com.exactpro.sf.externalapi.DictionaryType.OUTGOING
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
-import com.exactpro.th2.codec.AbstractCodecProcessor
-import com.exactpro.th2.codec.CumulativeDecodeProcessor
 import com.exactpro.th2.codec.DefaultMessageFactoryProxy
-import com.exactpro.th2.codec.SequentialDecodeProcessor
 import com.exactpro.th2.common.grpc.EventBatch
-import com.exactpro.th2.common.grpc.MessageBatch
-import com.exactpro.th2.common.grpc.RawMessageBatch
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.common.schema.message.MessageRouter
@@ -35,10 +30,15 @@ import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
-import org.apache.commons.lang3.math.NumberUtils.*
+import org.apache.commons.lang3.math.NumberUtils.toByte
+import org.apache.commons.lang3.math.NumberUtils.toDouble
+import org.apache.commons.lang3.math.NumberUtils.toFloat
+import org.apache.commons.lang3.math.NumberUtils.toInt
+import org.apache.commons.lang3.math.NumberUtils.toLong
+import org.apache.commons.lang3.math.NumberUtils.toShort
 import java.io.File
 import java.net.URLClassLoader
-import java.util.*
+import java.util.ServiceLoader
 
 class ApplicationContext(
     val commonFactory: CommonFactory,
@@ -49,12 +49,6 @@ class ApplicationContext(
     val messageToProtoConverter: IMessageToProtoConverter,
     val eventBatchRouter: MessageRouter<EventBatch>?
 ) {
-    fun createDecodeProcessor(type: ProcessorType): AbstractCodecProcessor<RawMessageBatch, MessageBatch> {
-        return when (type) {
-            ProcessorType.CUMULATIVE -> CumulativeDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter)
-            ProcessorType.SEQUENTIAL -> SequentialDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter)
-        }
-    }
 
     companion object {
         private const val CODEC_IMPLEMENTATION_PATH = "codec_implementation"
