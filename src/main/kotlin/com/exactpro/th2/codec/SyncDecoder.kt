@@ -14,34 +14,60 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
+import com.exactpro.th2.common.grpc.AnyMessage
 import com.exactpro.th2.common.grpc.EventID
-import com.exactpro.th2.common.grpc.MessageBatch
-import com.exactpro.th2.common.grpc.RawMessageBatch
+import com.exactpro.th2.common.grpc.Message
+import com.exactpro.th2.common.grpc.MessageGroup
+import com.exactpro.th2.common.grpc.MessageGroupBatch
+import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.schema.message.MessageRouter
 
 class SyncDecoder(
-    sourceRouter: MessageRouter<RawMessageBatch>,
-    targetRouter: MessageRouter<MessageBatch>,
+    router: MessageRouter<MessageGroupBatch>,
     applicationContext: ApplicationContext,
-    processor: AbstractCodecProcessor<RawMessageBatch, MessageBatch>,
+    private val processor: AbstractCodecProcessor<RawMessage, Message.Builder?>,
     codecRootID: EventID?
-): AbstractSyncCodec< RawMessageBatch,  MessageBatch>(
-    sourceRouter,
-    targetRouter,
+): AbstractSyncCodec(
+    router,
     applicationContext,
-    processor,
     codecRootID
 ) {
+
     override fun getParentEventId(
         codecRootID: EventID?,
-        protoSource: RawMessageBatch?,
-        protoResult: MessageBatch?
+        protoSource: MessageGroup?,
+        protoResult: MessageGroup?
     ): EventID? {
         return codecRootID
     }
 
-    override fun parseProtoSourceFrom(data: ByteArray): RawMessageBatch = RawMessageBatch.parseFrom(data)
+    override fun checkResult(protoResult: MessageGroup): Boolean = protoResult.messagesCount > 0
 
-    override fun checkResult(protoResult: MessageBatch): Boolean = protoResult.messagesCount != 0
+    override fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean = resultBatch.groupsCount > 0
 
+    override fun processMessageGroup(it: MessageGroup): MessageGroup? {
+        if (it.messagesCount < 1) {
+            return null
+        }
+
+        val groupBuilder = MessageGroup.newBuilder()
+
+        for (notTypeMessage in it.messagesList) {
+            if (notTypeMessage.hasRawMessage()) {
+                val rawMessage = notTypeMessage.rawMessage
+                processor.process(rawMessage)?.apply {
+                    metadataBuilder.idBuilder.addSubsequence(DEFAULT_SUBSEQUENCE_NUMBER)
+                    groupBuilder.addMessages(AnyMessage.newBuilder().setMessage(this))
+                }
+            } else {
+                groupBuilder.addMessages(notTypeMessage)
+            }
+        }
+
+        return if (groupBuilder.messagesCount > 0) groupBuilder.build() else null
+    }
+
+    companion object {
+        const val DEFAULT_SUBSEQUENCE_NUMBER = 1
+    }
 }

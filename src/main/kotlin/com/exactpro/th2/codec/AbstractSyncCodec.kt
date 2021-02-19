@@ -19,20 +19,19 @@ import com.exactpro.th2.common.event.Event.Status.FAILED
 import com.exactpro.th2.common.event.bean.Message
 import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.grpc.EventID
+import com.exactpro.th2.common.grpc.MessageGroup
+import com.exactpro.th2.common.grpc.MessageGroupBatch
 import com.exactpro.th2.common.schema.message.MessageListener
 import com.exactpro.th2.common.schema.message.MessageRouter
-import com.google.protobuf.GeneratedMessageV3
 import mu.KotlinLogging
 import java.io.IOException
 import java.util.concurrent.TimeoutException
 
-abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
-    protected val sourceRouter: MessageRouter<T>,
-    protected val targetRouter: MessageRouter<R>,
+abstract class AbstractSyncCodec(
+    protected val router: MessageRouter<MessageGroupBatch>,
     applicationContext: ApplicationContext,
-    protected val processor: AbstractCodecProcessor<T, R>,
     protected val codecRootEvent: EventID?
-): AutoCloseable, MessageListener<T> {
+): AutoCloseable, MessageListener<MessageGroupBatch> {
 
     protected val logger = KotlinLogging.logger {}
     protected val eventBatchRouter: MessageRouter<EventBatch>? = applicationContext.eventBatchRouter
@@ -44,7 +43,7 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
     fun start(sourceAttributes: String, targetAttributes: String) {
         try {
             this.tagretAttributes = targetAttributes
-            sourceRouter.subscribeAll(this, sourceAttributes)
+            router.subscribeAll(this, sourceAttributes)
         } catch (exception: Exception) {
             when(exception) {
                 is IOException,
@@ -57,7 +56,7 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
     override fun close() {
         val exceptions = mutableListOf<Exception>()
 
-        sourceRouter.close()
+        router.close()
         if (exceptions.isNotEmpty()) {
             throw RuntimeException("could not close decoder").also {
                 exceptions.forEach { exception -> it.addSuppressed(exception) }
@@ -73,24 +72,32 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
         }
     }
 
-    override fun handler(consumerTag: String?, message: T) {
-        var protoResult: R? = null
-        try {
+    override fun handler(consumerTag: String?, groupBatch: MessageGroupBatch) {
+        if (groupBatch.groupsCount < 1) {
+            return
+        }
 
-            protoResult = processor.process(message)
-
-            if (checkResult(protoResult))
-                targetRouter.sendAll(protoResult, this.tagretAttributes)
-
-
-        } catch (exception: CodecException) {
-            val parentEventId = getParentEventId(codecRootEvent, message, protoResult)
-            if (parentEventId != null) {
-                createAndStoreErrorEvent(exception, parentEventId)
+        val resultBuilder = MessageGroupBatch.newBuilder()
+        groupBatch.groupsList.filter { it.messagesCount > 1 }.forEach {
+            var resultGroup: MessageGroup? = null
+            try {
+                resultGroup = processMessageGroup(it)
+                if (resultGroup != null && checkResult(resultGroup)) {
+                    resultBuilder.addGroups(resultGroup)
+                }
+            } catch (e: CodecException) {
+                val parentEventId = getParentEventId(codecRootEvent, it, resultGroup)
+                if (parentEventId != null) {
+                    createAndStoreErrorEvent(e, parentEventId)
+                }
+                logger.error(e) {}
             }
-            logger.error(exception) {}
         }
     }
+
+    protected abstract fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean
+
+    protected abstract fun processMessageGroup(it: MessageGroup): MessageGroup?
 
     private fun createAndStoreErrorEvent(exception: CodecException, parentEventID: EventID) {
         if (eventBatchRouter != null) {
@@ -114,7 +121,6 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
         }
     }
 
-    abstract fun getParentEventId(codecRootID: EventID?, protoSource: T?, protoResult: R?): EventID?
-    abstract fun parseProtoSourceFrom(data: ByteArray): T
-    abstract fun checkResult(protoResult: R): Boolean
+    abstract fun getParentEventId(codecRootID: EventID?, protoSource: MessageGroup?, protoResult: MessageGroup?): EventID?
+    abstract fun checkResult(protoResult: MessageGroup): Boolean
 }
