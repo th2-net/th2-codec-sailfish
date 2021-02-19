@@ -35,23 +35,21 @@ class DecodeProcessor(
 ) :  AbstractCodecProcessor<RawMessage, Message.Builder?>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
 
-    override fun process(source: RawMessage): Message.Builder? = processSingle(source)
-
-    private fun processSingle(rawMessage: RawMessage): Message.Builder? {
+    override fun process(source: RawMessage): Message.Builder? {
         try {
-            val data: ByteArray = rawMessage.body.toByteArray()
-            logger.debug { "Decoding message: ${rawMessage.toDebugString()}" }
-            val decodedMessages = getCodec().decode(data, rawMessage.toCodecContext())
+            val data: ByteArray = source.body.toByteArray()
+            logger.debug { "Decoding message: ${source.toDebugString()}" }
+            val decodedMessages = getCodec().decode(data, source.toCodecContext())
             logger.debug { "Decoded messages: $decodedMessages" }
             val decodedMessage: IMessage = checkCountAndRawData(decodedMessages, data)
 
-            val messageMetadata = toMessageMetadataBuilder(rawMessage)
+            val messageMetadata = toMessageMetadataBuilder(source)
                 .setMessageType(decodedMessage.name)
                 .build()
             return messageToProtoConverter.toProtoMessage(decodedMessage)
                 .setMetadata(messageMetadata)
         } catch (ex: Exception) {
-            logger.error(ex) { "Cannot decode message from $rawMessage" }
+            logger.error(ex) { "Cannot decode message from $source" }
             return null
         }
     }

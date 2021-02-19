@@ -33,10 +33,6 @@ class SyncDecoder(
     codecRootID
 ) {
 
-    companion object {
-        const val DEFAULT_SUBSEQUENCE_NUMBER = 1
-    }
-
     override fun getParentEventId(
         codecRootID: EventID?,
         protoSource: MessageGroup?,
@@ -71,4 +67,7 @@ class SyncDecoder(
         return if (groupBuilder.messagesCount > 0) groupBuilder.build() else null
     }
 
+    companion object {
+        const val DEFAULT_SUBSEQUENCE_NUMBER = 1
+    }
 }
