@@ -1,3 +1,20 @@
+/*
+ * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ *
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.exactpro.th2.codec
 
 import com.exactpro.sf.common.messages.IMessage
@@ -6,6 +23,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.grpc.Message
+import com.exactpro.th2.common.grpc.MessageMetadata
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import mu.KotlinLogging
@@ -13,18 +31,11 @@ import mu.KotlinLogging
 class DecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    messageToProtoConverter: IMessageToProtoConverter
-) : RawDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter) {
+    private val messageToProtoConverter: IMessageToProtoConverter
+) :  AbstractCodecProcessor<RawMessage, Message.Builder?>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
 
-    override fun process(source: RawMessage): List<Message.Builder> {
-        val processSingle = processSingle(source)
-        return if (processSingle != null) {
-            listOf(processSingle)
-        } else {
-            emptyList()
-        }
-    }
+    override fun process(source: RawMessage): Message.Builder? = processSingle(source)
 
     private fun processSingle(rawMessage: RawMessage): Message.Builder? {
         try {
@@ -43,6 +54,13 @@ class DecodeProcessor(
             logger.error(ex) { "Cannot decode message from $rawMessage" }
             return null
         }
+    }
+
+    private fun toMessageMetadataBuilder(sourceMessage: RawMessage): MessageMetadata.Builder {
+        return MessageMetadata.newBuilder()
+            .setId(sourceMessage.metadata.id)
+            .setTimestamp(sourceMessage.metadata.timestamp)
+            .putAllProperties(sourceMessage.metadata.propertiesMap)
     }
 
     /**

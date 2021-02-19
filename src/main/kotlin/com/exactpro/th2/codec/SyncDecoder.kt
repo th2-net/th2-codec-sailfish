@@ -14,19 +14,28 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.common.grpc.*
+import com.exactpro.th2.common.grpc.AnyMessage
+import com.exactpro.th2.common.grpc.EventID
+import com.exactpro.th2.common.grpc.Message
+import com.exactpro.th2.common.grpc.MessageGroup
+import com.exactpro.th2.common.grpc.MessageGroupBatch
+import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.schema.message.MessageRouter
 
 class SyncDecoder(
     router: MessageRouter<MessageGroupBatch>,
     applicationContext: ApplicationContext,
-    private val processor: AbstractCodecProcessor<RawMessage, List<Message.Builder>>,
+    private val processor: AbstractCodecProcessor<RawMessage, Message.Builder?>,
     codecRootID: EventID?
 ): AbstractSyncCodec(
     router,
     applicationContext,
     codecRootID
 ) {
+
+    companion object {
+        const val DEFAULT_SUBSEQUENCE_NUMBER = 1
+    }
 
     override fun getParentEventId(
         codecRootID: EventID?,
@@ -50,10 +59,9 @@ class SyncDecoder(
         for (notTypeMessage in it.messagesList) {
             if (notTypeMessage.hasRawMessage()) {
                 val rawMessage = notTypeMessage.rawMessage
-                var subsequence = 1
-                for (decodeMessage in processor.process(rawMessage)) {
-                    decodeMessage.metadataBuilder.idBuilder.addSubsequence(subsequence++)
-                    groupBuilder.addMessages(AnyMessage.newBuilder().setMessage(decodeMessage))
+                processor.process(rawMessage)?.apply {
+                    metadataBuilder.idBuilder.addSubsequence(DEFAULT_SUBSEQUENCE_NUMBER)
+                    groupBuilder.addMessages(AnyMessage.newBuilder().setMessage(this))
                 }
             } else {
                 groupBuilder.addMessages(notTypeMessage)
