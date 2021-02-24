@@ -78,7 +78,7 @@ abstract class AbstractSyncCodec(
         }
 
         val resultBuilder = MessageGroupBatch.newBuilder()
-        groupBatch.groupsList.filter { it.messagesCount > 1 }.forEach {
+        groupBatch.groupsList.filter { it.messagesCount > 0 }.forEach {
             var resultGroup: MessageGroup? = null
             try {
                 resultGroup = processMessageGroup(it)
