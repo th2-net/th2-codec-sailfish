@@ -93,6 +93,13 @@ abstract class AbstractSyncCodec(
                 logger.error(e) {}
             }
         }
+
+        val result = resultBuilder.build()
+        if (checkResultBatch(result)) {
+            router.sendAll(result, this.tagretAttributes)
+        }
+
+
     }
 
     protected abstract fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean
