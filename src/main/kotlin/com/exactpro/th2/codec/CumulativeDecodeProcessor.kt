@@ -46,7 +46,7 @@ class CumulativeDecodeProcessor(
         try {
             val batchData = joinBatchData(source)
             val messageBatchBuilder = MessageBatch.newBuilder()
-            val decodedMessageList = getCodec().decode(batchData, source.codecContext)
+            val decodedMessageList: List<IMessage> = getCodec().decode(batchData, source.codecContext)
             logger.debug {
                 "decoded messages: {${decodedMessageList.joinToString { message -> "${message.name}: $message" }}}"
             }
@@ -54,6 +54,9 @@ class CumulativeDecodeProcessor(
                 for (pair in source.messagesList.zip(decodedMessageList)) {
                     val metadataBuilder = toMessageMetadataBuilder(pair.first)
                     val protoMessageBuilder = messageToProtoConverter.toProtoMessage(pair.second)
+                    if (pair.first.hasParentEventId()) {
+                        protoMessageBuilder.parentEventId = pair.first.parentEventId
+                    }
                     protoMessageBuilder.metadata = metadataBuilder.setMessageType(pair.second.name).build()
                     messageBatchBuilder.addMessages(protoMessageBuilder)
                 }

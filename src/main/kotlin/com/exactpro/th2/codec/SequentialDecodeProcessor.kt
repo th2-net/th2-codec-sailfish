@@ -63,12 +63,14 @@ class SequentialDecodeProcessor(
             logger.debug { "Decoded messages: $decodedMessages" }
             val decodedMessage: IMessage = checkCountAndRawData(decodedMessages, data)
 
-            val messageMetadata = toMessageMetadataBuilder(rawMessage)
-                .setMessageType(decodedMessage.name)
-                .build()
-            return messageToProtoConverter.toProtoMessage(decodedMessage)
-                .setMetadata(messageMetadata)
-                .build()
+            return messageToProtoConverter.toProtoMessage(decodedMessage).apply {
+                if (rawMessage.hasParentEventId()) {
+                    parentEventId = rawMessage.parentEventId
+                }
+                metadata = toMessageMetadataBuilder(rawMessage).apply {
+                    messageType = decodedMessage.name
+                }.build()
+            }.build()
         } catch (ex: Exception) {
             logger.error(ex) { "Cannot decode message from $rawMessage" }
             return null
