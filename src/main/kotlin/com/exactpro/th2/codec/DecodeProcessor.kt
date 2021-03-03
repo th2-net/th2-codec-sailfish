@@ -43,11 +43,14 @@ class DecodeProcessor(
             logger.debug { "Decoded messages: $decodedMessages" }
             val decodedMessage: IMessage = checkCountAndRawData(decodedMessages, data)
 
-            val messageMetadata = toMessageMetadataBuilder(source)
-                .setMessageType(decodedMessage.name)
-                .build()
-            return messageToProtoConverter.toProtoMessage(decodedMessage)
-                .setMetadata(messageMetadata)
+            return messageToProtoConverter.toProtoMessage(decodedMessage).apply {
+                if (source.hasParentEventId()) {
+                    parentEventId = source.parentEventId
+                }
+                metadata = toMessageMetadataBuilder(source).apply {
+                    messageType = decodedMessage.name
+                }.build()
+            }
         } catch (ex: Exception) {
             logger.error(ex) { "Cannot decode message from $source" }
             return null

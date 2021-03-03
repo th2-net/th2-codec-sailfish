@@ -43,14 +43,18 @@ class EncodeProcessor(
         }
 
         val encodedMessageData = getCodec().encode(convertedSourceMessage, source.toCodecContext())
-        return RawMessage.newBuilder()
-            .setBody(ByteString.copyFrom(encodedMessageData))
-            .setMetadata(toRawMessageMetadataBuilder(source).also {
+        return RawMessage.newBuilder().apply {
+            if (source.hasParentEventId()) {
+                parentEventId = source.parentEventId
+            }
+            body = ByteString.copyFrom(encodedMessageData)
+            metadata = toRawMessageMetadataBuilder(source).also {
                 logger.debug {
                     val jsonRawMessage = JsonFormat.printer().omittingInsignificantWhitespace().print(it)
                     "message metadata: $jsonRawMessage"
                 }
-            })
+            }
+        }
     }
 
     private fun toRawMessageMetadataBuilder(sourceMessage: Message): RawMessageMetadata {
