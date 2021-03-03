@@ -1,7 +1,7 @@
-# How it works
+# How it works (3.3.0)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
-It operates two instances of encoder/decoder pairs, one is used for operational purposes and the other for general conversion.
+It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
 
 Encoding and decoding are performed according to the scheme "one or more input pins and one or more output pins".
 Both types of pins may have filters. The input / output of the encoder and decoder can be partially or entirely filtered out depending on which filters the pin has.
@@ -13,7 +13,7 @@ Codec operates with arrays of messages (parsed batch to raw batch in case of enc
 
 ## Appointment
 
-This project includes only one adapter logic between Sailfish and the th2 packed into Docker Image.
+This project includes only one adapter logic between Sailfish and the th2 packed into the Docker Image.
 This [th2-codec-generic](https://github.com/th2-net/th2-codec-generic) project uses this image as a base.
 
 # Running
@@ -70,7 +70,7 @@ decodeProcessorType: CUMULATIVE
 These parameters will be passed to the actual codec implementation to configure its behavior.
 It's possible that a codec might not have any parameters to configure. In this case, you can omit adding those parameters.
 
-The codec implementation parameters should be located in the container's `/home` directory and stored in the file named `codec_config.yml`.
+The codec implementation parameters should be located in the container's `/home` directory and stored into the file named `codec_config.yml`.
 It has simple key-value format in YAML.
 ```yaml
 ---
@@ -162,7 +162,7 @@ Let's consider some examples of routing in codec box.
 
 For example, you got a big source data stream, and you want to split them into some pins via session alias.
 You can declare multiple pins with attributes `['decoder_out', 'parsed', 'publish']` and filters instead of common pin or in addition to it.
-Every decoded messages will be direct to all declared pins and will send to MQ only if it passes the filter.
+Every decoded messages will be directed to all declared pins and will be sent to MQ only if it passes the filter.
 
 ```yaml
 apiVersion: th2.exactpro.com/v1
@@ -191,3 +191,8 @@ spec:
 ```
 
 The filtering can also be applied for pins with  `subscribe` attribute.
+
+## Release notes
+
++ 3.3.0
+  + Copies a parent event id from the raw to the parsed message
