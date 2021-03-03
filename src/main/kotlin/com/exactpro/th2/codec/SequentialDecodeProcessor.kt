@@ -78,7 +78,7 @@ class SequentialDecodeProcessor(
     }
 
     /**
-     * Checks that the [decodedMessages] contains exact one message and its raw data is the same as [originalData].
+     * Checks that the [decodedMessages] contains exactly one message and its raw data is the same as [originalData].
      */
     private fun checkCountAndRawData(decodedMessages: List<IMessage>, originalData: ByteArray): IMessage {
         val decodedMessage = when {
