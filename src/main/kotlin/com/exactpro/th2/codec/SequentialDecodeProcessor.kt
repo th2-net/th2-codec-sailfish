@@ -63,12 +63,14 @@ class SequentialDecodeProcessor(
             logger.debug { "Decoded messages: $decodedMessages" }
             val decodedMessage: IMessage = checkCountAndRawData(decodedMessages, data)
 
-            val messageMetadata = toMessageMetadataBuilder(rawMessage)
-                .setMessageType(decodedMessage.name)
-                .build()
-            return messageToProtoConverter.toProtoMessage(decodedMessage)
-                .setMetadata(messageMetadata)
-                .build()
+            return messageToProtoConverter.toProtoMessage(decodedMessage).apply {
+                if (rawMessage.hasParentEventId()) {
+                    parentEventId = rawMessage.parentEventId
+                }
+                metadata = toMessageMetadataBuilder(rawMessage).apply {
+                    messageType = decodedMessage.name
+                }.build()
+            }.build()
         } catch (ex: Exception) {
             logger.error(ex) { "Cannot decode message from $rawMessage" }
             return null
@@ -76,7 +78,7 @@ class SequentialDecodeProcessor(
     }
 
     /**
-     * Checks that the [decodedMessages] contains exact one message and its raw data is the same as [originalData].
+     * Checks that the [decodedMessages] contains exactly one message and its raw data is the same as [originalData].
      */
     private fun checkCountAndRawData(decodedMessages: List<IMessage>, originalData: ByteArray): IMessage {
         val decodedMessage = when {

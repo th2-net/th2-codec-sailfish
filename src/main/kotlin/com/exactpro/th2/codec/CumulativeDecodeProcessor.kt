@@ -32,7 +32,7 @@ import mu.KotlinLogging
  * This processor joins data from all messages in [RawMessageBatch] to a single buffer.
  * After that, it decodes the cumulated buffer using [com.exactpro.sf.externalapi.codec.IExternalCodec].
  * The result of the decoding must produce the same number of messages as [RawMessageBatch] has.
- * Also, the raw data from decoded messages must match the data from corresponding [RawMessage].
+ * Also, the raw data from the decoded messages must match the data from the corresponding [RawMessage].
  */
 class CumulativeDecodeProcessor(
     codecFactory: IExternalCodecFactory,
@@ -46,7 +46,7 @@ class CumulativeDecodeProcessor(
         try {
             val batchData = joinBatchData(source)
             val messageBatchBuilder = MessageBatch.newBuilder()
-            val decodedMessageList = getCodec().decode(batchData, source.codecContext)
+            val decodedMessageList: List<IMessage> = getCodec().decode(batchData, source.codecContext)
             logger.debug {
                 "decoded messages: {${decodedMessageList.joinToString { message -> "${message.name}: $message" }}}"
             }
@@ -54,6 +54,9 @@ class CumulativeDecodeProcessor(
                 for (pair in source.messagesList.zip(decodedMessageList)) {
                     val metadataBuilder = toMessageMetadataBuilder(pair.first)
                     val protoMessageBuilder = messageToProtoConverter.toProtoMessage(pair.second)
+                    if (pair.first.hasParentEventId()) {
+                        protoMessageBuilder.parentEventId = pair.first.parentEventId
+                    }
                     protoMessageBuilder.metadata = metadataBuilder.setMessageType(pair.second.name).build()
                     messageBatchBuilder.addMessages(protoMessageBuilder)
                 }
