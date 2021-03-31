@@ -32,28 +32,34 @@ class DecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
     private val messageToProtoConverter: IMessageToProtoConverter
-) :  AbstractCodecProcessor<RawMessage, Message.Builder?>(codecFactory, codecSettings) {
+) :  AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
 
-    override fun process(source: RawMessage): Message.Builder? {
+    override fun process(source: RawMessage): List<Message.Builder> {
         try {
             val data: ByteArray = source.body.toByteArray()
-            logger.debug { "Decoding message: ${source.toDebugString()}" }
+            logger.debug { "Start decoding message with id: '${source.metadata.id.toDebugString()}'" }
+            logger.trace { "Decoding message: ${source.toDebugString()}" }
             val decodedMessages = getCodec().decode(data, source.toCodecContext())
-            logger.debug { "Decoded messages: $decodedMessages" }
-            val decodedMessage: IMessage = checkCountAndRawData(decodedMessages, data)
+            checkRawData(decodedMessages, data)
+            logger.trace { "Decoded messages: $decodedMessages" }
+            logger.debug { "Message with id: '${source.metadata.id.toDebugString()}' successfully decoded" }
 
-            return messageToProtoConverter.toProtoMessage(decodedMessage).apply {
-                if (source.hasParentEventId()) {
-                    parentEventId = source.parentEventId
+            return decodedMessages.map { msg ->
+                messageToProtoConverter.toProtoMessage(msg).apply {
+                    if (source.hasParentEventId()) {
+                        parentEventId = source.parentEventId
+                    }
+                    metadata = toMessageMetadataBuilder(source).apply {
+                        messageType = msg.name
+                    }.build()
                 }
-                metadata = toMessageMetadataBuilder(source).apply {
-                    messageType = decodedMessage.name
-                }.build()
             }
+        } catch (ex: CodecException) {
+            throw ex
         } catch (ex: Exception) {
             logger.error(ex) { "Cannot decode message from $source" }
-            return null
+            throw DecodeException("Cannot decode message from ${source.metadata.id.toDebugString()}", ex)
         }
     }
 
@@ -67,19 +73,36 @@ class DecodeProcessor(
     /**
      * Checks that the [decodedMessages] contains exact one message and its raw data is the same as [originalData].
      */
-    private fun checkCountAndRawData(decodedMessages: List<IMessage>, originalData: ByteArray): IMessage {
-        val decodedMessage = when {
-            decodedMessages.size == 1 -> decodedMessages[0]
-            decodedMessages.isEmpty() -> throw DecodeException("No message was decoded")
-            else -> throw DecodeException("More than one message was decoded: ${decodedMessages.size}")
+    private fun checkRawData(decodedMessages: List<IMessage>, originalData: ByteArray) {
+        if (decodedMessages.isEmpty()) {
+            throw DecodeException("No message was decoded")
         }
-        val rawMessage = decodedMessage.metaData.rawMessage
-            ?: throw DecodeException("Raw data is null for message: ${decodedMessage.name}")
-        return if (rawMessage contentEquals originalData) {
-            decodedMessage
-        } else {
+        val totalDecodedRawSize = decodedMessages.sumBy {
+            val size = requireNotNull(it.metaData.rawMessage) { "Raw data is null for message: ${it.name}" }.size
+            check(size > 0) { "Message ${it.name} has empty raw data" }
+            size
+        }
+        if (originalData.size != totalDecodedRawSize) {
+            throw DecodeException("The decoded raw data total size is different from the original one. " +
+                "Decoded ($totalDecodedRawSize): ${decodedMessages.map { it.metaData.rawMessage?.contentToString() }}, " +
+                "Original (${originalData.size}): ${originalData.contentToString()}")
+        }
+        val rawMessage = collectToByteArray(originalData.size, decodedMessages)
+        if (!(rawMessage contentEquals originalData)) {
             throw DecodeException("The decoded raw data is different from the original one. " +
                     "Decoded: ${rawMessage.contentToString()}, Original: ${originalData.contentToString()}")
+        }
+    }
+
+    private fun collectToByteArray(totalSize: Int, decodedMessages: List<IMessage>): ByteArray {
+        return ByteArray(totalSize).also { dest ->
+            var destIndex = 0
+            decodedMessages.forEach {
+                // should never happen here because we checks it earlier
+                val bytes = requireNotNull(it.metaData.rawMessage) { "Raw data for message ${it.name} is null" }
+                bytes.copyInto(dest, destIndex)
+                destIndex += bytes.size
+            }
         }
     }
 
