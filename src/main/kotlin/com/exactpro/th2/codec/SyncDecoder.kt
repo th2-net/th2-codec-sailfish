@@ -25,7 +25,7 @@ import com.exactpro.th2.common.schema.message.MessageRouter
 class SyncDecoder(
     router: MessageRouter<MessageGroupBatch>,
     applicationContext: ApplicationContext,
-    private val processor: AbstractCodecProcessor<RawMessage, Message.Builder?>,
+    private val processor: AbstractCodecProcessor<RawMessage, List<Message.Builder>>,
     codecRootID: EventID?
 ): AbstractSyncCodec(
     router,
@@ -55,9 +55,10 @@ class SyncDecoder(
         for (notTypeMessage in it.messagesList) {
             if (notTypeMessage.hasRawMessage()) {
                 val rawMessage = notTypeMessage.rawMessage
-                processor.process(rawMessage)?.apply {
-                    metadataBuilder.idBuilder.addSubsequence(DEFAULT_SUBSEQUENCE_NUMBER)
-                    groupBuilder.addMessages(AnyMessage.newBuilder().setMessage(this))
+                var startSeq = DEFAULT_SUBSEQUENCE_NUMBER
+                processor.process(rawMessage).forEach {
+                    it.metadataBuilder.idBuilder.addSubsequence(startSeq++)
+                    groupBuilder.addMessages(AnyMessage.newBuilder().setMessage(it))
                 }
             } else {
                 groupBuilder.addMessages(notTypeMessage)

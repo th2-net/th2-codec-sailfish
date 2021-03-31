@@ -78,19 +78,19 @@ abstract class AbstractSyncCodec(
         }
 
         val resultBuilder = MessageGroupBatch.newBuilder()
-        groupBatch.groupsList.filter { it.messagesCount > 0 }.forEach {
+        groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
             var resultGroup: MessageGroup? = null
             try {
-                resultGroup = processMessageGroup(it)
+                resultGroup = processMessageGroup(group)
                 if (resultGroup != null && checkResult(resultGroup)) {
                     resultBuilder.addGroups(resultGroup)
                 }
             } catch (e: CodecException) {
-                val parentEventId = getParentEventId(codecRootEvent, it, resultGroup)
+                val parentEventId = getParentEventId(codecRootEvent, group, resultGroup)
                 if (parentEventId != null) {
                     createAndStoreErrorEvent(e, parentEventId)
                 }
-                logger.error(e) {}
+                logger.error(e) { "Cannot decode not empty group number ${index + 1}" }
             }
         }
 

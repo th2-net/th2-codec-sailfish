@@ -80,6 +80,12 @@ dependencies {
     implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
 
     testImplementation 'org.mockito:mockito-inline:3.5.6'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
+    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
+}
+
+test {
+    useJUnitPlatform()
 }
 
 jar {
@@ -111,6 +117,10 @@ docker {
 }
 
 compileKotlin {
+    kotlinOptions.jvmTarget = "11"
+}
+
+compileTestKotlin {
     kotlinOptions.jvmTarget = "11"
 }
 

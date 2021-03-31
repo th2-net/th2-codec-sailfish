@@ -30,8 +30,8 @@ import com.google.common.collect.Table
 import io.grpc.BindableService
 import io.grpc.Server
 import org.apache.commons.io.FileUtils
-import org.junit.Assert
-import org.junit.Test
+import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.*
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
@@ -84,8 +84,8 @@ class TestApplicationContext {
 
                 val settings = ApplicationContext.create(configuration, commonFactory).codecSettings
 
-                Assert.assertEquals(mainDictionaryStructure.namespace, settings[SailfishDictionaryType.MAIN]!!.namespace)
-                Assert.assertEquals(level1DictionaryStructure.namespace, settings[SailfishDictionaryType.LEVEL1]!!.namespace)
+                Assertions.assertEquals(mainDictionaryStructure.namespace, settings[SailfishDictionaryType.MAIN]!!.namespace)
+                Assertions.assertEquals(level1DictionaryStructure.namespace, settings[SailfishDictionaryType.LEVEL1]!!.namespace)
             }
         }
     }
