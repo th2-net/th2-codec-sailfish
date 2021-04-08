@@ -14,11 +14,6 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.common.event.Event
-import com.exactpro.th2.common.event.Event.Status.FAILED
-import com.exactpro.th2.common.event.bean.Message
-import com.exactpro.th2.common.grpc.EventBatch
-import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.grpc.MessageGroup
 import com.exactpro.th2.common.grpc.MessageGroupBatch
 import com.exactpro.th2.common.schema.message.MessageListener
@@ -29,15 +24,11 @@ import java.util.concurrent.TimeoutException
 
 abstract class AbstractSyncCodec(
     protected val router: MessageRouter<MessageGroupBatch>,
-    applicationContext: ApplicationContext,
-    protected val codecRootEvent: EventID?
-): AutoCloseable, MessageListener<MessageGroupBatch> {
+    protected val applicationContext: ApplicationContext
+) : AutoCloseable, MessageListener<MessageGroupBatch> {
 
     protected val logger = KotlinLogging.logger {}
-    protected val eventBatchRouter: MessageRouter<EventBatch>? = applicationContext.eventBatchRouter
-    protected val context = applicationContext;
-
-    protected var tagretAttributes : String = ""
+    protected var tagretAttributes: String = ""
 
 
     fun start(sourceAttributes: String, targetAttributes: String) {
@@ -45,7 +36,7 @@ abstract class AbstractSyncCodec(
             this.tagretAttributes = targetAttributes
             router.subscribeAll(this, sourceAttributes)
         } catch (exception: Exception) {
-            when(exception) {
+            when (exception) {
                 is IOException,
                 is TimeoutException -> throw DecodeException("could not start rabbit mq subscriber", exception)
                 else -> throw DecodeException("could not start decoder", exception)
@@ -79,18 +70,17 @@ abstract class AbstractSyncCodec(
 
         val resultBuilder = MessageGroupBatch.newBuilder()
         groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
-            var resultGroup: MessageGroup? = null
             try {
-                resultGroup = processMessageGroup(group)
-                if (resultGroup != null && checkResult(resultGroup)) {
-                    resultBuilder.addGroups(resultGroup)
+                processMessageGroup(group).apply {
+                    if (this != null && checkResult(this)) {
+                        resultBuilder.addGroups(this)
+                    }
                 }
             } catch (e: CodecException) {
-                val parentEventId = getParentEventId(codecRootEvent, group, resultGroup)
-                if (parentEventId != null) {
-                    createAndStoreErrorEvent(e, parentEventId)
+                "Cannot decode not empty group number ${index + 1}".apply {
+                    logger.error(e) { this }
+                    applicationContext.eventBatchCollector.createAndStoreErrorEvent(this, e, group)
                 }
-                logger.error(e) { "Cannot decode not empty group number ${index + 1}" }
             }
         }
 
@@ -98,36 +88,11 @@ abstract class AbstractSyncCodec(
         if (checkResultBatch(result)) {
             router.sendAll(result, this.tagretAttributes)
         }
-
-
     }
 
     protected abstract fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean
 
     protected abstract fun processMessageGroup(it: MessageGroup): MessageGroup?
 
-    private fun createAndStoreErrorEvent(exception: CodecException, parentEventID: EventID) {
-        if (eventBatchRouter != null) {
-            try {
-                eventBatchRouter.send(
-                    EventBatch.newBuilder().addEvents(
-                    Event.start()
-                        .name("Codec error")
-                        .type("CodecError")
-                        .status(FAILED)
-                        .bodyData(Message().apply {
-                            data = exception.getAllMessages()
-                        })
-                        .toProtoEvent(parentEventID.id)
-                ).build(),
-                    "publish", "event"
-                )
-            } catch (exception: Exception) {
-                logger.warn(exception) { "could not send codec error event" }
-            }
-        }
-    }
-
-    abstract fun getParentEventId(codecRootID: EventID?, protoSource: MessageGroup?, protoResult: MessageGroup?): EventID?
     abstract fun checkResult(protoResult: MessageGroup): Boolean
 }

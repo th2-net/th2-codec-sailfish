@@ -32,7 +32,8 @@ import mu.KotlinLogging
 class EncodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    private val converter: ProtoToIMessageConverter
+    private val converter: ProtoToIMessageConverter,
+    private val eventBatchCollector: EventBatchCollector
 ) : AbstractCodecProcessor<Message, RawMessage.Builder>(codecFactory, codecSettings) {
 
     private val logger = KotlinLogging.logger {  }

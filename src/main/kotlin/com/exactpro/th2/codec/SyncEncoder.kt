@@ -20,31 +20,16 @@ import com.exactpro.th2.common.schema.message.MessageRouter
 class SyncEncoder(
     router: MessageRouter<MessageGroupBatch>,
     applicationContext: ApplicationContext,
-    private val processor: AbstractCodecProcessor<Message, RawMessage.Builder>,
-    codecRootID: EventID?
-): AbstractSyncCodec(
+    private val processor: AbstractCodecProcessor<Message, RawMessage.Builder>
+) : AbstractSyncCodec(
     router,
-    applicationContext,
-    codecRootID
+    applicationContext
 ) {
 
-    override fun getParentEventId(
-        codecRootID: EventID?,
-        protoSource: MessageGroup?,
-        protoResult: MessageGroup?
-    ): EventID? {
-        if (protoSource != null && protoSource.messagesCount != 0) {
-            val parsedMessage = protoSource.messagesList.first { it.hasMessage() }.message
-            if (parsedMessage.hasParentEventId()) {
-                return parsedMessage.parentEventId
-            }
-        }
-        return codecRootID
-    }
 
     override fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean = resultBatch.groupsCount > 0
 
-    override fun checkResult(protoResult: MessageGroup): Boolean  = protoResult.messagesCount > 0
+    override fun checkResult(protoResult: MessageGroup): Boolean = protoResult.messagesCount > 0
 
     override fun processMessageGroup(it: MessageGroup): MessageGroup? {
         if (it.messagesCount < 1) {
