@@ -33,7 +33,7 @@ class DecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
     private val messageToProtoConverter: IMessageToProtoConverter,
-    private val eventBatchCollector: EventBatchCollector
+    private val eventBatchCollector: EventBatchCollector?
 ) : AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
 
@@ -76,9 +76,10 @@ class DecodeProcessor(
     private fun checkErrorMessageContains(decodedMessages: List<IMessage>, rawMessage: RawMessage) {
         for (msg in decodedMessages) {
             if (msg.name == ErrorMessage.MESSAGE_NAME) {
-                eventBatchCollector.createAndStoreDecodeErrorEvent(
-                    "Error during decode msg: ${msg.getField<String>("Cause")}", rawMessage
-                )
+                "Error during decode msg: ${msg.getField<String>("Cause")}".apply {
+                    logger.debug { this }
+                    eventBatchCollector?.createAndStoreErrorEvent(this, rawMessage)
+                }
             }
         }
     }

@@ -29,12 +29,7 @@ import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
-import org.apache.commons.lang3.math.NumberUtils.toInt
-import org.apache.commons.lang3.math.NumberUtils.toLong
-import org.apache.commons.lang3.math.NumberUtils.toShort
-import org.apache.commons.lang3.math.NumberUtils.toByte
-import org.apache.commons.lang3.math.NumberUtils.toFloat
-import org.apache.commons.lang3.math.NumberUtils.toDouble
+import org.apache.commons.lang3.math.NumberUtils.*
 import java.io.File
 import java.net.URLClassLoader
 import java.util.*
@@ -58,29 +53,16 @@ class ApplicationContext(
             val codecFactory = loadFactory(configuration.codecClassName)
 
             val eventBatchRouter = commonFactory.eventBatchRouter
-            val eventBatchCollector = EventBatchCollector(
-                eventBatchRouter, configuration.maxOutgoingEventBatchSize,
-                configuration.outgoingEventBatchBuildTime
-            ).also {
-                it.createAndStoreRootEvent(codecFactory.protocolName)
-            }
-
             val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
-            val codec: IExternalCodec
-            val protoConverter: ProtoToIMessageConverter
-            val iMessageConverter: IMessageToProtoConverter
-            try {
-                codec = codecFactory.createCodec(codecSettings)
-                val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
-                val dictionary =
-                    checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
-                protoConverter = ProtoToIMessageConverter(
-                    DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
-                )
-                iMessageConverter = IMessageToProtoConverter()
-            } catch (e: RuntimeException) {
-                eventBatchCollector.createAndStoreErrorEvent("An error occurred while initializing the codec", e)
-                throw e
+            val codec = codecFactory.createCodec(codecSettings)
+            val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
+            val dictionary = checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
+            val protoConverter = ProtoToIMessageConverter(
+                DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
+            )
+            val iMessageConverter = IMessageToProtoConverter()
+            val eventBatchCollector = EventBatchCollector(eventBatchRouter, configuration.maxOutgoingEventBatchSize, configuration.outgoingEventBatchBuildTime).also {
+                it.createAndStoreRootEvent(codec::class.java.simpleName)
             }
 
             return ApplicationContext(

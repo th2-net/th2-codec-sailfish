@@ -76,13 +76,11 @@ abstract class AbstractSyncCodec(
                         resultBuilder.addGroups(this)
                     }
                 }
-            } catch (exception: RuntimeException) {
-                applicationContext.eventBatchCollector.createAndStoreErrorEvent(
-                    "Cannot process not empty group number ${index + 1}",
-                    exception,
-                    getDirection(),
-                    group
-                )
+            } catch (e: CodecException) {
+                "Cannot decode not empty group number ${index + 1}".apply {
+                    logger.error(e) { this }
+                    applicationContext.eventBatchCollector.createAndStoreErrorEvent(this, e, group)
+                }
             }
         }
 
@@ -91,12 +89,6 @@ abstract class AbstractSyncCodec(
             router.sendAll(result, this.tagretAttributes)
         }
     }
-
-    enum class Direction {
-        ENCODE, DECODE
-    }
-
-    protected abstract fun getDirection(): Direction
 
     protected abstract fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean
 

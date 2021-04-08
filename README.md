@@ -211,7 +211,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 + 3.5.0
     + Checks message structure by the configured dictionary during encode.
-
+    
 + 3.4.0
     + Validates configured dictionaries during initialization
 

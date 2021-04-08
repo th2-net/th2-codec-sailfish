@@ -1,7 +1,6 @@
 package com.exactpro.th2.codec
 
 
-import com.exactpro.th2.codec.util.getAllMessages
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.bean.Message
 import com.exactpro.th2.common.grpc.*
@@ -18,16 +17,13 @@ private val logger = KotlinLogging.logger {}
 class CollectorTask(val eventBatchBuilder: EventBatch.Builder, val timerTask: TimerTask)
 
 class EventBatchCollector(
-    private val eventBatchRouter: MessageRouter<EventBatch>,
+    private val eventBatchRouter: MessageRouter<EventBatch>?,
     private val maxBatchSize: Int,
     private val timeout: Long
 ) : AutoCloseable {
     private val collectorTasks = mutableMapOf<EventID, CollectorTask>()
-    private val lock = ReentrantLock()
-
     private lateinit var rootEventID: EventID
-    private lateinit var decodeErrorGroupEventID: EventID
-    private lateinit var encodeErrorGroupEventID: EventID
+    private val lock = ReentrantLock()
 
     private fun putEvent(event: Event) {
         lock.withLock {
@@ -55,7 +51,7 @@ class EventBatchCollector(
     }
 
     private fun sendEventBatch(eventBatch: EventBatch) {
-        eventBatchRouter.send(eventBatch, "publish", "event")
+        eventBatchRouter?.send(eventBatch, "publish", "event")
     }
 
     fun createAndStoreRootEvent(codecName: String) {
@@ -66,7 +62,7 @@ class EventBatchCollector(
                 .toProtoEvent(null)
 
             rootEventID = event.id
-            logger.info { "root event id: ${event.id.toDebugString()}" }
+            logger.info { "root event: ${event.toDebugString()}" }
             sendEventBatch(
                 EventBatch.newBuilder()
                     .addEvents(event)
@@ -78,116 +74,36 @@ class EventBatchCollector(
         }
     }
 
-    private fun getDecodeErrorGroupEventID(): EventID {
-        try {
-            if (!decodeErrorGroupEventID.isInitialized) {
-                val event = com.exactpro.th2.common.event.Event.start()
-                    .name("DecodeError")
-                    .type("CodecErrorGroup")
-                    .toProtoEvent(rootEventID.id)
-                decodeErrorGroupEventID = event.id
-
-                logger.info { "DecodeError group event id: ${event.id.toDebugString()}" }
-                sendEventBatch(
-                    EventBatch.newBuilder()
-                        .addEvents(event)
-                        .build()
-                )
-            }
-        } catch (exception: Exception) {
-            logger.warn(exception) { "could not store DecodeError group event" }
-        }
-        return decodeErrorGroupEventID
+    fun createAndStoreErrorEvent(errorText: String, rawMessage: RawMessage) {
+        val parentEventID = if (rawMessage.hasParentEventId()) rawMessage.parentEventId else rootEventID
+        val event = createErrorEvent(errorText, null, parentEventID)
+        storeErrorEvent(parentEventID, event)
     }
 
-    private fun getEncodeErrorGroupEventID(): EventID {
+    fun createAndStoreErrorEvent(errorText: String, exception: CodecException, group: MessageGroup) {
         try {
-            if (!encodeErrorGroupEventID.isInitialized) {
-                val event = com.exactpro.th2.common.event.Event.start()
-                    .name("EncodeError")
-                    .type("CodecErrorGroup")
-                    .toProtoEvent(rootEventID.id)
-                encodeErrorGroupEventID = event.id
-
-                logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
-                sendEventBatch(
-                    EventBatch.newBuilder()
-                        .addEvents(event)
-                        .build()
-                )
-            }
-        } catch (exception: Exception) {
-            logger.warn(exception) { "could not store EncodeError group event" }
-        }
-        return encodeErrorGroupEventID
-    }
-
-    fun createAndStoreDecodeErrorEvent(errorText: String, rawMessage: RawMessage) {
-        try {
-            val parentEventID =
-                if (rawMessage.hasParentEventId()) rawMessage.parentEventId else getDecodeErrorGroupEventID()
-            val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
-            logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
+            val parentEventID = getParentEventIdFromGroup(group)
+            val event = createErrorEvent(errorText, exception, parentEventID)
             storeErrorEvent(parentEventID, event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
         }
     }
 
-    fun createAndStoreErrorEvent(
-        errorText: String,
-        exception: RuntimeException,
-        direction: AbstractSyncCodec.Direction,
-        group: MessageGroup
-    ) {
-        try {
-            val parentEventID = getParentEventIdFromGroup(direction, group)
-            val messageIDs = getMessageIDsFromGroup(group)
-            val event = createErrorEvent(errorText, exception, parentEventID, messageIDs)
-            logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
-            storeErrorEvent(parentEventID, event)
-        } catch (exception: Exception) {
-            logger.warn(exception) { "could not send codec error event" }
-        }
-    }
-
-    fun createAndStoreErrorEvent(
-        errorText: String,
-        exception: RuntimeException
-    ) {
-        try {
-            val event = createErrorEvent(errorText, exception, rootEventID)
-            logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
-            storeErrorEvent(rootEventID, event)
-        } catch (exception: Exception) {
-            logger.warn(exception) { "could not send codec error event" }
-        }
-    }
-
-    private fun createErrorEvent(
-        errorText: String,
-        exception: Exception?,
-        parentEventID: EventID,
-        messageIDS: List<MessageID> = mutableListOf()
-    ): Event {
-        val eventName = exception?.message ?: errorText
+    private fun createErrorEvent(errorText: String?, exception: CodecException?, parentEventID: EventID): Event {
         var event = com.exactpro.th2.common.event.Event.start()
-            .name(eventName)
+            .name("Codec error")
             .type("CodecError")
             .status(com.exactpro.th2.common.event.Event.Status.FAILED)
-
-        event = event.bodyData(Message().apply {
-            data = errorText
-            type = "message"
-        })
-        exception?.getAllMessages()?.forEach {
+        if (errorText != null) {
             event = event.bodyData(Message().apply {
-                data = it
-                type = "message"
+                data = errorText
             })
         }
-        messageIDS.forEach {
-            event = event.messageID(it)
+        if (exception != null) {
+            event = event.bodyData(Message().apply {
+                data = exception.getAllMessages()
+            })
         }
         return event.toProtoEvent(parentEventID.id)
     }
@@ -204,17 +120,7 @@ class EventBatchCollector(
         }
     }
 
-    private fun getMessageIDsFromGroup(group: MessageGroup) = mutableListOf<MessageID>().apply {
-        group.messagesList.forEach {
-            if (it.hasMessage()) {
-                add(it.message.metadata.id)
-            } else {
-                add(it.rawMessage.metadata.id)
-            }
-        }
-    }
-
-    private fun getParentEventIdFromGroup(direction: AbstractSyncCodec.Direction, group: MessageGroup): EventID {
+    private fun getParentEventIdFromGroup(group: MessageGroup): EventID {
         if (group.messagesCount != 0) {
             val firstMessageInList = group.messagesList.first()
             if (firstMessageInList.hasMessage()) {
@@ -227,10 +133,7 @@ class EventBatchCollector(
                 }
             }
         }
-        return when (direction) {
-            AbstractSyncCodec.Direction.ENCODE -> getEncodeErrorGroupEventID()
-            AbstractSyncCodec.Direction.DECODE -> getDecodeErrorGroupEventID()
-        }
+        return rootEventID
     }
 
     override fun close() {

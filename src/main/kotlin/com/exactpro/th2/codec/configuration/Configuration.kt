@@ -31,7 +31,7 @@ internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(YAMLFactory()).apply { r
     .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
 class Configuration() {
-    val outgoingEventBatchBuildTime: Long = 1000
+    val outgoingEventBatchBuildTime: Long = 1
     val maxOutgoingEventBatchSize: Int = 99
     var codecClassName: String? = null
 
@@ -51,7 +51,7 @@ class Configuration() {
 
     companion object {
 
-        fun create(commonFactory: CommonFactory, sailfishCodecParamsPath: String?): Configuration {
+        fun create(commonFactory : CommonFactory, sailfishCodecParamsPath: String?) : Configuration{
 
             val configuration = commonFactory.getCustomConfiguration(Configuration::class.java)
             val implementationParams = readSailfishParameters(sailfishCodecParamsPath)
@@ -70,8 +70,8 @@ class Configuration() {
             }
             try {
                 return OBJECT_MAPPER.readValue(
-                    newInputStream(codecParameterFile),
-                    object : TypeReference<LinkedHashMap<String, String>>() {}
+                        newInputStream(codecParameterFile),
+                        object : TypeReference<LinkedHashMap<String, String>>() {}
                 )
             } catch (exception: Exception) {
                 when (exception) {
