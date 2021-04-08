@@ -21,24 +21,18 @@ import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.DefaultMessageFactoryProxy
-import com.exactpro.th2.common.grpc.EventBatch
+import com.exactpro.th2.codec.EventBatchCollector
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
-import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
-import org.apache.commons.lang3.math.NumberUtils.toByte
-import org.apache.commons.lang3.math.NumberUtils.toDouble
-import org.apache.commons.lang3.math.NumberUtils.toFloat
-import org.apache.commons.lang3.math.NumberUtils.toInt
-import org.apache.commons.lang3.math.NumberUtils.toLong
-import org.apache.commons.lang3.math.NumberUtils.toShort
+import org.apache.commons.lang3.math.NumberUtils.*
 import java.io.File
 import java.net.URLClassLoader
-import java.util.ServiceLoader
+import java.util.*
 
 class ApplicationContext(
     val commonFactory: CommonFactory,
@@ -47,7 +41,7 @@ class ApplicationContext(
     val codecSettings: IExternalCodecSettings,
     val protoToIMessageConverter: ProtoToIMessageConverter,
     val messageToProtoConverter: IMessageToProtoConverter,
-    val eventBatchRouter: MessageRouter<EventBatch>?
+    val eventBatchCollector: EventBatchCollector
 ) {
 
     companion object {
@@ -67,6 +61,9 @@ class ApplicationContext(
                 DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
             )
             val iMessageConverter = IMessageToProtoConverter()
+            val eventBatchCollector = EventBatchCollector(eventBatchRouter, configuration.maxOutgoingEventBatchSize, configuration.outgoingEventBatchBuildTime).also {
+                it.createAndStoreRootEvent(codec::class.java.simpleName)
+            }
 
             return ApplicationContext(
                 commonFactory,
@@ -75,7 +72,7 @@ class ApplicationContext(
                 codecSettings,
                 protoConverter,
                 iMessageConverter,
-                eventBatchRouter
+                eventBatchCollector
             )
         }
 
@@ -106,7 +103,7 @@ class ApplicationContext(
             if (clazz == null) {
                 logger.warn { "unknown codec parameter '$propertyName'" }
             } else {
-                settings[propertyName] = when(clazz) {
+                settings[propertyName] = when (clazz) {
                     Boolean::class.javaPrimitiveType,
                     Boolean::class.javaObjectType -> toBoolean(propertyValue)
                     Byte::class.javaPrimitiveType,
@@ -114,7 +111,7 @@ class ApplicationContext(
                     Short::class.javaPrimitiveType,
                     Short::class.javaObjectType -> toShort(propertyValue)
                     Integer::class.javaPrimitiveType,
-                    Integer::class.javaObjectType-> toInt(propertyValue)
+                    Integer::class.javaObjectType -> toInt(propertyValue)
                     Long::class.javaPrimitiveType,
                     Long::class.javaObjectType -> toLong(propertyValue)
                     Float::class.javaPrimitiveType,

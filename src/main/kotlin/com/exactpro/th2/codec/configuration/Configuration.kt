@@ -31,6 +31,8 @@ internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(YAMLFactory()).apply { r
     .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
 class Configuration() {
+    val outgoingEventBatchBuildTime: Long = 1
+    val maxOutgoingEventBatchSize: Int = 99
     var codecClassName: String? = null
 
     var codecParameters: Map<String, String>? = null

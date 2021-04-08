@@ -194,6 +194,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 3.6.2
+    + Add notify about ErrorMessage via a failed event
+
 + 3.6.1
     + removed gRPC event loop handling
     + fixed dictionary reading
