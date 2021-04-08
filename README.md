@@ -194,5 +194,8 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 2.6.0
+  + Validates configured dictionaries during initialization 
+
 + 2.5.0
   + Copies a parent event id from the raw to the parsed message
