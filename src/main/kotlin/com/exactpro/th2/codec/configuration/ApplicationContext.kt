@@ -25,6 +25,7 @@ import com.exactpro.th2.codec.CumulativeDecodeProcessor
 import com.exactpro.th2.codec.DefaultMessageFactoryProxy
 import com.exactpro.th2.codec.SequentialDecodeProcessor
 import com.exactpro.th2.common.grpc.EventBatch
+import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.grpc.MessageBatch
 import com.exactpro.th2.common.grpc.RawMessageBatch
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
@@ -49,9 +50,9 @@ class ApplicationContext(
     val messageToProtoConverter: IMessageToProtoConverter,
     val eventBatchRouter: MessageRouter<EventBatch>?
 ) {
-    fun createDecodeProcessor(type: ProcessorType): AbstractCodecProcessor<RawMessageBatch, MessageBatch> {
+    fun createDecodeProcessor(type: ProcessorType, rootEventId: EventID?): AbstractCodecProcessor<RawMessageBatch, MessageBatch> {
         return when (type) {
-            ProcessorType.CUMULATIVE -> CumulativeDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter)
+            ProcessorType.CUMULATIVE -> CumulativeDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter, eventBatchRouter, rootEventId)
             ProcessorType.SEQUENTIAL -> SequentialDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter)
         }
     }
@@ -112,7 +113,7 @@ class ApplicationContext(
             if (clazz == null) {
                 logger.warn { "unknown codec parameter '$propertyName'" }
             } else {
-                settings[propertyName] = when(clazz) {
+                settings[propertyName] = when (clazz) {
                     Boolean::class.javaPrimitiveType,
                     Boolean::class.javaObjectType -> toBoolean(propertyValue)
                     Byte::class.javaPrimitiveType,
@@ -120,7 +121,7 @@ class ApplicationContext(
                     Short::class.javaPrimitiveType,
                     Short::class.javaObjectType -> toShort(propertyValue)
                     Integer::class.javaPrimitiveType,
-                    Integer::class.javaObjectType-> toInt(propertyValue)
+                    Integer::class.javaObjectType -> toInt(propertyValue)
                     Long::class.javaPrimitiveType,
                     Long::class.javaObjectType -> toLong(propertyValue)
                     Float::class.javaPrimitiveType,

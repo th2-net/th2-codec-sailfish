@@ -77,7 +77,7 @@ class CodecCommand : CliktCommand() {
             createAndStartCodec("decoder", applicationContext, rootEventId)
             { _: ApplicationContext, _: EventID? ->
                 SyncDecoder(rawRouter, parsedRouter, applicationContext,
-                    applicationContext.createDecodeProcessor(configuration.decodeProcessorType),
+                    applicationContext.createDecodeProcessor(configuration.decodeProcessorType, rootEventId),
                     rootEventId).also { it.start(configuration.decoderInputAttribute, configuration.decoderOutputAttribute) }
             }
 
@@ -135,7 +135,7 @@ class CodecCommand : CliktCommand() {
             val rawRouter = context.commonFactory.messageRouterRawBatch
             SyncDecoder(
                 rawRouter, parsedRouter, context,
-                context.createDecodeProcessor(configuration.decodeProcessorType),
+                context.createDecodeProcessor(configuration.decodeProcessorType, rootEventId),
                 rootEventId
             ).also { it.start(configuration.generalDecoderInputAttribute, configuration.generalDecoderOutputAttribute) }
         }

@@ -19,12 +19,13 @@ package com.exactpro.th2.codec
 import com.exactpro.sf.common.messages.IMessage
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
+import com.exactpro.sf.messages.service.ErrorMessage
 import com.exactpro.th2.codec.util.codecContext
+import com.exactpro.th2.codec.util.sendError
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.codec.util.toHexString
-import com.exactpro.th2.common.grpc.MessageBatch
-import com.exactpro.th2.common.grpc.RawMessage
-import com.exactpro.th2.common.grpc.RawMessageBatch
+import com.exactpro.th2.common.grpc.*
+import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import mu.KotlinLogging
 
@@ -37,7 +38,9 @@ import mu.KotlinLogging
 class CumulativeDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    messageToProtoConverter: IMessageToProtoConverter
+    messageToProtoConverter: IMessageToProtoConverter,
+    private val eventBatchRouter: MessageRouter<EventBatch>?,
+    private val rootEventId: EventID?
 ) : RawBatchDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter) {
 
     private val logger = KotlinLogging.logger { }
@@ -49,6 +52,16 @@ class CumulativeDecodeProcessor(
             val decodedMessageList: List<IMessage> = getCodec().decode(batchData, source.codecContext)
             logger.debug {
                 "decoded messages: {${decodedMessageList.joinToString { message -> "${message.name}: $message" }}}"
+            }
+            for (msg in decodedMessageList) {
+                if (msg.name == ErrorMessage.MESSAGE_NAME) {
+                    "Error during decode msg: ${msg.getField<String>("Cause")}".apply {
+                        logger.debug { this }
+                        rootEventId?.let {
+                            eventBatchRouter?.sendError(it, this)
+                        }
+                    }
+                }
             }
             if (checkSizeAndContext(source, decodedMessageList)) {
                 for (pair in source.messagesList.zip(decodedMessageList)) {
