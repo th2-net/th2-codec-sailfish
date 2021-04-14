@@ -51,7 +51,10 @@ internal class TestDecodeProcessor {
         val messageID = MessageID.newBuilder()
             .setSequence(1)
             .build()
-        val result = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
+        val result = processor.process(
+            RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }
+                .build()
+        )
 
         assertEquals(1, result.size) { "Unexpected result: $result" }
         val id = result[0].metadata.id
@@ -73,7 +76,10 @@ internal class TestDecodeProcessor {
         val messageID = MessageID.newBuilder()
             .setSequence(1)
             .build()
-        val result = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
+        val result = processor.process(
+            RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }
+                .build()
+        )
 
         assertEquals(2, result.size) { "Unexpected result: $result" }
         assertAll(
@@ -99,7 +105,10 @@ internal class TestDecodeProcessor {
             .setSequence(1)
             .build()
         assertThrows<DecodeException> {
-            processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
+            processor.process(
+                RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }
+                    .build()
+            )
         }
     }
 
@@ -116,7 +125,10 @@ internal class TestDecodeProcessor {
             .setSequence(1)
             .build()
         assertThrows<DecodeException> {
-            processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
+            processor.process(
+                RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }
+                    .build()
+            )
         }
     }
 }

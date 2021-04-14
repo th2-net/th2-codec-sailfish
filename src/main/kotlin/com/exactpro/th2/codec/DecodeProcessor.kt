@@ -77,7 +77,7 @@ class DecodeProcessor(
         for (msg in decodedMessages) {
             if (msg.name == ErrorMessage.MESSAGE_NAME) {
                 "Error during decode msg: ${msg.getField<String>("Cause")}".apply {
-                    logger.debug { this }
+                    logger.error { this }
                     eventBatchCollector.createAndStoreErrorEvent(this, rawMessage)
                 }
             }

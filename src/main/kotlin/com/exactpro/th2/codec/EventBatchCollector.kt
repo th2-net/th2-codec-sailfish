@@ -76,21 +76,27 @@ class EventBatchCollector(
 
     fun createAndStoreErrorEvent(errorText: String, rawMessage: RawMessage) {
         val parentEventID = if (rawMessage.hasParentEventId()) rawMessage.parentEventId else rootEventID
-        val event = createErrorEvent(errorText, null, parentEventID)
+        val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
         storeErrorEvent(parentEventID, event)
     }
 
     fun createAndStoreErrorEvent(errorText: String, exception: CodecException, group: MessageGroup) {
         try {
             val parentEventID = getParentEventIdFromGroup(group)
-            val event = createErrorEvent(errorText, exception, parentEventID)
+            val messageIDs = getMessageIDsFromGroup(group)
+            val event = createErrorEvent(errorText, exception, parentEventID, messageIDs)
             storeErrorEvent(parentEventID, event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
         }
     }
 
-    private fun createErrorEvent(errorText: String?, exception: CodecException?, parentEventID: EventID): Event {
+    private fun createErrorEvent(
+        errorText: String?,
+        exception: CodecException?,
+        parentEventID: EventID,
+        messageIDS: List<MessageID>
+    ): Event {
         var event = com.exactpro.th2.common.event.Event.start()
             .name("Codec error")
             .type("CodecError")
@@ -105,6 +111,9 @@ class EventBatchCollector(
                 data = exception.getAllMessages()
             })
         }
+        messageIDS.forEach {
+            event = event.messageID(it)
+        }
         return event.toProtoEvent(parentEventID.id)
     }
 
@@ -117,6 +126,16 @@ class EventBatchCollector(
                     .addEvents(event)
                     .build()
             )
+        }
+    }
+
+    private fun getMessageIDsFromGroup(group: MessageGroup) = mutableListOf<MessageID>().apply {
+        group.messagesList.forEach {
+            if (it.hasMessage()) {
+                add(it.message.metadata.id)
+            } else {
+                add(it.rawMessage.metadata.id)
+            }
         }
     }
 
