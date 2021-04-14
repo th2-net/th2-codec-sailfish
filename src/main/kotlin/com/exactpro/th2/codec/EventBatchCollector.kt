@@ -1,6 +1,7 @@
 package com.exactpro.th2.codec
 
 
+import com.exactpro.th2.codec.util.getAllMessages
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.bean.Message
 import com.exactpro.th2.common.grpc.*
@@ -75,16 +76,22 @@ class EventBatchCollector(
     }
 
     fun createAndStoreErrorEvent(errorText: String, rawMessage: RawMessage) {
-        val parentEventID = if (rawMessage.hasParentEventId()) rawMessage.parentEventId else rootEventID
-        val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
-        storeErrorEvent(parentEventID, event)
+        try {
+            val parentEventID = if (rawMessage.hasParentEventId()) rawMessage.parentEventId else rootEventID
+            val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
+            logger.error { "${errorText}. Error event: ${event.toDebugString()}" }
+            storeErrorEvent(parentEventID, event)
+        } catch (exception: Exception) {
+            logger.warn(exception) { "could not send codec error event" }
+        }
     }
 
-    fun createAndStoreErrorEvent(errorText: String, exception: CodecException, group: MessageGroup) {
+    fun createAndStoreErrorEvent(errorText: String, exception: Exception, group: MessageGroup) {
         try {
             val parentEventID = getParentEventIdFromGroup(group)
             val messageIDs = getMessageIDsFromGroup(group)
             val event = createErrorEvent(errorText, exception, parentEventID, messageIDs)
+            logger.error(exception) { "${errorText}. Error event: ${event.toDebugString()}" }
             storeErrorEvent(parentEventID, event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
@@ -92,23 +99,19 @@ class EventBatchCollector(
     }
 
     private fun createErrorEvent(
-        errorText: String?,
-        exception: CodecException?,
+        errorText: String,
+        exception: Exception?,
         parentEventID: EventID,
         messageIDS: List<MessageID>
     ): Event {
         var event = com.exactpro.th2.common.event.Event.start()
-            .name("Codec error")
+            .name(errorText)
             .type("CodecError")
             .status(com.exactpro.th2.common.event.Event.Status.FAILED)
-        if (errorText != null) {
-            event = event.bodyData(Message().apply {
-                data = errorText
-            })
-        }
         if (exception != null) {
             event = event.bodyData(Message().apply {
                 data = exception.getAllMessages()
+                type = "message"
             })
         }
         messageIDS.forEach {
