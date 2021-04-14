@@ -61,7 +61,7 @@ dependencies {
     api platform('com.exactpro.th2:bom:2.10.1')
     implementation 'com.exactpro.th2:grpc-common:2.4.0'
     implementation "com.exactpro.th2:common:2.10.0"
-    implementation 'com.exactpro.th2:sailfish-utils:2.4.0'
+    implementation 'com.exactpro.th2:sailfish-utils:2.4.1'
 
     implementation 'io.github.microutils:kotlin-logging:1.7.+'
 
