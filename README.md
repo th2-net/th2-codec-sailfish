@@ -1,4 +1,4 @@
-# How it works (3.6.1)
+# How it works (3.6.2)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -63,6 +63,15 @@ They should be defined in the `custom-config` section of the component configura
 ```yaml
 codecClassName: fully.qualified.class.name.for.Factory
 decodeProcessorType: CUMULATIVE
+```
+
+## Publishing events parameters
+
+These parameters determine the size of the EventBatch, and the time (milliseconds) during which the EventBatch is built.
+
+```yaml
+outgoingEventBatchBuildTime: 1000
+maxOutgoingEventBatchSize: 99
 ```
 
 ## Codec implementation parameters
@@ -195,7 +204,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 3.6.2
-    + Add notify about ErrorMessage via a failed event
+    + Add notify about ErrorMessage during decoding and any codec errors via a failed event
 
 + 3.6.1
     + removed gRPC event loop handling
