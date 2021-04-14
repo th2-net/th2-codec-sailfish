@@ -65,6 +65,15 @@ codecClassName: fully.qualified.class.name.for.Factory
 decodeProcessorType: CUMULATIVE
 ```
 
+## Publishing events parameters
+
+These parameters determine the size of the EventBatch, and the time (milliseconds) during which the EventBatch is built.
+
+```yaml
+outgoingEventBatchBuildTime: 1000
+maxOutgoingEventBatchSize: 99
+```
+
 ## Codec implementation parameters
 
 These parameters will be passed to the actual codec implementation to configure its behavior.
@@ -195,7 +204,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 3.4.1
-    + Add notify about ErrorMessage via a failed event
+    + Add notify about ErrorMessage during decoding and any codec errors via a failed event
 
 + 3.4.0
     + Validates configured dictionaries during initialization
