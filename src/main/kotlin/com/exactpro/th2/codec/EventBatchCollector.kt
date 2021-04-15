@@ -18,7 +18,7 @@ private val logger = KotlinLogging.logger {}
 class CollectorTask(val eventBatchBuilder: EventBatch.Builder, val timerTask: TimerTask)
 
 class EventBatchCollector(
-    private val eventBatchRouter: MessageRouter<EventBatch>?,
+    private val eventBatchRouter: MessageRouter<EventBatch>,
     private val maxBatchSize: Int,
     private val timeout: Long
 ) : AutoCloseable {
@@ -52,7 +52,7 @@ class EventBatchCollector(
     }
 
     private fun sendEventBatch(eventBatch: EventBatch) {
-        eventBatchRouter?.send(eventBatch, "publish", "event")
+        eventBatchRouter.send(eventBatch, "publish", "event")
     }
 
     fun createAndStoreRootEvent(codecName: String) {
@@ -104,10 +104,18 @@ class EventBatchCollector(
         parentEventID: EventID,
         messageIDS: List<MessageID>
     ): Event {
+        val exceptionMessage = exception?.getAllMessages()
+        val indexCause = exceptionMessage?.lastIndexOf(':') ?: -1
+        val eventName = if (indexCause != -1) exceptionMessage?.substring(indexCause + 1) else errorText
         var event = com.exactpro.th2.common.event.Event.start()
-            .name(errorText)
+            .name(eventName)
             .type("CodecError")
             .status(com.exactpro.th2.common.event.Event.Status.FAILED)
+
+        event = event.bodyData(Message().apply {
+            data = errorText
+            type = "message"
+        })
         if (exception != null) {
             event = event.bodyData(Message().apply {
                 data = exception.getAllMessages()
