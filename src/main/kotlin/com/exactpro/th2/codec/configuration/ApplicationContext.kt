@@ -29,7 +29,12 @@ import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
-import org.apache.commons.lang3.math.NumberUtils.*
+import org.apache.commons.lang3.math.NumberUtils.toInt
+import org.apache.commons.lang3.math.NumberUtils.toLong
+import org.apache.commons.lang3.math.NumberUtils.toShort
+import org.apache.commons.lang3.math.NumberUtils.toByte
+import org.apache.commons.lang3.math.NumberUtils.toFloat
+import org.apache.commons.lang3.math.NumberUtils.toDouble
 import java.io.File
 import java.net.URLClassLoader
 import java.util.*
