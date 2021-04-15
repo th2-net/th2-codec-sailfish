@@ -1,6 +1,7 @@
 package com.exactpro.th2.codec
 
 
+import com.exactpro.th2.codec.util.getAllMessages
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.bean.Message
 import com.exactpro.th2.common.grpc.*
@@ -17,7 +18,7 @@ private val logger = KotlinLogging.logger {}
 class CollectorTask(val eventBatchBuilder: EventBatch.Builder, val timerTask: TimerTask)
 
 class EventBatchCollector(
-    private val eventBatchRouter: MessageRouter<EventBatch>?,
+    private val eventBatchRouter: MessageRouter<EventBatch>,
     private val maxBatchSize: Int,
     private val timeout: Long
 ) : AutoCloseable {
@@ -51,7 +52,7 @@ class EventBatchCollector(
     }
 
     private fun sendEventBatch(eventBatch: EventBatch) {
-        eventBatchRouter?.send(eventBatch, "publish", "event")
+        eventBatchRouter.send(eventBatch, "publish", "event")
     }
 
     fun createAndStoreRootEvent(codecName: String) {
@@ -75,35 +76,54 @@ class EventBatchCollector(
     }
 
     fun createAndStoreErrorEvent(errorText: String, rawMessage: RawMessage) {
-        val parentEventID = if (rawMessage.hasParentEventId()) rawMessage.parentEventId else rootEventID
-        val event = createErrorEvent(errorText, null, parentEventID)
-        storeErrorEvent(parentEventID, event)
-    }
-
-    fun createAndStoreErrorEvent(errorText: String, exception: CodecException, group: MessageGroup) {
         try {
-            val parentEventID = getParentEventIdFromGroup(group)
-            val event = createErrorEvent(errorText, exception, parentEventID)
+            val parentEventID = if (rawMessage.hasParentEventId()) rawMessage.parentEventId else rootEventID
+            val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
+            logger.error { "${errorText}. Error event: ${event.toDebugString()}" }
             storeErrorEvent(parentEventID, event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
         }
     }
 
-    private fun createErrorEvent(errorText: String?, exception: CodecException?, parentEventID: EventID): Event {
+    fun createAndStoreErrorEvent(errorText: String, exception: Exception, group: MessageGroup) {
+        try {
+            val parentEventID = getParentEventIdFromGroup(group)
+            val messageIDs = getMessageIDsFromGroup(group)
+            val event = createErrorEvent(errorText, exception, parentEventID, messageIDs)
+            logger.error(exception) { "${errorText}. Error event: ${event.toDebugString()}" }
+            storeErrorEvent(parentEventID, event)
+        } catch (exception: Exception) {
+            logger.warn(exception) { "could not send codec error event" }
+        }
+    }
+
+    private fun createErrorEvent(
+        errorText: String,
+        exception: Exception?,
+        parentEventID: EventID,
+        messageIDS: List<MessageID>
+    ): Event {
+        val exceptionMessage = exception?.getAllMessages()
+        val indexCause = exceptionMessage?.lastIndexOf(':') ?: -1
+        val eventName = if (indexCause != -1) exceptionMessage?.substring(indexCause + 1) else errorText
         var event = com.exactpro.th2.common.event.Event.start()
-            .name("Codec error")
+            .name(eventName)
             .type("CodecError")
             .status(com.exactpro.th2.common.event.Event.Status.FAILED)
-        if (errorText != null) {
-            event = event.bodyData(Message().apply {
-                data = errorText
-            })
-        }
+
+        event = event.bodyData(Message().apply {
+            data = errorText
+            type = "message"
+        })
         if (exception != null) {
             event = event.bodyData(Message().apply {
                 data = exception.getAllMessages()
+                type = "message"
             })
+        }
+        messageIDS.forEach {
+            event = event.messageID(it)
         }
         return event.toProtoEvent(parentEventID.id)
     }
@@ -117,6 +137,16 @@ class EventBatchCollector(
                     .addEvents(event)
                     .build()
             )
+        }
+    }
+
+    private fun getMessageIDsFromGroup(group: MessageGroup) = mutableListOf<MessageID>().apply {
+        group.messagesList.forEach {
+            if (it.hasMessage()) {
+                add(it.message.metadata.id)
+            } else {
+                add(it.rawMessage.metadata.id)
+            }
         }
     }
 
