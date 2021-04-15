@@ -18,7 +18,7 @@ private val logger = KotlinLogging.logger {}
 class CollectorTask(val eventBatchBuilder: EventBatch.Builder, val timerTask: TimerTask)
 
 class EventBatchCollector(
-    private val eventBatchRouter: MessageRouter<EventBatch>,
+    private val eventBatchRouter: MessageRouter<EventBatch>?,
     private val maxBatchSize: Int,
     private val timeout: Long
 ) : AutoCloseable {
@@ -52,7 +52,7 @@ class EventBatchCollector(
     }
 
     private fun sendEventBatch(eventBatch: EventBatch) {
-        eventBatchRouter.send(eventBatch, "publish", "event")
+        eventBatchRouter?.send(eventBatch, "publish", "event")
     }
 
     fun createAndStoreRootEvent(codecName: String) {
