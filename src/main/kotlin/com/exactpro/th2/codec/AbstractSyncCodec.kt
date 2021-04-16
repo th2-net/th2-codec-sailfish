@@ -76,11 +76,10 @@ abstract class AbstractSyncCodec(
                         resultBuilder.addGroups(this)
                     }
                 }
-            } catch (e: CodecException) {
-                "Cannot decode not empty group number ${index + 1}".apply {
-                    logger.error(e) { this }
-                    applicationContext.eventBatchCollector.createAndStoreErrorEvent(this, e, group)
-                }
+            } catch (e: RuntimeException) {
+                applicationContext.eventBatchCollector.createAndStoreErrorEvent(
+                    "Cannot process not empty group number ${index + 1}", e, group
+                )
             }
         }
 
