@@ -105,8 +105,8 @@ class EventBatchCollector(
         messageIDS: List<MessageID>
     ): Event {
         val exceptionMessage = exception?.getAllMessages()
-        val indexCause = exceptionMessage?.lastIndexOf(':') ?: -1
-        val eventName = if (indexCause != -1) exceptionMessage?.substring(indexCause + 1) else errorText
+        val indexCause = exceptionMessage?.lastIndexOf("Caused by: ") ?: -1
+        val eventName = if (indexCause != -1) exceptionMessage?.substring(indexCause + 10) else errorText
         var event = com.exactpro.th2.common.event.Event.start()
             .name(eventName)
             .type("CodecError")
