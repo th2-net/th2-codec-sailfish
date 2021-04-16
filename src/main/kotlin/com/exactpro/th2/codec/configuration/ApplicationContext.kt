@@ -66,7 +66,10 @@ class ApplicationContext(
                 DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
             )
             val iMessageConverter = IMessageToProtoConverter()
-            val eventBatchCollector = EventBatchCollector(eventBatchRouter, configuration.maxOutgoingEventBatchSize, configuration.outgoingEventBatchBuildTime).also {
+            val eventBatchCollector = EventBatchCollector(
+                eventBatchRouter, configuration.maxOutgoingEventBatchSize,
+                configuration.outgoingEventBatchBuildTime
+            ).also {
                 it.createAndStoreRootEvent(codec::class.java.simpleName)
             }
 
