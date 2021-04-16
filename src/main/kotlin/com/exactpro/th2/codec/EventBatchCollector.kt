@@ -18,7 +18,7 @@ private val logger = KotlinLogging.logger {}
 class CollectorTask(val eventBatchBuilder: EventBatch.Builder, val timerTask: TimerTask)
 
 class EventBatchCollector(
-    private val eventBatchRouter: MessageRouter<EventBatch>?,
+    private val eventBatchRouter: MessageRouter<EventBatch>,
     private val maxBatchSize: Int,
     private val timeout: Long
 ) : AutoCloseable {
@@ -52,7 +52,7 @@ class EventBatchCollector(
     }
 
     private fun sendEventBatch(eventBatch: EventBatch) {
-        eventBatchRouter?.send(eventBatch, "publish", "event")
+        eventBatchRouter.send(eventBatch, "publish", "event")
     }
 
     fun createAndStoreRootEvent(codecName: String) {
@@ -79,19 +79,19 @@ class EventBatchCollector(
         try {
             val parentEventID = if (rawMessage.hasParentEventId()) rawMessage.parentEventId else rootEventID
             val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
-            logger.error { "${errorText}. Error event: ${event.toDebugString()}" }
+            logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
             storeErrorEvent(parentEventID, event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
         }
     }
 
-    fun createAndStoreErrorEvent(errorText: String, exception: Exception, group: MessageGroup) {
+    fun createAndStoreErrorEvent(errorText: String, exception: RuntimeException, group: MessageGroup) {
         try {
             val parentEventID = getParentEventIdFromGroup(group)
             val messageIDs = getMessageIDsFromGroup(group)
             val event = createErrorEvent(errorText, exception, parentEventID, messageIDs)
-            logger.error(exception) { "${errorText}. Error event: ${event.toDebugString()}" }
+            logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
             storeErrorEvent(parentEventID, event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
