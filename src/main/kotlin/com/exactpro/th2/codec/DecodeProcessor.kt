@@ -76,7 +76,7 @@ class DecodeProcessor(
     private fun checkErrorMessageContains(decodedMessages: List<IMessage>, rawMessage: RawMessage) {
         for (msg in decodedMessages) {
             if (msg.name == ErrorMessage.MESSAGE_NAME) {
-                eventBatchCollector.createAndStoreErrorEvent(
+                eventBatchCollector.createAndStoreDecodeErrorEvent(
                     "Error during decode msg: ${msg.getField<String>("Cause")}", rawMessage
                 )
             }
