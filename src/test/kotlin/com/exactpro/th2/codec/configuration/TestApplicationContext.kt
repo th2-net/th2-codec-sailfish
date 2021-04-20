@@ -24,6 +24,7 @@ import com.exactpro.sf.externalapi.codec.*
 import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
+import com.exactpro.th2.common.schema.grpc.configuration.GrpcConfiguration
 import com.exactpro.th2.common.schema.grpc.configuration.GrpcRouterConfiguration
 import com.exactpro.th2.common.schema.grpc.router.GrpcRouter
 import com.exactpro.th2.common.schema.message.MessageRouter
@@ -54,6 +55,10 @@ class TestApplicationContext {
         `when`(commonFactory.grpcRouter).thenReturn(object : GrpcRouter {
             override fun close(): Unit = TODO("Not yet implemented")
             override fun init(p0: GrpcRouterConfiguration?): Unit = TODO("Not yet implemented")
+            override fun init(configuration: GrpcConfiguration, routerConfiguration: GrpcRouterConfiguration) {
+                TODO("Not yet implemented")
+            }
+
             override fun <T : Any?> getService(p0: Class<T>): T? = null
             override fun startServer(vararg p0: BindableService?): Server = TODO("Not yet implemented")
         })
