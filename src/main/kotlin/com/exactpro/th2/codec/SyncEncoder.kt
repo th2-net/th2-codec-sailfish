@@ -25,6 +25,7 @@ class SyncEncoder(
     router,
     applicationContext
 ) {
+    override fun getDirection(): Direction = Direction.ENCODE
 
 
     override fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean = resultBatch.groupsCount > 0

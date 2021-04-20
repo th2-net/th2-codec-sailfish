@@ -28,6 +28,7 @@ class SyncDecoder(
 
 
     override fun checkResult(protoResult: MessageGroup): Boolean = protoResult.messagesCount > 0
+    override fun getDirection(): Direction = Direction.DECODE
 
     override fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean = resultBatch.groupsCount > 0
 

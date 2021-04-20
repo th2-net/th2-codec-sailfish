@@ -16,14 +16,22 @@
 
 package com.exactpro.th2.codec.util
 
-fun Exception.getAllMessages(): String = getMessage(this)
+fun Exception.getAllMessages(): List<String> = getMessage(this)
 
-private fun getMessage(exception: Throwable?): String {
-    return when {
-        exception?.cause != null && exception.cause != exception ->
-            "${exception.message}. Caused by: ${getMessage(exception.cause)}"
-        exception?.message != null ->
-            "${exception.message}."
-        else -> ""
+private fun getMessage(exception: Throwable?): List<String> {
+    var errorText = ""
+    if (exception?.message != null) {
+        errorText += "${exception.message}"
     }
+    if (exception?.cause != null && exception.cause != exception) {
+        errorText += ". Caused by:"
+    }
+    val list = mutableListOf<String>()
+    if (errorText.isNotEmpty()) {
+        list.add(errorText)
+    }
+    if (exception?.cause != null) {
+        list.addAll(getMessage(exception.cause))
+    }
+    return list
 }

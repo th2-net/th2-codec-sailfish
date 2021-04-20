@@ -58,19 +58,29 @@ class ApplicationContext(
             val codecFactory = loadFactory(configuration.codecClassName)
 
             val eventBatchRouter = commonFactory.eventBatchRouter
-            val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
-            val codec = codecFactory.createCodec(codecSettings)
-            val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
-            val dictionary = checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
-            val protoConverter = ProtoToIMessageConverter(
-                DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
-            )
-            val iMessageConverter = IMessageToProtoConverter()
             val eventBatchCollector = EventBatchCollector(
                 eventBatchRouter, configuration.maxOutgoingEventBatchSize,
                 configuration.outgoingEventBatchBuildTime
             ).also {
-                it.createAndStoreRootEvent(codec::class.java.simpleName)
+                it.createAndStoreRootEvent(codecFactory.protocolName)
+            }
+
+            val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
+            val codec: IExternalCodec
+            val protoConverter: ProtoToIMessageConverter
+            val iMessageConverter: IMessageToProtoConverter
+            try {
+                codec = codecFactory.createCodec(codecSettings)
+                val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
+                val dictionary =
+                    checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
+                protoConverter = ProtoToIMessageConverter(
+                    DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
+                )
+                iMessageConverter = IMessageToProtoConverter()
+            } catch (e: RuntimeException) {
+                eventBatchCollector.createAndStoreErrorEvent("An error occurred while initializing the codec", e)
+                throw e
             }
 
             return ApplicationContext(
