@@ -33,6 +33,7 @@ internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(YAMLFactory()).apply { r
 class Configuration() {
     val outgoingEventBatchBuildTime: Long = 1000
     val maxOutgoingEventBatchSize: Int = 99
+    val numOfEventBatchCollectorWorkers: Int = 1
     var codecClassName: String? = null
 
     var codecParameters: Map<String, String>? = null

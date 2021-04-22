@@ -72,6 +72,7 @@ These parameters determine the size of the EventBatch, and the time (millisecond
 ```yaml
 outgoingEventBatchBuildTime: 1000
 maxOutgoingEventBatchSize: 99
+numOfEventBatchCollectorWorkers: 1
 ```
 
 ## Codec implementation parameters

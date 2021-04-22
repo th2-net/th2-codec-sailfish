@@ -68,7 +68,8 @@ class ApplicationContext(
             val iMessageConverter = IMessageToProtoConverter()
             val eventBatchCollector = EventBatchCollector(
                 eventBatchRouter, configuration.maxOutgoingEventBatchSize,
-                configuration.outgoingEventBatchBuildTime
+                configuration.outgoingEventBatchBuildTime,
+                configuration.numOfEventBatchCollectorWorkers
             ).also {
                 it.createAndStoreRootEvent(codec::class.java.simpleName)
             }
