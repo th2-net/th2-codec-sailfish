@@ -8,51 +8,128 @@ import com.exactpro.th2.common.grpc.*
 import com.exactpro.th2.common.schema.message.MessageRouter
 import mu.KotlinLogging
 import java.time.LocalDateTime
-import java.util.*
-import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.timerTask
-import kotlin.concurrent.withLock
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 
 private val logger = KotlinLogging.logger {}
 
-class CollectorTask(val eventBatchBuilder: EventBatch.Builder, val timerTask: TimerTask)
+class CollectorTask {
+    @Volatile
+    lateinit var eventBatchBuilder: EventBatch.Builder
+
+    @Volatile
+    lateinit var scheduledFuture: ScheduledFuture<*>
+
+    @Volatile
+    var isSent: Boolean = false
+
+    fun update(
+        event: Event,
+        scheduleCollectorTask: (collectorTask: CollectorTask) -> ScheduledFuture<*>
+    ) {
+        eventBatchBuilder = EventBatch.newBuilder().setParentEventId(event.parentId)
+        scheduledFuture = scheduleCollectorTask(this)
+        isSent = false
+    }
+}
 
 class EventBatchCollector(
     private val eventBatchRouter: MessageRouter<EventBatch>,
     private val maxBatchSize: Int,
-    private val timeout: Long
+    private val timeout: Long,
+    private val numOfEventBatchCollectorWorkers: Int
 ) : AutoCloseable {
-    private val collectorTasks = mutableMapOf<EventID, CollectorTask>()
+    private val collectorTasks = ConcurrentHashMap<EventID, CollectorTask>()
+    private val scheduler = Executors.newScheduledThreadPool(numOfEventBatchCollectorWorkers)
+
     private lateinit var rootEventID: EventID
-    private val lock = ReentrantLock()
+    private lateinit var decodeErrorGroupEventID: EventID
+    private lateinit var encodeErrorGroupEventID: EventID
 
     private fun putEvent(event: Event) {
-        lock.withLock {
-            val batchAndTask = collectorTasks.getOrPut(event.parentId) {
-                val builder = EventBatch.newBuilder().setParentEventId(event.parentId)
-                val task = timerTask { sendEventBatch(event.parentId) }
-                Timer().schedule(task, timeout)
-                CollectorTask(builder, task)
+        val collectorTask = collectorTasks.getOrPut(event.parentId) {
+            CollectorTask().apply {
+                update(event, this@EventBatchCollector::scheduleCollectorTask)
             }
+        }
 
-            batchAndTask.eventBatchBuilder.addEvents(event)
-            if (batchAndTask.eventBatchBuilder.eventsList.size == maxBatchSize) {
-                batchAndTask.timerTask.cancel()
-                sendEventBatch(batchAndTask.eventBatchBuilder.build())
+        synchronized(collectorTask) {
+            if (collectorTask.isSent) {
+                collectorTasks[event.parentId] = collectorTask.apply {
+                    update(event, this@EventBatchCollector::scheduleCollectorTask)
+                }
+            }
+            collectorTask.eventBatchBuilder.addEvents(event)
+            if (collectorTask.eventBatchBuilder.eventsList.size == maxBatchSize) {
+                collectorTask.scheduledFuture.cancel(true)
+                sendEventBatch(collectorTask.eventBatchBuilder.build())
                 collectorTasks.remove(event.parentId)
             }
         }
     }
 
-    private fun sendEventBatch(eventID: EventID) {
-        lock.withLock {
-            collectorTasks[eventID]?.eventBatchBuilder?.build()?.let { sendEventBatch(it) }
-            collectorTasks.remove(eventID)
+    fun scheduleCollectorTask(collectorTask: CollectorTask) =
+        scheduler.scheduleWithFixedDelay(
+            { executeCollectorTask(collectorTask) },
+            timeout, 0, TimeUnit.SECONDS
+        )
+
+    fun executeCollectorTask(collectorTask: CollectorTask) {
+        synchronized(collectorTask) {
+            if (!collectorTask.isSent) {
+                collectorTask.isSent = true
+                sendEventBatch(collectorTask.eventBatchBuilder.build())
+                collectorTasks.remove(collectorTask.eventBatchBuilder.parentEventId)
+            }
         }
     }
 
     private fun sendEventBatch(eventBatch: EventBatch) {
         eventBatchRouter.send(eventBatch, "publish", "event")
+    }
+
+    fun createAndStoreDecodeErrorEvent(errorText: String, rawMessage: RawMessage) {
+        try {
+            val parentEventID =
+                if (rawMessage.hasParentEventId()) rawMessage.parentEventId else getDecodeErrorGroupEventID()
+            val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
+            logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
+            storeErrorEvent(parentEventID, event)
+        } catch (exception: Exception) {
+            logger.warn(exception) { "could not send codec error event" }
+        }
+    }
+
+    fun createAndStoreErrorEvent(
+        errorText: String,
+        exception: RuntimeException,
+        direction: AbstractSyncCodec.Direction,
+        group: MessageGroup
+    ) {
+        try {
+            val parentEventID = getParentEventIdFromGroup(direction, group)
+            val messageIDs = getMessageIDsFromGroup(group)
+            val event = createErrorEvent(errorText, exception, parentEventID, messageIDs)
+            logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
+            storeErrorEvent(parentEventID, event)
+        } catch (exception: Exception) {
+            logger.warn(exception) { "could not send codec error event" }
+        }
+    }
+
+    fun createAndStoreErrorEvent(
+        errorText: String,
+        exception: RuntimeException
+    ) {
+        try {
+            val event = createErrorEvent(errorText, exception, rootEventID)
+            logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
+            storeErrorEvent(rootEventID, event)
+        } catch (exception: Exception) {
+            logger.warn(exception) { "could not send codec error event" }
+        }
     }
 
     fun createAndStoreRootEvent(codecName: String) {
@@ -63,7 +140,7 @@ class EventBatchCollector(
                 .toProtoEvent(null)
 
             rootEventID = event.id
-            logger.info { "root event: ${event.toDebugString()}" }
+            logger.info { "root event id: ${event.id.toDebugString()}" }
             sendEventBatch(
                 EventBatch.newBuilder()
                     .addEvents(event)
@@ -75,38 +152,57 @@ class EventBatchCollector(
         }
     }
 
-    fun createAndStoreErrorEvent(errorText: String, rawMessage: RawMessage) {
+    private fun getDecodeErrorGroupEventID(): EventID {
         try {
-            val parentEventID = if (rawMessage.hasParentEventId()) rawMessage.parentEventId else rootEventID
-            val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
-            logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
-            storeErrorEvent(parentEventID, event)
+            if (!decodeErrorGroupEventID.isInitialized) {
+                val event = com.exactpro.th2.common.event.Event.start()
+                    .name("DecodeError")
+                    .type("CodecErrorGroup")
+                    .toProtoEvent(rootEventID.id)
+                decodeErrorGroupEventID = event.id
+
+                logger.info { "DecodeError group event id: ${event.id.toDebugString()}" }
+                sendEventBatch(
+                    EventBatch.newBuilder()
+                        .addEvents(event)
+                        .build()
+                )
+            }
         } catch (exception: Exception) {
-            logger.warn(exception) { "could not send codec error event" }
+            logger.warn(exception) { "could not store DecodeError group event" }
         }
+        return decodeErrorGroupEventID
     }
 
-    fun createAndStoreErrorEvent(errorText: String, exception: RuntimeException, group: MessageGroup) {
+    private fun getEncodeErrorGroupEventID(): EventID {
         try {
-            val parentEventID = getParentEventIdFromGroup(group)
-            val messageIDs = getMessageIDsFromGroup(group)
-            val event = createErrorEvent(errorText, exception, parentEventID, messageIDs)
-            logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
-            storeErrorEvent(parentEventID, event)
+            if (!encodeErrorGroupEventID.isInitialized) {
+                val event = com.exactpro.th2.common.event.Event.start()
+                    .name("EncodeError")
+                    .type("CodecErrorGroup")
+                    .toProtoEvent(rootEventID.id)
+                encodeErrorGroupEventID = event.id
+
+                logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
+                sendEventBatch(
+                    EventBatch.newBuilder()
+                        .addEvents(event)
+                        .build()
+                )
+            }
         } catch (exception: Exception) {
-            logger.warn(exception) { "could not send codec error event" }
+            logger.warn(exception) { "could not store EncodeError group event" }
         }
+        return encodeErrorGroupEventID
     }
 
     private fun createErrorEvent(
         errorText: String,
         exception: Exception?,
         parentEventID: EventID,
-        messageIDS: List<MessageID>
+        messageIDS: List<MessageID> = mutableListOf()
     ): Event {
-        val exceptionMessage = exception?.getAllMessages()
-        val indexCause = exceptionMessage?.lastIndexOf(':') ?: -1
-        val eventName = if (indexCause != -1) exceptionMessage?.substring(indexCause + 1) else errorText
+        val eventName = exception?.message ?: errorText
         var event = com.exactpro.th2.common.event.Event.start()
             .name(eventName)
             .type("CodecError")
@@ -116,9 +212,9 @@ class EventBatchCollector(
             data = errorText
             type = "message"
         })
-        if (exception != null) {
+        exception?.getAllMessages()?.forEach {
             event = event.bodyData(Message().apply {
-                data = exception.getAllMessages()
+                data = it
                 type = "message"
             })
         }
@@ -150,7 +246,7 @@ class EventBatchCollector(
         }
     }
 
-    private fun getParentEventIdFromGroup(group: MessageGroup): EventID {
+    private fun getParentEventIdFromGroup(direction: AbstractSyncCodec.Direction, group: MessageGroup): EventID {
         if (group.messagesCount != 0) {
             val firstMessageInList = group.messagesList.first()
             if (firstMessageInList.hasMessage()) {
@@ -163,18 +259,26 @@ class EventBatchCollector(
                 }
             }
         }
-        return rootEventID
+        return when (direction) {
+            AbstractSyncCodec.Direction.ENCODE -> getEncodeErrorGroupEventID()
+            AbstractSyncCodec.Direction.DECODE -> getDecodeErrorGroupEventID()
+        }
     }
 
     override fun close() {
         logger.info { "Closing EventBatchCollector. Sending unsent batches." }
-        lock.withLock {
-            collectorTasks.values.forEach {
-                it.timerTask.cancel()
-                sendEventBatch(it.eventBatchBuilder.build())
+
+        collectorTasks.values.forEach {
+            synchronized(it) {
+                if (!it.isSent) {
+                    it.isSent = true
+                    it.scheduledFuture.cancel(true)
+                    sendEventBatch(it.eventBatchBuilder.build())
+                }
             }
-            collectorTasks.clear()
         }
+        collectorTasks.clear()
+
         logger.info { "EventBatchCollector is closed. " }
     }
 }
