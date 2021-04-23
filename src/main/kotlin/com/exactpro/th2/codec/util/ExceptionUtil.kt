@@ -14,17 +14,24 @@
  *  limitations under the License.
  */
 
-package com.exactpro.th2.codec
+package com.exactpro.th2.codec.util
 
-open class CodecException : RuntimeException {
-    constructor() : super()
-    constructor(message: String?) : super(message)
-    constructor(message: String?, cause: Throwable?) : super(message, cause)
-    constructor(cause: Throwable?) : super(cause)
-    constructor(message: String?, cause: Throwable?, enableSuppression: Boolean, writableStackTrace: Boolean) : super(
-        message,
-        cause,
-        enableSuppression,
-        writableStackTrace
-    )
+fun Exception.getAllMessages(): List<String> = getMessage(this)
+
+private fun getMessage(exception: Throwable?): List<String> {
+    var errorText = ""
+    if (exception?.message != null) {
+        errorText += "${exception.message}"
+    }
+    if (exception?.cause != null && exception.cause != exception) {
+        errorText += ". Caused by:"
+    }
+    val list = mutableListOf<String>()
+    if (errorText.isNotEmpty()) {
+        list.add(errorText)
+    }
+    if (exception?.cause != null) {
+        list.addAll(getMessage(exception.cause))
+    }
+    return list
 }
