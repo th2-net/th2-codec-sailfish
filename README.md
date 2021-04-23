@@ -206,7 +206,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 + 3.6.2
     + Add a notification about ErrorMessage during decoding and any codec errors via failed event
-
+    
 + 3.6.1
     + removed gRPC event loop handling
     + fixed dictionary reading
