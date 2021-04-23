@@ -70,13 +70,13 @@ class EventBatchCollector(
         }
     }
 
-    fun scheduleCollectorTask(collectorTask: CollectorTask) =
-        scheduler.scheduleWithFixedDelay(
+    private fun scheduleCollectorTask(collectorTask: CollectorTask): ScheduledFuture<*> =
+        scheduler.schedule(
             { executeCollectorTask(collectorTask) },
-            timeout, 0, TimeUnit.SECONDS
+            timeout, TimeUnit.SECONDS
         )
 
-    fun executeCollectorTask(collectorTask: CollectorTask) {
+    private fun executeCollectorTask(collectorTask: CollectorTask) {
         synchronized(collectorTask) {
             if (!collectorTask.isSent) {
                 collectorTask.isSent = true
