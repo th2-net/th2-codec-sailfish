@@ -29,12 +29,7 @@ import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
-import org.apache.commons.lang3.math.NumberUtils.toInt
-import org.apache.commons.lang3.math.NumberUtils.toLong
-import org.apache.commons.lang3.math.NumberUtils.toShort
-import org.apache.commons.lang3.math.NumberUtils.toByte
-import org.apache.commons.lang3.math.NumberUtils.toFloat
-import org.apache.commons.lang3.math.NumberUtils.toDouble
+import org.apache.commons.lang3.math.NumberUtils.*
 import java.io.File
 import java.net.URLClassLoader
 import java.util.*
@@ -66,11 +61,12 @@ class ApplicationContext(
                 it.createAndStoreRootEvent(codecFactory.protocolName)
             }
 
-            val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
+            val codecSettings: IExternalCodecSettings
             val codec: IExternalCodec
             val protoConverter: ProtoToIMessageConverter
             val iMessageConverter: IMessageToProtoConverter
             try {
+                codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
                 codec = codecFactory.createCodec(codecSettings)
                 val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
                 val dictionary =
