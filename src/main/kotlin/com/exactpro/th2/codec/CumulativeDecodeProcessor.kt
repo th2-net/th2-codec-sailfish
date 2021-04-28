@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.sf.messages.service.ErrorMessage
 import com.exactpro.th2.codec.util.codecContext
-import com.exactpro.th2.codec.util.sendError
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.codec.util.toHexString
-import com.exactpro.th2.common.grpc.*
-import com.exactpro.th2.common.schema.message.MessageRouter
+import com.exactpro.th2.common.grpc.MessageBatch
+import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.grpc.RawMessageBatch
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import mu.KotlinLogging
 
@@ -39,8 +39,7 @@ class CumulativeDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
     messageToProtoConverter: IMessageToProtoConverter,
-    private val eventBatchRouter: MessageRouter<EventBatch>?,
-    private val rootEventId: EventID?
+    private val eventBatchCollector: EventBatchCollector
 ) : RawBatchDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter) {
 
     private val logger = KotlinLogging.logger { }
@@ -53,14 +52,12 @@ class CumulativeDecodeProcessor(
             logger.debug {
                 "decoded messages: {${decodedMessageList.joinToString { message -> "${message.name}: $message" }}}"
             }
-            for (msg in decodedMessageList) {
+            decodedMessageList.forEachIndexed { index, msg ->
                 if (msg.name == ErrorMessage.MESSAGE_NAME) {
-                    "Error during decode msg: ${msg.getField<String>("Cause")}".apply {
-                        logger.debug { this }
-                        rootEventId?.let {
-                            eventBatchRouter?.sendError(it, this)
-                        }
-                    }
+                    eventBatchCollector.createAndStoreDecodeErrorEvent(
+                        "Error during decode msg: ${msg.getField<String>("Cause")}",
+                        source.messagesList[index]
+                    )
                 }
             }
             if (checkSizeAndContext(source, decodedMessageList)) {
