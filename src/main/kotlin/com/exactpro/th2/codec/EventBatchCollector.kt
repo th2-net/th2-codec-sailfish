@@ -154,7 +154,7 @@ class EventBatchCollector(
 
     private fun getDecodeErrorGroupEventID(): EventID {
         try {
-            if (!decodeErrorGroupEventID.isInitialized) {
+            if (!::decodeErrorGroupEventID.isInitialized) {
                 val event = com.exactpro.th2.common.event.Event.start()
                     .name("DecodeError")
                     .type("CodecErrorGroup")
@@ -176,7 +176,7 @@ class EventBatchCollector(
 
     private fun getEncodeErrorGroupEventID(): EventID {
         try {
-            if (!encodeErrorGroupEventID.isInitialized) {
+            if (!::encodeErrorGroupEventID.isInitialized) {
                 val event = com.exactpro.th2.common.event.Event.start()
                     .name("EncodeError")
                     .type("CodecErrorGroup")
