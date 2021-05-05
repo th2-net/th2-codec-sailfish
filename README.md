@@ -195,7 +195,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 2.8.0
-  + Update common version (fix but with filtering by `message_type`)
+  + Update common version (fix bug with filtering by `message_type`)
 
 + 2.7.1
   + Update sailfish-utils to fix problem with message names
