@@ -1,4 +1,4 @@
-# How it works (3.6.1)
+# How it works (3.6.2)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -193,6 +193,9 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 3.6.2
+    + fixed dictionary reading
 
 + 3.6.1
     + removed gRPC event loop handling
