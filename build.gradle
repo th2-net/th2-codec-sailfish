@@ -24,7 +24,7 @@ plugins {
 ext {
     genDir             = file('src/gen')
     sharedDir          = file("${project.rootDir}/shared")
-    sailfishVersion     = '3.2-SNAPSHOT'
+    sailfishVersion     = '3.2.1560'
 }
 
 group 'com.exactpro.th2'
@@ -36,10 +36,6 @@ repositories {
         url sharedDir
     }
     mavenCentral()
-    maven {
-        name 'Bintray'
-        url 'https://dl.bintray.com/exactpro/th2'
-    }
     maven {
         name 'Sonatype_snapshots'
         url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
@@ -59,8 +55,8 @@ repositories {
 
 dependencies {
     api platform('com.exactpro.th2:bom:3.0.0')
-    implementation "com.exactpro.th2:common:3.13.6"
-    implementation 'com.exactpro.th2:sailfish-utils:3.3.2'
+    implementation "com.exactpro.th2:common:3.14.0"
+    implementation 'com.exactpro.th2:sailfish-utils:3.3.3'
 
     implementation 'io.github.microutils:kotlin-logging:1.7.+'
 
