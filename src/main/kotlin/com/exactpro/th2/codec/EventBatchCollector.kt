@@ -20,7 +20,12 @@ package com.exactpro.th2.codec
 import com.exactpro.th2.codec.util.getAllMessages
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.bean.Message
-import com.exactpro.th2.common.grpc.*
+import com.exactpro.th2.common.grpc.Event
+import com.exactpro.th2.common.grpc.EventBatch
+import com.exactpro.th2.common.grpc.EventID
+import com.exactpro.th2.common.grpc.MessageGroup
+import com.exactpro.th2.common.grpc.MessageID
+import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.schema.message.MessageRouter
 import mu.KotlinLogging
 import java.time.LocalDateTime

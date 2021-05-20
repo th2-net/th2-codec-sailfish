@@ -63,7 +63,7 @@ class TestApplicationContext {
             override fun startServer(vararg p0: BindableService?): Server = TODO("Not yet implemented")
         })
 
-        `when`(commonFactory.eventBatchRouter).thenReturn(mock<MessageRouter<EventBatch>>{})
+        `when`(commonFactory.eventBatchRouter).thenReturn(mock<MessageRouter<EventBatch>> {})
 
         val mainDictionary = """<dictionary xmlns="http://exactprosystems.com/dictionary" name="MAIN"></dictionary>"""
         val level1Dictionary = """<dictionary xmlns="http://exactprosystems.com/dictionary" name="LEVEL1"></dictionary>"""
