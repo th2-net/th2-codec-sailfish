@@ -25,7 +25,7 @@ import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.same
 import com.nhaarman.mockitokotlin2.whenever
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
 import org.junit.jupiter.api.assertThrows
@@ -36,7 +36,8 @@ internal class TestDecodeProcessor {
     private val factory = mock<IExternalCodecFactory> {
         on { createCodec(same(settings)) }.thenReturn(codec)
     }
-    private val processor = DecodeProcessor(factory, settings, IMessageToProtoConverter())
+
+    private val processor = DecodeProcessor(factory, settings, IMessageToProtoConverter(), mock {})
 
     @Test
     internal fun `decodes one to one`() {

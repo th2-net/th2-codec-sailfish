@@ -14,34 +14,21 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.common.grpc.AnyMessage
-import com.exactpro.th2.common.grpc.EventID
-import com.exactpro.th2.common.grpc.Message
-import com.exactpro.th2.common.grpc.MessageGroup
-import com.exactpro.th2.common.grpc.MessageGroupBatch
-import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.grpc.*
 import com.exactpro.th2.common.schema.message.MessageRouter
 
 class SyncDecoder(
     router: MessageRouter<MessageGroupBatch>,
     applicationContext: ApplicationContext,
-    private val processor: AbstractCodecProcessor<RawMessage, List<Message.Builder>>,
-    codecRootID: EventID?
-): AbstractSyncCodec(
+    private val processor: AbstractCodecProcessor<RawMessage, List<Message.Builder>>
+) : AbstractSyncCodec(
     router,
-    applicationContext,
-    codecRootID
+    applicationContext
 ) {
 
-    override fun getParentEventId(
-        codecRootID: EventID?,
-        protoSource: MessageGroup?,
-        protoResult: MessageGroup?
-    ): EventID? {
-        return codecRootID
-    }
 
     override fun checkResult(protoResult: MessageGroup): Boolean = protoResult.messagesCount > 0
+    override fun getDirection(): Direction = Direction.DECODE
 
     override fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean = resultBatch.groupsCount > 0
 
