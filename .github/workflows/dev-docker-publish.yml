@@ -5,8 +5,8 @@ on:
     branches-ignore:
       - master
       - version-*
-    paths:
-      - gradle.properties
+#    paths:
+#      - gradle.properties
 #    - package_info.json
 
 jobs:
