@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -18,20 +18,17 @@ package com.exactpro.th2.codec.util
 
 fun Exception.getAllMessages(): List<String> = getMessage(this)
 
-private fun getMessage(exception: Throwable?): List<String> {
-    var errorText = ""
-    if (exception?.message != null) {
-        errorText += "${exception.message}"
-    }
-    if (exception?.cause != null && exception.cause != exception) {
-        errorText += ". Caused by:"
-    }
+private fun getMessage(exception: Throwable?, isRoot: Boolean = true): List<String> {
     val list = mutableListOf<String>()
-    if (errorText.isNotEmpty()) {
-        list.add(errorText)
+    if (exception?.message != null) {
+        list += if (!isRoot) {
+            "Caused by: "
+        } else {
+            ""
+        } + exception.message
     }
     if (exception?.cause != null) {
-        list.addAll(getMessage(exception.cause))
+        list.addAll(getMessage(exception.cause, false))
     }
     return list
 }
