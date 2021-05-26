@@ -24,7 +24,7 @@ plugins {
 ext {
     genDir             = file('src/gen')
     sharedDir          = file("${project.rootDir}/shared")
-    sailfishVersion     = '3.2-SNAPSHOT'
+    sailfishVersion     = '3.2.1583'
 }
 
 group 'com.exactpro.th2'
@@ -55,7 +55,7 @@ repositories {
 
 dependencies {
     api platform('com.exactpro.th2:bom:3.0.0')
-    implementation "com.exactpro.th2:common:2.17.2"
+    implementation "com.exactpro.th2:common:2.19.0"
     implementation 'com.exactpro.th2:sailfish-utils:2.4.2'
 
     implementation 'io.github.microutils:kotlin-logging:1.7.+'

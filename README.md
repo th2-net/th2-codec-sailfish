@@ -1,4 +1,4 @@
-# How it works (2.8.0)
+# How it works (2.8.1)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
