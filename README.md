@@ -194,6 +194,10 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 3.7.1
+    + Updated sailfish-utils to 3.3.4
+    + Updated sailfish-core to 3.2.1583
+    
 + 3.7.0
     + Update common library to 3.14.0
     + Copy properties from th2 proto Message to the Sailfish IMessage when converting
