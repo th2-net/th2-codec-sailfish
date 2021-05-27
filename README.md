@@ -195,8 +195,8 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 3.7.1
-    + Updated sailfish-utils to 3.3.4
-    + Updated sailfish-core to 3.2.1583
+    + Updated sailfish-utils to 3.3.4 - optimized converter Value.SIMPLE_VALUE to Java Class
+    + Updated sailfish-core to 3.2.1583 - removed method call MessageWrapper.cloneMessage to improve performance
     
 + 3.7.0
     + Update common library to 3.14.0
