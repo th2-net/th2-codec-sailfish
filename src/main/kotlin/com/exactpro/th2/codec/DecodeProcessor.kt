@@ -84,7 +84,7 @@ class DecodeProcessor(
     }
 
     /**
-     * Checks that the [decodedMessages] contains exact one message and its raw data is the same as [originalData].
+     * Checks that the [decodedMessages] contains exactly one message and its raw data is the same as [originalData].
      */
     private fun checkRawData(decodedMessages: List<IMessage>, originalData: ByteArray) {
         if (decodedMessages.isEmpty()) {

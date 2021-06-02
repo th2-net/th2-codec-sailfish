@@ -165,13 +165,13 @@ spec:
 
 ## Message routing
 
-Schema API allows the configuration of messages routing streams via links between connections and filters on pins.
+Schema API allows the configuration of routing streams messages via links between connections and filters on pins.
 Let's consider some examples of routing in codec box.
 
 ### Split on 'publish' pins
 
 For example, you got a big source data stream, and you want to split them into some pins via session alias.
-You can declare multiple pins with attributes `['decoder_out', 'parsed', 'publish']` and filters instead of common pin or in addition to it.
+You can declare multiple pins with the attributes `['decoder_out', 'parsed', 'publish']` and filters, instead of a common pin or in addition to it.
 Every decoded message will be directed to every declared pins , which will be sent to MQ only if it will pass the filter.
 
 ```yaml
@@ -229,7 +229,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
     + tries to load log4j.properties files from sources in order: '/var/th2/config', '/home/etc', configured path via cmd, default configuration
 
 + 3.5.1
-    + Update sailfish-utils to fix problem with message names
+    + Update sailfish-utils to fix a problem with message names
 
 + 3.5.0
     + Checks message structure by the configured dictionary during encode.
@@ -238,7 +238,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
     + Validates configured dictionaries during initialization
 
 + 3.3.2
-  + Allow the codec produce more than one message during decoding
+  + Allows the codec to produce more than one message during decoding
 
 + 3.3.1
   + Updated core version. Introduce the embedded pipeline for Netty

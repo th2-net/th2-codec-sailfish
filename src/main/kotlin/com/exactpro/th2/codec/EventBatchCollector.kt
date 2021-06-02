@@ -117,7 +117,7 @@ class EventBatchCollector(
                 if (rawMessage.hasParentEventId()) rawMessage.parentEventId else getDecodeErrorGroupEventID()
             val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
             logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
-            storeErrorEvent(parentEventID, event)
+            putEvent(event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
         }
@@ -134,7 +134,7 @@ class EventBatchCollector(
             val messageIDs = getMessageIDsFromGroup(group)
             val event = createErrorEvent(errorText, exception, parentEventID, messageIDs)
             logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
-            storeErrorEvent(parentEventID, event)
+            putEvent(event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
         }
@@ -147,7 +147,7 @@ class EventBatchCollector(
         try {
             val event = createErrorEvent(errorText, exception, rootEventID)
             logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
-            storeErrorEvent(rootEventID, event)
+            putEvent(event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
         }
@@ -243,18 +243,6 @@ class EventBatchCollector(
             event = event.messageID(it)
         }
         return event.toProtoEvent(parentEventID.id)
-    }
-
-    private fun storeErrorEvent(parentEventID: EventID, event: Event) {
-        if (parentEventID.id == rootEventID.id) {
-            putEvent(event)
-        } else {
-            sendEventBatch(
-                EventBatch.newBuilder()
-                    .addEvents(event)
-                    .build()
-            )
-        }
     }
 
     private fun getMessageIDsFromGroup(group: MessageGroup) = mutableListOf<MessageID>().apply {
