@@ -286,16 +286,4 @@ class EventBatchCollector(
         logger.info { "EventBatchCollector is closed. " }
     }
 
-//    override fun getParentEventId(
-//        codecRootID: EventID?,
-//        protoSource: MessageBatch?,
-//        protoResult: RawMessageBatch?
-//    ): EventID? {
-//        if (protoSource != null && protoSource.messagesCount != 0
-//            && protoSource.getMessages(0).hasParentEventId()
-//        ) {
-//            return protoSource.getMessages(0).parentEventId
-//        }
-//        return codecRootID
-//    }
 }
