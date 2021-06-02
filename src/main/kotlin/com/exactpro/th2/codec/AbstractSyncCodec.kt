@@ -73,7 +73,7 @@ abstract class AbstractSyncCodec<T : GeneratedMessageV3, R : GeneratedMessageV3>
                 targetRouter.sendAll(protoResult, this.tagretAttributes)
 
 
-        } catch (exception: CodecException) {
+        } catch (exception: RuntimeException) {
             eventBatchCollector.createAndStoreErrorEvent(
                 "Cannot process message",
                 exception,
