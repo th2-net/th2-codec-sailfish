@@ -197,18 +197,22 @@ class EventBatchCollector(
     private fun getEncodeErrorGroupEventID(): EventID {
         try {
             if (!::encodeErrorGroupEventID.isInitialized) {
-                val event = com.exactpro.th2.common.event.Event.start()
-                    .name("EncodeError")
-                    .type("CodecErrorGroup")
-                    .toProtoEvent(rootEventID.id)
-                encodeErrorGroupEventID = event.id
+                synchronized(encodeErrorGroupEventID) {
+                    if (!::encodeErrorGroupEventID.isInitialized) {
+                        val event = com.exactpro.th2.common.event.Event.start()
+                            .name("EncodeError")
+                            .type("CodecErrorGroup")
+                            .toProtoEvent(rootEventID.id)
+                        encodeErrorGroupEventID = event.id
 
-                logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
-                eventBatchRouter.send(
-                    EventBatch.newBuilder()
-                        .addEvents(event)
-                        .build()
-                )
+                        logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
+                        eventBatchRouter.send(
+                            EventBatch.newBuilder()
+                                .addEvents(event)
+                                .build()
+                        )
+                    }
+                }
             }
         } catch (exception: Exception) {
             logger.warn(exception) { "could not store EncodeError group event" }
