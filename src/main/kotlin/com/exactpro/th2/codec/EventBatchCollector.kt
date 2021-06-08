@@ -17,7 +17,6 @@
 package com.exactpro.th2.codec
 
 
-import com.exactpro.th2.codec.util.getAllMessages
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.bean.Message
 import com.exactpro.th2.common.grpc.Event
@@ -70,7 +69,7 @@ class EventBatchCollector(
     private lateinit var encodeErrorGroupEventID: EventID
 
     private fun putEvent(event: Event) {
-        val collectorTask = collectorTasks.getOrPut(event.parentId) {
+        val collectorTask = collectorTasks.computeIfAbsent(event.parentId) {
             CollectorTask().apply {
                 update(event, this@EventBatchCollector::scheduleCollectorTask)
             }
@@ -85,7 +84,7 @@ class EventBatchCollector(
             collectorTask.eventBatchBuilder.addEvents(event)
             if (collectorTask.eventBatchBuilder.eventsList.size == maxBatchSize) {
                 collectorTask.scheduledFuture.cancel(true)
-                sendEventBatch(collectorTask.eventBatchBuilder.build())
+                eventBatchRouter.send(collectorTask.eventBatchBuilder.build())
                 collectorTasks.remove(event.parentId)
             }
         }
@@ -101,14 +100,10 @@ class EventBatchCollector(
         synchronized(collectorTask) {
             if (!collectorTask.isSent) {
                 collectorTask.isSent = true
-                sendEventBatch(collectorTask.eventBatchBuilder.build())
+                eventBatchRouter.send(collectorTask.eventBatchBuilder.build())
                 collectorTasks.remove(collectorTask.eventBatchBuilder.parentEventId)
             }
         }
-    }
-
-    private fun sendEventBatch(eventBatch: EventBatch) {
-        eventBatchRouter.send(eventBatch, "publish", "event")
     }
 
     fun createAndStoreDecodeErrorEvent(errorText: String, rawMessage: RawMessage) {
@@ -162,7 +157,7 @@ class EventBatchCollector(
 
             rootEventID = event.id
             logger.info { "root event id: ${event.id.toDebugString()}" }
-            sendEventBatch(
+            eventBatchRouter.send(
                 EventBatch.newBuilder()
                     .addEvents(event)
                     .build()
@@ -176,18 +171,22 @@ class EventBatchCollector(
     private fun getDecodeErrorGroupEventID(): EventID {
         try {
             if (!::decodeErrorGroupEventID.isInitialized) {
-                val event = com.exactpro.th2.common.event.Event.start()
-                    .name("DecodeError")
-                    .type("CodecErrorGroup")
-                    .toProtoEvent(rootEventID.id)
-                decodeErrorGroupEventID = event.id
+                synchronized(decodeErrorGroupEventID) {
+                    if (!::decodeErrorGroupEventID.isInitialized) {
+                        val event = com.exactpro.th2.common.event.Event.start()
+                            .name("DecodeError")
+                            .type("CodecErrorGroup")
+                            .toProtoEvent(rootEventID.id)
+                        decodeErrorGroupEventID = event.id
 
-                logger.info { "DecodeError group event id: ${event.id.toDebugString()}" }
-                sendEventBatch(
-                    EventBatch.newBuilder()
-                        .addEvents(event)
-                        .build()
-                )
+                        logger.info { "DecodeError group event id: ${event.id.toDebugString()}" }
+                        eventBatchRouter.send(
+                            EventBatch.newBuilder()
+                                .addEvents(event)
+                                .build()
+                        )
+                    }
+                }
             }
         } catch (exception: Exception) {
             logger.warn(exception) { "could not store DecodeError group event" }
@@ -198,18 +197,22 @@ class EventBatchCollector(
     private fun getEncodeErrorGroupEventID(): EventID {
         try {
             if (!::encodeErrorGroupEventID.isInitialized) {
-                val event = com.exactpro.th2.common.event.Event.start()
-                    .name("EncodeError")
-                    .type("CodecErrorGroup")
-                    .toProtoEvent(rootEventID.id)
-                encodeErrorGroupEventID = event.id
+                synchronized(encodeErrorGroupEventID) {
+                    if (!::encodeErrorGroupEventID.isInitialized) {
+                        val event = com.exactpro.th2.common.event.Event.start()
+                            .name("EncodeError")
+                            .type("CodecErrorGroup")
+                            .toProtoEvent(rootEventID.id)
+                        encodeErrorGroupEventID = event.id
 
-                logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
-                sendEventBatch(
-                    EventBatch.newBuilder()
-                        .addEvents(event)
-                        .build()
-                )
+                        logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
+                        eventBatchRouter.send(
+                            EventBatch.newBuilder()
+                                .addEvents(event)
+                                .build()
+                        )
+                    }
+                }
             }
         } catch (exception: Exception) {
             logger.warn(exception) { "could not store EncodeError group event" }
@@ -228,16 +231,12 @@ class EventBatchCollector(
             .name(eventName)
             .type("CodecError")
             .status(com.exactpro.th2.common.event.Event.Status.FAILED)
-
-        event = event.bodyData(Message().apply {
-            data = errorText
-            type = "message"
-        })
-        exception?.getAllMessages()?.forEach {
-            event = event.bodyData(Message().apply {
-                data = it
+            .bodyData(Message().apply {
+                data = errorText
                 type = "message"
             })
+        exception?.apply {
+            event = event.exception(this, true)
         }
         messageIDS.forEach {
             event = event.messageID(it)
@@ -282,11 +281,12 @@ class EventBatchCollector(
                 if (!it.isSent) {
                     it.isSent = true
                     it.scheduledFuture.cancel(true)
-                    sendEventBatch(it.eventBatchBuilder.build())
+                    eventBatchRouter.send(it.eventBatchBuilder.build())
                 }
             }
         }
         collectorTasks.clear()
+        scheduler.shutdown()
 
         logger.info { "EventBatchCollector is closed. " }
     }

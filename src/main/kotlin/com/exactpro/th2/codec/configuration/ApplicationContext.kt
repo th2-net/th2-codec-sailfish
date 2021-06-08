@@ -58,42 +58,40 @@ class ApplicationContext(
             val codecFactory = loadFactory(configuration.codecClassName)
 
             val eventBatchRouter = commonFactory.eventBatchRouter
+            check(configuration.outgoingEventBatchBuildTime > 0) { "The value of outgoingEventBatchBuildTime must be greater than zero" }
+            check(configuration.maxOutgoingEventBatchSize > 0) { "The value of maxOutgoingEventBatchSize must be greater than zero" }
+            check(configuration.numOfEventBatchCollectorWorkers > 0) { "The value of numOfEventBatchCollectorWorkers must be greater than zero" }
             val eventBatchCollector = EventBatchCollector(
-                eventBatchRouter, configuration.maxOutgoingEventBatchSize,
+                eventBatchRouter,
+                configuration.maxOutgoingEventBatchSize,
                 configuration.outgoingEventBatchBuildTime,
                 configuration.numOfEventBatchCollectorWorkers
-            ).also {
-                it.createAndStoreRootEvent(codecFactory.protocolName)
+            ).apply {
+                createAndStoreRootEvent(codecFactory.protocolName)
             }
 
-            val codecSettings: IExternalCodecSettings
-            val codec: IExternalCodec
-            val protoConverter: ProtoToIMessageConverter
-            val iMessageConverter: IMessageToProtoConverter
             try {
-                codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
-                codec = codecFactory.createCodec(codecSettings)
+                val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
+                val codec = codecFactory.createCodec(codecSettings)
                 val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
                 val dictionary =
                     checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
-                protoConverter = ProtoToIMessageConverter(
+                val protoConverter = ProtoToIMessageConverter(
                     DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
                 )
-                iMessageConverter = IMessageToProtoConverter()
+                return ApplicationContext(
+                    commonFactory,
+                    codec,
+                    codecFactory,
+                    codecSettings,
+                    protoConverter,
+                    IMessageToProtoConverter(),
+                    eventBatchCollector
+                )
             } catch (e: RuntimeException) {
                 eventBatchCollector.createAndStoreErrorEvent("An error occurred while initializing the codec", e)
                 throw e
             }
-
-            return ApplicationContext(
-                commonFactory,
-                codec,
-                codecFactory,
-                codecSettings,
-                protoConverter,
-                iMessageConverter,
-                eventBatchCollector
-            )
         }
 
         private fun createSettings(
