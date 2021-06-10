@@ -18,6 +18,7 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.sf.common.messages.IMessage
+import com.exactpro.sf.common.util.EvolutionBatch
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.util.toCodecContext
@@ -40,7 +41,17 @@ class DecodeProcessor(
             val data: ByteArray = source.body.toByteArray()
             logger.debug { "Start decoding message with id: '${source.metadata.id.toDebugString()}'" }
             logger.trace { "Decoding message: ${source.toDebugString()}" }
-            val decodedMessages = getCodec().decode(data, source.toCodecContext())
+            val decodedMsg = getCodec().decode(data, source.toCodecContext())
+
+            val decodedMessages = arrayListOf<IMessage>()
+            decodedMsg.forEach { msg ->
+                if (msg.name == EvolutionBatch.MESSAGE_NAME) {
+                    decodedMessages += EvolutionBatch(msg).batch
+                } else {
+                    decodedMessages += msg
+                }
+            }
+
             checkRawData(decodedMessages, data)
             logger.trace { "Decoded messages: $decodedMessages" }
             logger.debug { "Message with id: '${source.metadata.id.toDebugString()}' successfully decoded" }
