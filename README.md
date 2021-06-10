@@ -1,4 +1,4 @@
-# How it works (2.8.1)
+# How it works (2.8.2)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -193,6 +193,12 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 2.8.2
+  + Resets embedded log4j configuration before configuring from a file
+
++ 2.8.1
+  + Update sailfish-core version to 3.2.1583
 
 + 2.8.0
   + Update common version (fix bug with filtering by `message_type`)
