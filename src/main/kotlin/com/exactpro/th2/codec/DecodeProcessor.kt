@@ -41,16 +41,15 @@ class DecodeProcessor(
             val data: ByteArray = source.body.toByteArray()
             logger.debug { "Start decoding message with id: '${source.metadata.id.toDebugString()}'" }
             logger.trace { "Decoding message: ${source.toDebugString()}" }
-            val decodedMsg = getCodec().decode(data, source.toCodecContext())
 
-            val decodedMessages = arrayListOf<IMessage>()
-            decodedMsg.forEach { msg ->
-                if (msg.name == EvolutionBatch.MESSAGE_NAME) {
-                    decodedMessages += EvolutionBatch(msg).batch
-                } else {
-                    decodedMessages += msg
+            val decodedMessages = getCodec().decode(data, source.toCodecContext())
+                .flatMap {
+                    if (it.name == EvolutionBatch.MESSAGE_NAME) {
+                        EvolutionBatch(it).batch
+                    } else {
+                        listOf(it)
+                    }
                 }
-            }
 
             checkRawData(decodedMessages, data)
             logger.trace { "Decoded messages: $decodedMessages" }
