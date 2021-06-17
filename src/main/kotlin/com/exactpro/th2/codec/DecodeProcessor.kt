@@ -109,7 +109,7 @@ class DecodeProcessor(
         return ByteArray(totalSize).also { dest ->
             var destIndex = 0
             decodedMessages.forEach {
-                // should never happen here because we checks it earlier
+                // should never happened here because we checked it earlier
                 val bytes = requireNotNull(it.metaData.rawMessage) { "Raw data for message ${it.name} is null" }
                 bytes.copyInto(dest, destIndex)
                 destIndex += bytes.size
