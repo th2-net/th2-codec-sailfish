@@ -53,7 +53,7 @@ Decoding can work in different modes:
 + **CUMULATIVE** (default) - all raw messages in batch will be joined together and decoded. After decoding, the content and the count of the decoded messages will be compared with the original messages in the batch.
 + **SEQUENTIAL** - each message in the batch will be decoded as a separate message.
 + **COMBINED** - this is a solution for problems with decoding messages with SECOND direction sent by SF services (they are not split into protocol types). 
-  In this mode the codec will try tro decode each message with SECOND direction in isolation and chose the correct parsed message from the decoded result.
+  In this mode the codec will try to decode each message with SECOND direction in isolation and chose the correct parsed message from the decoded result.
   **NOTE: if the codec cannot choose the parsed message it will report an error.** It cannot choose the message if:
   + the decoded result contains more than one business message
   + the result is only session messages and there is more than one message in the result

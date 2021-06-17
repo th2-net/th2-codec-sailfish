@@ -36,7 +36,7 @@ import mu.KotlinLogging
  *
  * NOTE: if the raw message that was decoded sequentially produces more than one parsed message
  * the one to publish will be chosen according to the following rule:
- * + if the only one parsed message is a business message it will be publish
+ * + if the only one parsed message is a business message it will be published
  * + if there is more than one admin message in the result (and not business messages)
  *   or more than one business message in the result the error will be reported
  */
@@ -117,7 +117,7 @@ class CombinedDecodeProcessor(
             prevDirection = direction
         }
         if (currentGroup.isNotEmpty()) {
-            groups += DirectionGroup(currentGroup.first().metadata.id.direction, currentGroup)
+            groups += DirectionGroup(requireNotNull(prevDirection) { "Group is not empty but direction is null" }, currentGroup)
         }
         return groups
     }
@@ -135,7 +135,7 @@ class CombinedDecodeProcessor(
             val decodedMessageData = pair.second.metaData.rawMessage
             if (decodedMessageData != null && !(sourceMessageData contentEquals decodedMessageData)) {
                 logger.error {
-                    "content mismatch by position $index in the batch: " +
+                    "content mismatch by position $index in the batch for message ${pair.first.metadata.id.toDebugString()}: " +
                             "source hex: '${sourceMessageData.toHexString()}', " +
                             "decoded hex: '${decodedMessageData.toHexString()}'"
                 }
@@ -150,7 +150,7 @@ class CombinedDecodeProcessor(
         val sourceMessageData = source.rawBody
         if (!(sourceMessageData contentEquals joinedData)) {
             logger.error {
-                "content mismatch by position in the batch: " +
+                "content mismatch by position in the batch for message ${source.metadata.id.toDebugString()}: " +
                     "source hex: '${sourceMessageData.toHexString()}', " +
                     "decoded hex: '${joinedData.toHexString()}'"
             }
