@@ -104,7 +104,7 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
                         .bodyData(Message().apply {
                             data = exception.getAllMessages()
                         })
-                        .toProtoEvent(parentEventID.id)
+                        .toProto(parentEventID)
                 ).build(),
                     "publish", "event"
                 )

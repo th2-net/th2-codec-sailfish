@@ -164,7 +164,7 @@ class CodecCommand : CliktCommand() {
                 val event = Event.start()
                     .name("Codec_${applicationContext.codec::class.java.simpleName}_${LocalDateTime.now()}")
                     .type("CodecRoot")
-                    .toProtoEvent(null)
+                    .toProto(null)
 
                 eventBatchRouter.send(
                     EventBatch.newBuilder()

@@ -21,6 +21,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.AbstractCodecProcessor
+import com.exactpro.th2.codec.CombinedDecodeProcessor
 import com.exactpro.th2.codec.CumulativeDecodeProcessor
 import com.exactpro.th2.codec.DefaultMessageFactoryProxy
 import com.exactpro.th2.codec.SequentialDecodeProcessor
@@ -53,6 +54,7 @@ class ApplicationContext(
         return when (type) {
             ProcessorType.CUMULATIVE -> CumulativeDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter)
             ProcessorType.SEQUENTIAL -> SequentialDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter)
+            ProcessorType.COMBINED -> CombinedDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter)
         }
     }
 
