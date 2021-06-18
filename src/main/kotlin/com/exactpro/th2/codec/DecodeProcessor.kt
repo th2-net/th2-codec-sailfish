@@ -22,6 +22,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.codec.util.toDebugString
+import com.exactpro.th2.codec.util.toErrorMessage
 import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.MessageMetadata
 import com.exactpro.th2.common.grpc.RawMessage
@@ -55,13 +56,22 @@ class DecodeProcessor(
                     }.build()
                 }
             }
-        } catch (ex: CodecException) {
-            throw ex
+        } catch (ex: DecodeException) {
+            logger.error(ex) { "Cannot decode message from $source" }
+            return listOf(
+                source.toErrorMessage(
+                    DecodeException(
+                        "Cannot decode message from ${source.metadata.id.toDebugString()}",
+                        ex
+                    )
+                )
+            )
         } catch (ex: Exception) {
             logger.error(ex) { "Cannot decode message from $source" }
-            throw DecodeException("Cannot decode message from ${source.metadata.id.toDebugString()}", ex)
+            throw ex
         }
     }
+
 
     private fun toMessageMetadataBuilder(sourceMessage: RawMessage): MessageMetadata.Builder {
         return MessageMetadata.newBuilder()

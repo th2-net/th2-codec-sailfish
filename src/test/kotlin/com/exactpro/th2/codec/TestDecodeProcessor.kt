@@ -19,12 +19,14 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.message.getField
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.google.protobuf.ByteString
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.same
 import com.nhaarman.mockitokotlin2.whenever
+import java.nio.charset.Charset
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
@@ -97,13 +99,16 @@ internal class TestDecodeProcessor {
         val messageID = MessageID.newBuilder()
             .setSequence(1)
             .build()
-        assertThrows<DecodeException> {
-            processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
+
+        val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
+        assertEquals("th2-codec-error", builder.metadata.messageType)
+        if (!rawData.contentEquals(builder.getField("body")?.simpleValue?.toByteArray(Charset.defaultCharset())!!)) {
+            fail<String>("Content of raw message isn't from original one")
         }
     }
 
     @Test
-    internal fun `throws exception if result's content size does not match the original`() {
+    internal fun `creates an error message if result's content size does not match the original`() {
         val rawData = byteArrayOf(42, 43)
         val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
             metaData.rawMessage = rawData + 44
@@ -114,8 +119,11 @@ internal class TestDecodeProcessor {
         val messageID = MessageID.newBuilder()
             .setSequence(1)
             .build()
-        assertThrows<DecodeException> {
-            processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
+
+        val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
+        assertEquals("th2-codec-error", builder.metadata.messageType)
+        if (!rawData.contentEquals(builder.getField("body")?.simpleValue?.toByteArray(Charset.defaultCharset())!!)) {
+            fail<String>("Content of raw message isn't from original one")
         }
     }
 }
