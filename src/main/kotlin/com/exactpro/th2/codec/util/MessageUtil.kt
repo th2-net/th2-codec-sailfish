@@ -22,6 +22,7 @@ import com.exactpro.sf.externalapi.codec.impl.ExternalCodecContext
 import com.exactpro.th2.codec.DecodeException
 import com.exactpro.th2.common.grpc.Direction
 import com.exactpro.th2.common.grpc.Message
+import com.exactpro.th2.common.grpc.MessageMetadata
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.grpc.Value
 
@@ -47,9 +48,19 @@ fun Message.toCodecContext(): IExternalCodecContext {
     return metadata.id.direction.toRole().toContext(properties)
 }
 
-fun RawMessage.toErrorMessage(exception: DecodeException) :  Message.Builder = Message.newBuilder().run {
-    metadataBuilder.messageType = "th2-codec-error"
-    putFields("content", Value.newBuilder().setSimpleValue(exception.getAllMessages()).build())
-    putFields("body", Value.newBuilder().setSimpleValue(body.toStringUtf8()).build())
+fun RawMessage.toErrorMessage(exception: DecodeException) :  Message.Builder {
+    val result = Message.newBuilder()
+    val content = exception.getAllMessages()
+    result.putFields("content", Value.newBuilder().setSimpleValue(content).build())
+    if (hasParentEventId()) {
+        result.parentEventId = parentEventId
+    }
+    result.metadata = MessageMetadata.newBuilder()
+        .setId(metadata.id)
+        .putProperties("content", content)
+        .setTimestamp(metadata.timestamp)
+        .putAllProperties(metadata.propertiesMap)
+        .setMessageType("th2-codec-error")
+        .build()
+    return result
 }
-

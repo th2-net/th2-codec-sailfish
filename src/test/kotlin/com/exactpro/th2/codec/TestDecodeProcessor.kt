@@ -102,9 +102,6 @@ internal class TestDecodeProcessor {
 
         val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
         assertEquals("th2-codec-error", builder.metadata.messageType)
-        if (!rawData.contentEquals(builder.getField("body")?.simpleValue?.toByteArray(Charset.defaultCharset())!!)) {
-            fail<String>("Content of raw message isn't from original one")
-        }
     }
 
     @Test
@@ -135,8 +132,5 @@ internal class TestDecodeProcessor {
 
         val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
         assertEquals("th2-codec-error", builder.metadata.messageType)
-        if (!rawData.contentEquals(builder.getField("body")?.simpleValue?.toByteArray(Charset.defaultCharset())!!)) {
-            fail<String>("Content of raw message isn't from original one")
-        }
     }
 }
