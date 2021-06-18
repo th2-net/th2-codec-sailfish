@@ -88,7 +88,7 @@ internal class TestDecodeProcessor {
     }
 
     @Test
-    internal fun `throws exception if result's content does not match the original`() {
+    internal fun `creates an error message if result's content does not match the original`() {
         val rawData = byteArrayOf(42, 43)
         val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
             metaData.rawMessage = byteArrayOf(42, 44)
@@ -106,6 +106,19 @@ internal class TestDecodeProcessor {
             fail<String>("Content of raw message isn't from original one")
         }
     }
+
+    @Test
+    internal fun `creates an error message if there was DecodeException`() {
+        whenever(codec.decode(any(), any())).thenThrow(DecodeException("Test"))
+
+        val messageID = MessageID.newBuilder()
+            .setSequence(1)
+            .build()
+
+        val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(byteArrayOf(42, 43))).apply { metadataBuilder.id = messageID }.build())[0]
+        assertEquals("th2-codec-error", builder.metadata.messageType)
+    }
+
 
     @Test
     internal fun `creates an error message if result's content size does not match the original`() {
