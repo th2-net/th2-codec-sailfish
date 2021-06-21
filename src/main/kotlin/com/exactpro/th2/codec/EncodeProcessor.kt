@@ -20,9 +20,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.common.grpc.Message
-import com.exactpro.th2.common.grpc.MessageBatch
 import com.exactpro.th2.common.grpc.RawMessage
-import com.exactpro.th2.common.grpc.RawMessageBatch
 import com.exactpro.th2.common.grpc.RawMessageMetadata
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.google.protobuf.ByteString

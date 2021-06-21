@@ -19,12 +19,10 @@ import com.exactpro.sf.externalapi.codec.ExternalCodecContextProperty.MESSAGE_PR
 import com.exactpro.sf.externalapi.codec.IExternalCodecContext
 import com.exactpro.sf.externalapi.codec.IExternalCodecContext.Role
 import com.exactpro.sf.externalapi.codec.impl.ExternalCodecContext
-import com.exactpro.th2.codec.DecodeException
 import com.exactpro.th2.common.grpc.Direction
 import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.MessageMetadata
 import com.exactpro.th2.common.grpc.RawMessage
-import com.exactpro.th2.common.grpc.Value
 
 private fun Direction.toRole(): Role = when (this) {
     Direction.FIRST -> Role.RECEIVER
