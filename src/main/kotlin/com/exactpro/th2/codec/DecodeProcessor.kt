@@ -18,6 +18,7 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.sf.common.messages.IMessage
+import com.exactpro.sf.common.util.EvolutionBatch
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.util.toCodecContext
@@ -41,7 +42,16 @@ class DecodeProcessor(
             val data: ByteArray = source.body.toByteArray()
             logger.debug { "Start decoding message with id: '${source.metadata.id.toDebugString()}'" }
             logger.trace { "Decoding message: ${source.toDebugString()}" }
+
             val decodedMessages = getCodec().decode(data, source.toCodecContext())
+                .flatMap {
+                    if (it.name == EvolutionBatch.MESSAGE_NAME) {
+                        EvolutionBatch(it).batch
+                    } else {
+                        listOf(it)
+                    }
+                }
+
             checkRawData(decodedMessages, data)
             logger.trace { "Decoded messages: $decodedMessages" }
             logger.debug { "Message with id: '${source.metadata.id.toDebugString()}' successfully decoded" }
@@ -105,7 +115,7 @@ class DecodeProcessor(
         return ByteArray(totalSize).also { dest ->
             var destIndex = 0
             decodedMessages.forEach {
-                // should never happen here because we checks it earlier
+                // should never happened here because we checked it earlier
                 val bytes = requireNotNull(it.metaData.rawMessage) { "Raw data for message ${it.name} is null" }
                 bytes.copyInto(dest, destIndex)
                 destIndex += bytes.size
