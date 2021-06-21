@@ -51,7 +51,6 @@ fun Message.toCodecContext(): IExternalCodecContext {
 fun RawMessage.toErrorMessage(exception: DecodeException) :  Message.Builder {
     val result = Message.newBuilder()
     val content = exception.getAllMessages()
-    result.putFields("content", Value.newBuilder().setSimpleValue(content).build())
     if (hasParentEventId()) {
         result.parentEventId = parentEventId
     }

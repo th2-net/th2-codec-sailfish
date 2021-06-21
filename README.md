@@ -194,6 +194,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 3.7.2
+  + Updated codec actions on error, new message with th2-codec-error type will be generated - message contains information about the problem and raw message inside
+  
 + 3.7.1
     + Updated sailfish-utils to 3.3.4 - optimized converter Value.SIMPLE_VALUE to Java Class
     + Updated sailfish-core to 3.2.1583 - removed method call MessageWrapper.cloneMessage to improve performance
