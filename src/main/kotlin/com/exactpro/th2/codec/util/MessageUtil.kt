@@ -48,9 +48,20 @@ fun Message.toCodecContext(): IExternalCodecContext {
     return metadata.id.direction.toRole().toContext(properties)
 }
 
-fun RawMessage.toErrorMessage(exception: DecodeException) :  Message.Builder {
+fun RawMessage.toErrorMessage(exception: Exception) :  Message.Builder {
+
+    val content = StringBuilder().apply {
+        var throwable: Throwable? = exception
+
+        while(throwable!= null) {
+            append( "Caused by: ${throwable.message}. ")
+            throwable = throwable.cause
+        }
+    }.toString()
+
+
     val result = Message.newBuilder()
-    val content = exception.getAllMessages()
+    //val content = exception.getAllMessages()
     if (hasParentEventId()) {
         result.parentEventId = parentEventId
     }

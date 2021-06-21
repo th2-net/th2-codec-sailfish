@@ -195,10 +195,10 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 3.7.3
-  + Updated codec actions on error, new message with th2-codec-error type will be generated - message contains information about the problem and raw message inside
+    + Updated codec actions on error, new message with th2-codec-error type will be generated - message contains information about the problem and raw message inside
   
 + 3.7.2
-  + Added extraction of messages from EvolutionBatch when decoding RawMessages. This is necessary if evolutionSupportEnabled mode is set to true - Sailfish codecs package the decoding results in EvolutionBatch.
+    + Added extraction of messages from EvolutionBatch when decoding RawMessages. This is necessary if evolutionSupportEnabled mode is set to true - Sailfish codecs package the decoding results in EvolutionBatch.
 
 + 3.7.1
     + Updated sailfish-utils to 3.3.4 - optimized converter Value.SIMPLE_VALUE to Java Class
@@ -231,10 +231,10 @@ The filtering can also be applied for pins with  `subscribe` attribute.
     + Validates configured dictionaries during initialization
 
 + 3.3.2
-  + Allow the codec produce more than one message during decoding
+    + Allow the codec produce more than one message during decoding
 
 + 3.3.1
-  + Updated core version. Introduce the embedded pipeline for Netty
+    + Updated core version. Introduce the embedded pipeline for Netty
 
 + 3.3.0
-  + Copies a parent event id from the raw to the parsed message
+    + Copies a parent event id from the raw to the parsed message

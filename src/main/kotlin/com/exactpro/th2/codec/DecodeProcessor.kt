@@ -68,14 +68,7 @@ class DecodeProcessor(
             }
         } catch (ex: Exception) {
             logger.error(ex) { "Cannot decode message from $source.\nCreating th2-codec-error message with description." }
-            return listOf(
-                source.toErrorMessage(
-                    DecodeException(
-                        "Cannot decode message from ${source.metadata.id.toDebugString()}",
-                        ex
-                    )
-                )
-            )
+            return listOf(source.toErrorMessage(ex))
         }
     }
 
