@@ -20,9 +20,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.common.grpc.Message
-import com.exactpro.th2.common.grpc.MessageBatch
 import com.exactpro.th2.common.grpc.RawMessage
-import com.exactpro.th2.common.grpc.RawMessageBatch
 import com.exactpro.th2.common.grpc.RawMessageMetadata
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.google.protobuf.ByteString
@@ -34,8 +32,8 @@ class EncodeProcessor(
     codecSettings: IExternalCodecSettings,
     private val converter: ProtoToIMessageConverter
 ) : AbstractCodecProcessor<Message, RawMessage.Builder>(codecFactory, codecSettings) {
-
-    private val logger = KotlinLogging.logger {  }
+    private val logger = KotlinLogging.logger { }
+    private val protocol = codecFactory.protocolName
 
     override fun process(source: Message): RawMessage.Builder {
         val convertedSourceMessage = converter.fromProtoMessage(source, true).also {
@@ -61,6 +59,7 @@ class EncodeProcessor(
         return RawMessageMetadata.newBuilder()
             .setId(sourceMessage.metadata.id)
             .setTimestamp(sourceMessage.metadata.timestamp)
+            .setProtocol(protocol)
             .putAllProperties(sourceMessage.metadata.propertiesMap)
             .build()
     }

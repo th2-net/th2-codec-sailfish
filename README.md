@@ -1,4 +1,4 @@
-# How it works (3.7.2)
+# How it works (3.8.0)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -194,13 +194,16 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 3.8.0
+    + Set message protocol of encoded/decoded messages according to used codec
+
 + 3.7.2
     + Added extraction of messages from EvolutionBatch when decoding RawMessages. This is necessary if evolutionSupportEnabled mode is set to true - Sailfish codecs package the decoding results in EvolutionBatch.
 
 + 3.7.1
     + Updated sailfish-utils to 3.3.4 - optimized converter Value.SIMPLE_VALUE to Java Class
     + Updated sailfish-core to 3.2.1583 - removed method call MessageWrapper.cloneMessage to improve performance
-    
+
 + 3.7.0
     + Update common library to 3.14.0
     + Copy properties from th2 proto Message to the Sailfish IMessage when converting
@@ -228,10 +231,10 @@ The filtering can also be applied for pins with  `subscribe` attribute.
     + Validates configured dictionaries during initialization
 
 + 3.3.2
-  + Allow the codec produce more than one message during decoding
+    + Allow the codec produce more than one message during decoding
 
 + 3.3.1
-  + Updated core version. Introduce the embedded pipeline for Netty
+    + Updated core version. Introduce the embedded pipeline for Netty
 
 + 3.3.0
-  + Copies a parent event id from the raw to the parsed message
+    + Copies a parent event id from the raw to the parsed message

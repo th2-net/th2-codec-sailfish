@@ -35,6 +35,7 @@ class DecodeProcessor(
     private val messageToProtoConverter: IMessageToProtoConverter
 ) :  AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
+    private val protocol = codecFactory.protocolName
 
     override fun process(source: RawMessage): List<Message.Builder> {
         try {
@@ -77,6 +78,7 @@ class DecodeProcessor(
         return MessageMetadata.newBuilder()
             .setId(sourceMessage.metadata.id)
             .setTimestamp(sourceMessage.metadata.timestamp)
+            .setProtocol(protocol)
             .putAllProperties(sourceMessage.metadata.propertiesMap)
     }
 
