@@ -24,13 +24,17 @@ import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.MessageMetadata
 import com.exactpro.th2.common.grpc.RawMessage
 
+private const val ERROR_TYPE_MESSAGE = "th2-codec-error"
+private const val ERROR_CONTENT_PROPERTY = "content"
+
 private fun Direction.toRole(): Role = when (this) {
     Direction.FIRST -> Role.RECEIVER
     Direction.SECOND -> Role.SENDER
     else -> throw IllegalStateException("Unsupported direction: $this")
 }
 
-private fun Role.toContext(properties: Map<String, Any> = emptyMap()): IExternalCodecContext = ExternalCodecContext(this, properties)
+private fun Role.toContext(properties: Map<String, Any> = emptyMap()): IExternalCodecContext =
+    ExternalCodecContext(this, properties)
 
 fun RawMessage.toCodecContext(): IExternalCodecContext {
     val properties = mapOf(
@@ -46,29 +50,29 @@ fun Message.toCodecContext(): IExternalCodecContext {
     return metadata.id.direction.toRole().toContext(properties)
 }
 
-fun RawMessage.toErrorMessage(exception: Exception) :  Message.Builder {
-
-    val content = StringBuilder().apply {
-        var throwable: Throwable? = exception
-
-        while(throwable!= null) {
-            append( "Caused by: ${throwable.message}. ")
-            throwable = throwable.cause
-        }
-    }.toString()
-
-
-    val result = Message.newBuilder()
-    //val content = exception.getAllMessages()
-    if (hasParentEventId()) {
-        result.parentEventId = parentEventId
-    }
-    result.metadata = MessageMetadata.newBuilder()
+fun RawMessage.toMessageMetadataBuilder(): MessageMetadata.Builder {
+    return MessageMetadata.newBuilder()
         .setId(metadata.id)
-        .putProperties("content", content)
         .setTimestamp(metadata.timestamp)
         .putAllProperties(metadata.propertiesMap)
-        .setMessageType("th2-codec-error")
+}
+
+fun RawMessage.toErrorMessage(exception: Exception): Message.Builder  = Message.newBuilder().apply {
+    if (hasParentEventId()) {
+        parentEventId = parentEventId
+    }
+
+    val content = buildString {
+        var throwable: Throwable? = exception
+
+        while (throwable != null) {
+            append("Caused by: ${throwable.message}. ")
+            throwable = throwable.cause
+        }
+    }
+
+    metadata = toMessageMetadataBuilder()
+        .putProperties(ERROR_CONTENT_PROPERTY, content)
+        .setMessageType(ERROR_TYPE_MESSAGE)
         .build()
-    return result
 }
