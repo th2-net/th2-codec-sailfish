@@ -67,7 +67,7 @@ class DecodeProcessor(
                 }
             }
         } catch (ex: Exception) {
-            logger.error(ex) { "Cannot decode message from $source.\nCreating th2-codec-error message with description." }
+            logger.error(ex) { "Cannot decode message from $source. Creating th2-codec-error message with description." }
             return listOf(source.toErrorMessage(ex))
         }
     }

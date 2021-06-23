@@ -23,9 +23,10 @@ import com.exactpro.th2.common.grpc.Direction
 import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.MessageMetadata
 import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.grpc.Value
 
-private const val ERROR_TYPE_MESSAGE = "th2-codec-error"
-private const val ERROR_CONTENT_PROPERTY = "content"
+const val ERROR_TYPE_MESSAGE = "th2-codec-error"
+const val ERROR_CONTENT_FIELD = "content"
 
 private fun Direction.toRole(): Role = when (this) {
     Direction.FIRST -> Role.RECEIVER
@@ -61,6 +62,7 @@ fun RawMessage.toErrorMessage(exception: Exception): Message.Builder  = Message.
     if (hasParentEventId()) {
         parentEventId = parentEventId
     }
+    metadata = toMessageMetadataBuilder().setMessageType(ERROR_TYPE_MESSAGE).build()
 
     val content = buildString {
         var throwable: Throwable? = exception
@@ -70,9 +72,5 @@ fun RawMessage.toErrorMessage(exception: Exception): Message.Builder  = Message.
             throwable = throwable.cause
         }
     }
-
-    metadata = toMessageMetadataBuilder()
-        .putProperties(ERROR_CONTENT_PROPERTY, content)
-        .setMessageType(ERROR_TYPE_MESSAGE)
-        .build()
+    putFields(ERROR_CONTENT_FIELD, Value.newBuilder().setSimpleValue(content).build())
 }

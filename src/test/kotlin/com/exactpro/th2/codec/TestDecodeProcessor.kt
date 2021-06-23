@@ -17,6 +17,8 @@ import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
+import com.exactpro.th2.codec.util.ERROR_CONTENT_FIELD
+import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
 import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.message.getField
@@ -113,7 +115,8 @@ internal class TestDecodeProcessor {
             .build()
 
         val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(byteArrayOf(42, 43))).apply { metadataBuilder.id = messageID }.build())[0]
-        assertEquals("th2-codec-error", builder.metadata.messageType)
+        assertEquals(ERROR_TYPE_MESSAGE, builder.metadata.messageType)
+        assertEquals("Caused by: Test. ", builder.getField(ERROR_CONTENT_FIELD)?.simpleValue)
     }
 
 
@@ -131,6 +134,7 @@ internal class TestDecodeProcessor {
             .build()
 
         val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
-        assertEquals("th2-codec-error", builder.metadata.messageType)
+        assertEquals(ERROR_TYPE_MESSAGE, builder.metadata.messageType)
+        assertNotNull(builder.getField(ERROR_CONTENT_FIELD))
     }
 }
