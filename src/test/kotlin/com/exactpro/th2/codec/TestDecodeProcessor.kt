@@ -39,6 +39,7 @@ internal class TestDecodeProcessor {
     private val codec = mock<IExternalCodec> {}
     private val factory = mock<IExternalCodecFactory> {
         on { createCodec(same(settings)) }.thenReturn(codec)
+        on { protocolName }.thenReturn("mock")
     }
     private val processor = DecodeProcessor(factory, settings, IMessageToProtoConverter())
 
