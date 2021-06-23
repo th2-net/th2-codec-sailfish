@@ -62,14 +62,14 @@ class DecodeProcessor(
                     if (source.hasParentEventId()) {
                         parentEventId = source.parentEventId
                     }
-                    metadata = source.toMessageMetadataBuilder().apply {
+                    metadata = source.toMessageMetadataBuilder(protocol).apply {
                         messageType = msg.name
                     }.build()
                 }
             }
         } catch (ex: Exception) {
             logger.error(ex) { "Cannot decode message from $source. Creating th2-codec-error message with description." }
-            return listOf(source.toErrorMessage(ex))
+            return listOf(source.toErrorMessage(ex, protocol))
         }
     }
 
