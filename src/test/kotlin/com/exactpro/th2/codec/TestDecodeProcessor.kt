@@ -17,8 +17,11 @@ import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
+import com.exactpro.th2.codec.util.ERROR_CONTENT_FIELD
+import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
 import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.message.getField
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.google.protobuf.ByteString
 import com.nhaarman.mockitokotlin2.any
@@ -26,9 +29,9 @@ import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.same
 import com.nhaarman.mockitokotlin2.whenever
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
-import org.junit.jupiter.api.assertThrows
 
 internal class TestDecodeProcessor {
     private val settings = mock<IExternalCodecSettings> { }
@@ -87,7 +90,7 @@ internal class TestDecodeProcessor {
     }
 
     @Test
-    internal fun `throws exception if result's content does not match the original`() {
+    internal fun `creates an error message if result's content does not match the original`() {
         val rawData = byteArrayOf(42, 43)
         val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
             metaData.rawMessage = byteArrayOf(42, 44)
@@ -98,13 +101,27 @@ internal class TestDecodeProcessor {
         val messageID = MessageID.newBuilder()
             .setSequence(1)
             .build()
-        assertThrows<DecodeException> {
-            processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
-        }
+
+        val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
+        assertEquals(ERROR_TYPE_MESSAGE, builder.metadata.messageType)
     }
 
     @Test
-    internal fun `throws exception if result's content size does not match the original`() {
+    internal fun `creates an error message if there was DecodeException`() {
+        whenever(codec.decode(any(), any())).thenThrow(DecodeException("Test"))
+
+        val messageID = MessageID.newBuilder()
+            .setSequence(1)
+            .build()
+
+        val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(byteArrayOf(42, 43))).apply { metadataBuilder.id = messageID }.build())[0]
+        assertEquals(ERROR_TYPE_MESSAGE, builder.metadata.messageType)
+        assertEquals("Caused by: Test. ", builder.getField(ERROR_CONTENT_FIELD)?.simpleValue)
+    }
+
+
+    @Test
+    internal fun `creates an error message if result's content size does not match the original`() {
         val rawData = byteArrayOf(42, 43)
         val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
             metaData.rawMessage = rawData + 44
@@ -115,8 +132,9 @@ internal class TestDecodeProcessor {
         val messageID = MessageID.newBuilder()
             .setSequence(1)
             .build()
-        assertThrows<DecodeException> {
-            processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
-        }
+
+        val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
+        assertEquals(ERROR_TYPE_MESSAGE, builder.metadata.messageType)
+        assertNotNull(builder.getField(ERROR_CONTENT_FIELD))
     }
 }

@@ -1,4 +1,4 @@
-# How it works (3.8.0)
+# How it works (3.8.1)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -194,6 +194,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 3.8.1
+    + Updated codec actions on error, new message with th2-codec-error type will be generated - message contains information about the problem and raw message inside
+  
 + 3.8.0
     + Set message protocol of encoded/decoded messages according to used codec
 

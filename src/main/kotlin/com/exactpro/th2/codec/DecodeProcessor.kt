@@ -23,8 +23,9 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.codec.util.toDebugString
+import com.exactpro.th2.codec.util.toErrorMessage
+import com.exactpro.th2.codec.util.toMessageMetadataBuilder
 import com.exactpro.th2.common.grpc.Message
-import com.exactpro.th2.common.grpc.MessageMetadata
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import mu.KotlinLogging
@@ -61,25 +62,15 @@ class DecodeProcessor(
                     if (source.hasParentEventId()) {
                         parentEventId = source.parentEventId
                     }
-                    metadata = toMessageMetadataBuilder(source).apply {
+                    metadata = source.toMessageMetadataBuilder(protocol).apply {
                         messageType = msg.name
                     }.build()
                 }
             }
-        } catch (ex: CodecException) {
-            throw ex
         } catch (ex: Exception) {
-            logger.error(ex) { "Cannot decode message from $source" }
-            throw DecodeException("Cannot decode message from ${source.metadata.id.toDebugString()}", ex)
+            logger.error(ex) { "Cannot decode message from $source. Creating th2-codec-error message with description." }
+            return listOf(source.toErrorMessage(ex, protocol))
         }
-    }
-
-    private fun toMessageMetadataBuilder(sourceMessage: RawMessage): MessageMetadata.Builder {
-        return MessageMetadata.newBuilder()
-            .setId(sourceMessage.metadata.id)
-            .setTimestamp(sourceMessage.metadata.timestamp)
-            .setProtocol(protocol)
-            .putAllProperties(sourceMessage.metadata.propertiesMap)
     }
 
     /**
