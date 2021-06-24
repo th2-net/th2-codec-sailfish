@@ -103,7 +103,7 @@ internal class TestDecodeProcessor {
             .build()
 
         val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
-        assertEquals("th2-codec-error", builder.metadata.messageType)
+        assertEquals(ERROR_TYPE_MESSAGE, builder.metadata.messageType)
     }
 
     @Test
