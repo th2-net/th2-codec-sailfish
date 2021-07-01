@@ -281,8 +281,8 @@ class EventBatchCollector(
             }
         }
         collectorTasks.clear()
-        scheduler.awaitTermination(5, TimeUnit.SECONDS)
         scheduler.shutdown()
+        scheduler.awaitTermination(5, TimeUnit.SECONDS)
 
         logger.info { "EventBatchCollector is closed. " }
     }
