@@ -83,6 +83,7 @@ class EventBatchCollector(
             }
             collectorTask.eventBatchBuilder.addEvents(event)
             if (collectorTask.eventBatchBuilder.eventsList.size == maxBatchSize) {
+                collectorTask.isSent = true
                 collectorTask.scheduledFuture.cancel(true)
                 eventBatchRouter.send(collectorTask.eventBatchBuilder.build())
                 collectorTasks.remove(event.parentId)
@@ -152,7 +153,7 @@ class EventBatchCollector(
             val event = com.exactpro.th2.common.event.Event.start()
                 .name("Codec_${codecName}_${LocalDateTime.now()}")
                 .type("CodecRoot")
-                .toProtoEvent(null)
+                .toProto(null)
 
             rootEventID = event.id
             logger.info { "root event id: ${event.id.toDebugString()}" }
@@ -176,7 +177,7 @@ class EventBatchCollector(
                         val event = com.exactpro.th2.common.event.Event.start()
                             .name("DecodeError")
                             .type("CodecErrorGroup")
-                            .toProtoEvent(rootEventID.id)
+                            .toProto(rootEventID)
                         decodeErrorGroupEventID = event.id
 
                         logger.info { "DecodeError group event id: ${event.id.toDebugString()}" }
@@ -202,7 +203,7 @@ class EventBatchCollector(
                         val event = com.exactpro.th2.common.event.Event.start()
                             .name("EncodeError")
                             .type("CodecErrorGroup")
-                            .toProtoEvent(rootEventID.id)
+                            .toProto(rootEventID)
                         encodeErrorGroupEventID = event.id
 
                         logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
@@ -225,25 +226,23 @@ class EventBatchCollector(
         exception: Exception?,
         parentEventID: EventID,
         messageIDS: List<MessageID> = mutableListOf()
-    ): Event {
-        val eventName = exception?.message ?: errorText
-        var event = com.exactpro.th2.common.event.Event.start()
-            .name(eventName)
-            .type("CodecError")
-            .status(com.exactpro.th2.common.event.Event.Status.FAILED)
-            .bodyData(MessageEvent().apply {
-                data = errorText
-                type = "message"
-            })
+    ): Event = com.exactpro.th2.common.event.Event.start()
+        .name(exception?.message ?: errorText)
+        .type("CodecError")
+        .status(com.exactpro.th2.common.event.Event.Status.FAILED)
+        .bodyData(MessageEvent().apply {
+            data = errorText
+            type = "message"
+        }).apply {
+            if (exception != null) {
+                exception(exception, true)
+            }
+            messageIDS.forEach {
+                messageID(it)
+            }
+        }
+        .toProto(parentEventID)
 
-        exception?.apply {
-            event = event.exception(this, true)
-        }
-        messageIDS.forEach {
-            event = event.messageID(it)
-        }
-        return event.toProtoEvent(parentEventID.id)
-    }
 
     private fun <T : GeneratedMessageV3> getMessageIDs(message: T) = mutableListOf<MessageID>().apply {
         if (message is Message) {
@@ -282,6 +281,7 @@ class EventBatchCollector(
             }
         }
         collectorTasks.clear()
+        scheduler.awaitTermination(5, TimeUnit.SECONDS)
         scheduler.shutdown()
 
         logger.info { "EventBatchCollector is closed. " }

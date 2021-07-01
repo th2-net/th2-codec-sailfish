@@ -1,4 +1,4 @@
-# How it works (2.8.2)
+# How it works (2.9.1)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -49,9 +49,14 @@ Codec has four types of connections: stream and general for encode and decode fu
 
 Codec never mixes messages from the _stream_ and the _general_ connections. 
 
-Decoding can work in two different modes:
+Decoding can work in different modes:
 + **CUMULATIVE** (default) - all raw messages in the batch will be joined together and decoded. After decoding them, the content and the count of the decoded messages will be compared to the original messages in the batch.
 + **SEQUENTIAL** - each message in the batch will be decoded as a separate message.
++ **COMBINED** - this is a solution for problems with decoding messages with SECOND direction sent by SF services (they are not split into protocol types). 
+  In this mode the codec will try to decode each message with SECOND direction in isolation and chose the correct parsed message from the decoded result.
+  **NOTE: if the codec cannot choose the parsed message it will report an error.** It cannot choose the message if:
+  + the decoded result contains more than one business message
+  + the result is only session messages and there is more than one message in the result
 
 This setting can be overridden in a custom config for the application using the parameter `decodeProcessorType`.
 
@@ -204,8 +209,17 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
-+ 2.8.2
++ 2.9.1
   + Add a notification about ErrorMessage via failed event
+
++ 2.9.0
+  + Add a new decoder type. Support for decoding SF messages that are not split into protocol parts
+
++ 2.8.2
+  + Resets embedded log4j configuration before configuring from a file
+
++ 2.8.1
+  + Update sailfish-core version to 3.2.1583
 
 + 2.8.0
   + Update common version (fix bug with filtering by `message_type`)

@@ -30,12 +30,13 @@ import java.nio.file.Paths
 internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(YAMLFactory()).apply { registerModule(KotlinModule()) }
     .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
-enum class ProcessorType { CUMULATIVE, SEQUENTIAL }
+enum class ProcessorType { CUMULATIVE, SEQUENTIAL, COMBINED }
 
-class Configuration() {
-    val outgoingEventBatchBuildTime: Long = 1000
-    val maxOutgoingEventBatchSize: Int = 99
+class Configuration(
+    val outgoingEventBatchBuildTime: Long = 1000,
+    val maxOutgoingEventBatchSize: Int = 99,
     val numOfEventBatchCollectorWorkers: Int = 1
+) {
     var codecClassName: String? = null
 
     var codecParameters: Map<String, String>? = null
