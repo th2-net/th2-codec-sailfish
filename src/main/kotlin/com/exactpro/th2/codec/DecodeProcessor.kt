@@ -18,13 +18,15 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.sf.common.messages.IMessage
+import com.exactpro.sf.common.util.EvolutionBatch
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.sf.messages.service.ErrorMessage
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.codec.util.toDebugString
+import com.exactpro.th2.codec.util.toErrorMessage
+import com.exactpro.th2.codec.util.toMessageMetadataBuilder
 import com.exactpro.th2.common.grpc.Message
-import com.exactpro.th2.common.grpc.MessageMetadata
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import mu.KotlinLogging
@@ -36,13 +38,23 @@ class DecodeProcessor(
     private val eventBatchCollector: EventBatchCollector
 ) : AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
+    private val protocol = codecFactory.protocolName
 
     override fun process(source: RawMessage): List<Message.Builder> {
         try {
             val data: ByteArray = source.body.toByteArray()
             logger.debug { "Start decoding message with id: '${source.metadata.id.toDebugString()}'" }
             logger.trace { "Decoding message: ${source.toDebugString()}" }
+
             val decodedMessages = getCodec().decode(data, source.toCodecContext())
+                .flatMap {
+                    if (it.name == EvolutionBatch.MESSAGE_NAME) {
+                        EvolutionBatch(it).batch
+                    } else {
+                        listOf(it)
+                    }
+                }
+
             checkErrorMessageContains(decodedMessages, source)
             checkRawData(decodedMessages, data)
             logger.trace { "Decoded messages: $decodedMessages" }
@@ -53,24 +65,15 @@ class DecodeProcessor(
                     if (source.hasParentEventId()) {
                         parentEventId = source.parentEventId
                     }
-                    metadata = toMessageMetadataBuilder(source).apply {
+                    metadata = source.toMessageMetadataBuilder(protocol).apply {
                         messageType = msg.name
                     }.build()
                 }
             }
-        } catch (ex: CodecException) {
-            throw ex
         } catch (ex: Exception) {
-            logger.error(ex) { "Cannot decode message from $source" }
-            throw DecodeException("Cannot decode message from ${source.metadata.id.toDebugString()}", ex)
+            logger.error(ex) { "Cannot decode message from $source. Creating th2-codec-error message with description." }
+            return listOf(source.toErrorMessage(ex, protocol))
         }
-    }
-
-    private fun toMessageMetadataBuilder(sourceMessage: RawMessage): MessageMetadata.Builder {
-        return MessageMetadata.newBuilder()
-            .setId(sourceMessage.metadata.id)
-            .setTimestamp(sourceMessage.metadata.timestamp)
-            .putAllProperties(sourceMessage.metadata.propertiesMap)
     }
 
     private fun checkErrorMessageContains(decodedMessages: List<IMessage>, rawMessage: RawMessage) {
@@ -83,9 +86,6 @@ class DecodeProcessor(
         }
     }
 
-    /**
-     * Checks that the [decodedMessages] contains exactly one message and its raw data is the same as [originalData].
-     */
     private fun checkRawData(decodedMessages: List<IMessage>, originalData: ByteArray) {
         if (decodedMessages.isEmpty()) {
             throw DecodeException("No message was decoded")
@@ -115,7 +115,7 @@ class DecodeProcessor(
         return ByteArray(totalSize).also { dest ->
             var destIndex = 0
             decodedMessages.forEach {
-                // should never happen here because we checks it earlier
+                // should never happened here because we checked it earlier
                 val bytes = requireNotNull(it.metaData.rawMessage) { "Raw data for message ${it.name} is null" }
                 bytes.copyInto(dest, destIndex)
                 destIndex += bytes.size

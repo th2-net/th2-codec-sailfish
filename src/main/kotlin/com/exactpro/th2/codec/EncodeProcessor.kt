@@ -33,8 +33,8 @@ class EncodeProcessor(
     private val converter: ProtoToIMessageConverter,
     private val eventBatchCollector: EventBatchCollector
 ) : AbstractCodecProcessor<Message, RawMessage.Builder>(codecFactory, codecSettings) {
-
     private val logger = KotlinLogging.logger { }
+    private val protocol = codecFactory.protocolName
 
     override fun process(source: Message): RawMessage.Builder {
         val convertedSourceMessage = converter.fromProtoMessage(source, true).also {
@@ -60,6 +60,7 @@ class EncodeProcessor(
         return RawMessageMetadata.newBuilder()
             .setId(sourceMessage.metadata.id)
             .setTimestamp(sourceMessage.metadata.timestamp)
+            .setProtocol(protocol)
             .putAllProperties(sourceMessage.metadata.propertiesMap)
             .build()
     }

@@ -76,7 +76,7 @@ abstract class AbstractSyncCodec(
                         resultBuilder.addGroups(this)
                     }
                 }
-            } catch (exception: RuntimeException) {
+            } catch (exception: Exception) {
                 applicationContext.eventBatchCollector.createAndStoreErrorEvent(
                     "Cannot process not empty group number ${index + 1}",
                     exception,

@@ -21,7 +21,12 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecContext.Role
 import com.exactpro.sf.externalapi.codec.impl.ExternalCodecContext
 import com.exactpro.th2.common.grpc.Direction
 import com.exactpro.th2.common.grpc.Message
+import com.exactpro.th2.common.grpc.MessageMetadata
 import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.grpc.Value
+
+const val ERROR_TYPE_MESSAGE = "th2-codec-error"
+const val ERROR_CONTENT_FIELD = "content"
 
 private fun Direction.toRole(): Role = when (this) {
     Direction.FIRST -> Role.RECEIVER
@@ -29,7 +34,8 @@ private fun Direction.toRole(): Role = when (this) {
     else -> throw IllegalStateException("Unsupported direction: $this")
 }
 
-private fun Role.toContext(properties: Map<String, Any> = emptyMap()): IExternalCodecContext = ExternalCodecContext(this, properties)
+private fun Role.toContext(properties: Map<String, Any> = emptyMap()): IExternalCodecContext =
+    ExternalCodecContext(this, properties)
 
 fun RawMessage.toCodecContext(): IExternalCodecContext {
     val properties = mapOf(
@@ -43,4 +49,29 @@ fun Message.toCodecContext(): IExternalCodecContext {
         MESSAGE_PROPERTIES.propertyName to metadata.propertiesMap
     )
     return metadata.id.direction.toRole().toContext(properties)
+}
+
+fun RawMessage.toMessageMetadataBuilder(protocol: String): MessageMetadata.Builder {
+    return MessageMetadata.newBuilder()
+        .setId(metadata.id)
+        .setTimestamp(metadata.timestamp)
+        .setProtocol(protocol)
+        .putAllProperties(metadata.propertiesMap)
+}
+
+fun RawMessage.toErrorMessage(exception: Exception, protocol: String): Message.Builder = Message.newBuilder().apply {
+    if (hasParentEventId()) {
+        parentEventId = parentEventId
+    }
+    metadata = toMessageMetadataBuilder(protocol).setMessageType(ERROR_TYPE_MESSAGE).build()
+
+    val content = buildString {
+        var throwable: Throwable? = exception
+
+        while (throwable != null) {
+            append("Caused by: ${throwable.message}. ")
+            throwable = throwable.cause
+        }
+    }
+    putFields(ERROR_CONTENT_FIELD, Value.newBuilder().setSimpleValue(content).build())
 }
