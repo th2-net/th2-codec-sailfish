@@ -195,8 +195,6 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 3.9.0
-    + Fixed configuration for gRPC server
-        + Added the property `workers`, which changes the count of gRPC server's threads
     + Disable waiting for connection recovery when closing the `SubscribeMonitor`
     
 + 3.8.1
