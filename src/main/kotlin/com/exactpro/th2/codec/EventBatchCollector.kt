@@ -287,8 +287,10 @@ class EventBatchCollector(
         }
         collectorTasks.clear()
         scheduler.shutdown()
-        scheduler.awaitTermination(5, TimeUnit.SECONDS)
-
+        if (scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+            logger.warn("Cannot shutdown scheduler for 5 seconds")
+            scheduler.shutdownNow()
+        }
         logger.info { "EventBatchCollector is closed. " }
     }
 }
