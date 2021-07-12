@@ -194,6 +194,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 3.9.1
+    + Update version sailfish-core
+
 + 3.9.0
     + Disable waiting for connection recovery when closing the `SubscribeMonitor`
     
