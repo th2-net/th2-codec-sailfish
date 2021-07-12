@@ -107,10 +107,15 @@ class EventBatchCollector(
         }
     }
 
-    fun createAndStoreDecodeErrorEvent(errorText: String, rawMessage: RawMessage) {
+    fun createAndStoreDecodeErrorEvent(errorText: String, rawMessage: RawMessage?) {
         try {
-            val parentEventID = if (rawMessage.hasParentEventId()) rawMessage.parentEventId else getDecodeErrorGroupEventID()
-            val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
+            val parentEventID = if (rawMessage?.hasParentEventId() == true) rawMessage.parentEventId else getDecodeErrorGroupEventID()
+            val messageIDS = if (rawMessage == null) {
+                listOf()
+            } else {
+                listOf<MessageID>(rawMessage.metadata.id)
+            }
+            val event = createErrorEvent(errorText, null, parentEventID, messageIDS)
             logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
             putEvent(event)
         } catch (exception: Exception) {

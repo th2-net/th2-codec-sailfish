@@ -65,10 +65,10 @@ class CodecCommand : CliktCommand() {
 
             val configuration = Configuration.create(commonFactory, sailfishCodecConfig)
             val applicationContext = ApplicationContext.create(configuration, commonFactory)
+            resources.addFirst { applicationContext.eventBatchCollector.close() }
+
             val parsedRouter = applicationContext.commonFactory.messageRouterParsedBatch
             val rawRouter = applicationContext.commonFactory.messageRouterRawBatch
-
-            resources.addFirst { applicationContext.eventBatchCollector.close() }
 
             createAndStartCodec("decoder", applicationContext)
             { _: ApplicationContext ->

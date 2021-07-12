@@ -52,14 +52,15 @@ class CumulativeDecodeProcessor(
             logger.debug {
                 "decoded messages: {${decodedMessageList.joinToString { message -> "${message.name}: $message" }}}"
             }
-            decodedMessageList.forEachIndexed loop@{ index, msg ->
+            decodedMessageList.forEachIndexed { index, msg ->
                 if (msg.name == ErrorMessage.MESSAGE_NAME) {
-                    if (index >= source.messagesList.size) {
-                        return@loop
-                    }
                     eventBatchCollector.createAndStoreDecodeErrorEvent(
                         "Error during decode msg: ${ErrorMessage(msg).cause}",
-                        source.messagesList[index]
+                        if (index < source.messagesList.size) {
+                            source.messagesList[index]
+                        } else {
+                            null
+                        }
                     )
                 }
             }
