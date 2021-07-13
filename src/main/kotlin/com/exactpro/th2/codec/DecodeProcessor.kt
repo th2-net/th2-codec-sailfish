@@ -21,6 +21,7 @@ import com.exactpro.sf.common.messages.IMessage
 import com.exactpro.sf.common.util.EvolutionBatch
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
+import com.exactpro.sf.messages.service.ErrorMessage
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.codec.util.toErrorMessage
@@ -33,8 +34,9 @@ import mu.KotlinLogging
 class DecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    private val messageToProtoConverter: IMessageToProtoConverter
-) :  AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
+    private val messageToProtoConverter: IMessageToProtoConverter,
+    private val eventBatchCollector: EventBatchCollector
+) : AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
     private val protocol = codecFactory.protocolName
 
@@ -53,6 +55,7 @@ class DecodeProcessor(
                     }
                 }
 
+            checkErrorMessageContains(decodedMessages, source)
             checkRawData(decodedMessages, data)
             logger.trace { "Decoded messages: $decodedMessages" }
             logger.debug { "Message with id: '${source.metadata.id.toDebugString()}' successfully decoded" }
@@ -73,9 +76,16 @@ class DecodeProcessor(
         }
     }
 
-    /**
-     * Checks that the [decodedMessages] contains exact one message and its raw data is the same as [originalData].
-     */
+    private fun checkErrorMessageContains(decodedMessages: List<IMessage>, rawMessage: RawMessage) {
+        for (msg in decodedMessages) {
+            if (msg.name == ErrorMessage.MESSAGE_NAME) {
+                eventBatchCollector.createAndStoreDecodeErrorEvent(
+                    "Error during decode msg: ${msg.getField<String>("Cause")}", rawMessage
+                )
+            }
+        }
+    }
+
     private fun checkRawData(decodedMessages: List<IMessage>, originalData: ByteArray) {
         if (decodedMessages.isEmpty()) {
             throw DecodeException("No message was decoded")
@@ -86,14 +96,18 @@ class DecodeProcessor(
             size
         }
         if (originalData.size != totalDecodedRawSize) {
-            throw DecodeException("The decoded raw data total size is different from the original one. " +
-                "Decoded ($totalDecodedRawSize): ${decodedMessages.map { it.metaData.rawMessage?.contentToString() }}, " +
-                "Original (${originalData.size}): ${originalData.contentToString()}")
+            throw DecodeException(
+                "The decoded raw data total size is different from the original one. " +
+                        "Decoded ($totalDecodedRawSize): ${decodedMessages.map { it.metaData.rawMessage?.contentToString() }}, " +
+                        "Original (${originalData.size}): ${originalData.contentToString()}"
+            )
         }
         val rawMessage = collectToByteArray(originalData.size, decodedMessages)
         if (!(rawMessage contentEquals originalData)) {
-            throw DecodeException("The decoded raw data is different from the original one. " +
-                    "Decoded: ${rawMessage.contentToString()}, Original: ${originalData.contentToString()}")
+            throw DecodeException(
+                "The decoded raw data is different from the original one. " +
+                        "Decoded: ${rawMessage.contentToString()}, Original: ${originalData.contentToString()}"
+            )
         }
     }
 

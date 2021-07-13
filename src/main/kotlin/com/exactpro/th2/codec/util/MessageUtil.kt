@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ fun RawMessage.toMessageMetadataBuilder(protocol: String): MessageMetadata.Build
         .putAllProperties(metadata.propertiesMap)
 }
 
-fun RawMessage.toErrorMessage(exception: Exception, protocol: String): Message.Builder  = Message.newBuilder().apply {
+fun RawMessage.toErrorMessage(exception: Exception, protocol: String): Message.Builder = Message.newBuilder().apply {
     if (hasParentEventId()) {
         parentEventId = parentEventId
     }

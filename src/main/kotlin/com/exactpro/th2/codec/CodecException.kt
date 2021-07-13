@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package com.exactpro.th2.codec
 
-import java.lang.RuntimeException
-
 open class CodecException : RuntimeException {
     constructor() : super()
     constructor(message: String?) : super(message)
@@ -29,16 +27,4 @@ open class CodecException : RuntimeException {
         enableSuppression,
         writableStackTrace
     )
-
-    fun getAllMessages(): String = getMessage(this)
-
-    private fun getMessage(exception: Throwable?): String {
-        return when {
-            exception?.cause != null && exception.cause != exception ->
-                "${exception.message}. Caused by: ${getMessage(exception.cause)}"
-            exception?.message != null ->
-                "${exception.message}."
-            else -> ""
-        }
-    }
 }

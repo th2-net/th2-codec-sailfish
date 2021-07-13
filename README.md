@@ -1,4 +1,4 @@
-# How it works (3.9.0)
+# How it works (3.9.1)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -35,14 +35,14 @@ In order to provide the ServiceLoader with the knowledge about your factory impl
 
 **META-INF/services/com.exactpro.sf.externalapi.codec.IExternalCodecFactory**
 
-with the content equals to the fully-qualified class name of your factory implementation.
+with the content that is equal to the fully-qualified class name of your factory implementation.
 
-_If you have several implementations of that interface, their fully-qualified names should be written in that file each one on the new line._
+_If you have several implementations regarding that interface, each one of their fully-qualified names should be written in a new line, inside that file._
 
 
 # Configuration
 
-Codec has four types of connection: stream and general for encode and decode functions.
+Codec has four types of connections: stream and general for encode and decode functions.
 
 * stream encode / decode connections works 24 / 7
 * general encode / decode connections works on demand
@@ -50,14 +50,14 @@ Codec has four types of connection: stream and general for encode and decode fun
 Codec never mixes messages from the _stream_ and the _general_ connections. 
 
 Decoding can work in two different modes:
-+ **CUMULATIVE** (default) - all raw messages in batch will be joined together and decoded. After decoding, the content and the count of the decoded messages will be compared with the original messages in the batch.
++ **CUMULATIVE** (default) - all raw messages in the batch will be joined together and decoded. After decoding them, the content and the count of the decoded messages will be compared to the original messages in the batch.
 + **SEQUENTIAL** - each message in the batch will be decoded as a separate message.
 
 This setting can be overridden in a custom config for the application using the parameter `decodeProcessorType`.
 
 ## Bootstrap parameters
 
-These parameters specify the codec to be used for the messages decoding/encoding and the mode which should be used.
+These parameters specify the codec that will be used for the messages decoding/encoding and the mode which should be used.
 They should be defined in the `custom-config` section of the component configuration.
 
 ```yaml
@@ -65,13 +65,23 @@ codecClassName: fully.qualified.class.name.for.Factory
 decodeProcessorType: CUMULATIVE
 ```
 
+## Publishing events parameters
+
+These parameters determine the size of the EventBatch, and the time (milliseconds) during which the EventBatch is built.
+
+```yaml
+outgoingEventBatchBuildTime: 1000
+maxOutgoingEventBatchSize: 99
+numOfEventBatchCollectorWorkers: 1
+```
+
 ## Codec implementation parameters
 
 These parameters will be passed to the actual codec implementation to configure its behavior.
-It's possible that a codec might not have any parameters to configure. In this case, you can omit adding those parameters.
+It's possible that a codec might not require to configure any parameters. In this case, you can ommit adding those parameters.
 
 The codec implementation parameters should be located in the container's `/home` directory and stored into the file named `codec_config.yml`.
-It has simple key-value format in YAML.
+It has a simple key-value format in YAML.
 ```yaml
 ---
 param1: value1
@@ -155,14 +165,14 @@ spec:
 
 ## Message routing
 
-Schema API allows configuring routing streams of messages via links between connections and filters on pins.
+Schema API allows the configuration of routing streams messages via links between connections and filters on pins.
 Let's consider some examples of routing in codec box.
 
 ### Split on 'publish' pins
 
 For example, you got a big source data stream, and you want to split them into some pins via session alias.
-You can declare multiple pins with attributes `['decoder_out', 'parsed', 'publish']` and filters instead of common pin or in addition to it.
-Every decoded messages will be directed to all declared pins and will be sent to MQ only if it passes the filter.
+You can declare multiple pins with the attributes `['decoder_out', 'parsed', 'publish']` and filters, instead of a common pin or in addition to it.
+Every decoded message will be directed to every declared pins , which will be sent to MQ only if it will pass the filter.
 
 ```yaml
 apiVersion: th2.exactpro.com/v1
@@ -193,6 +203,9 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 3.9.1
+    + Add a notification about ErrorMessage during decoding and any codec errors via failed event
 
 + 3.9.0
     + Disable waiting for connection recovery when closing the `SubscribeMonitor`
@@ -228,7 +241,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
     + tries to load log4j.properties files from sources in order: '/var/th2/config', '/home/etc', configured path via cmd, default configuration
 
 + 3.5.1
-    + Update sailfish-utils to fix problem with message names
+    + Update sailfish-utils to fix a problem with message names
 
 + 3.5.0
     + Checks message structure by the configured dictionary during encode.

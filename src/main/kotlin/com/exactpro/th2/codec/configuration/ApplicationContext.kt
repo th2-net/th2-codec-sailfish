@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -21,10 +21,9 @@ import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.DefaultMessageFactoryProxy
-import com.exactpro.th2.common.grpc.EventBatch
+import com.exactpro.th2.codec.EventBatchCollector
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
-import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import mu.KotlinLogging
@@ -47,7 +46,7 @@ class ApplicationContext(
     val codecSettings: IExternalCodecSettings,
     val protoToIMessageConverter: ProtoToIMessageConverter,
     val messageToProtoConverter: IMessageToProtoConverter,
-    val eventBatchRouter: MessageRouter<EventBatch>?
+    val eventBatchCollector: EventBatchCollector
 ) {
 
     companion object {
@@ -59,24 +58,40 @@ class ApplicationContext(
             val codecFactory = loadFactory(configuration.codecClassName)
 
             val eventBatchRouter = commonFactory.eventBatchRouter
-            val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
-            val codec = codecFactory.createCodec(codecSettings)
-            val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
-            val dictionary = checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
-            val protoConverter = ProtoToIMessageConverter(
-                DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
-            )
-            val iMessageConverter = IMessageToProtoConverter()
+            check(configuration.outgoingEventBatchBuildTime > 0) { "The value of outgoingEventBatchBuildTime must be greater than zero" }
+            check(configuration.maxOutgoingEventBatchSize > 0) { "The value of maxOutgoingEventBatchSize must be greater than zero" }
+            check(configuration.numOfEventBatchCollectorWorkers > 0) { "The value of numOfEventBatchCollectorWorkers must be greater than zero" }
+            val eventBatchCollector = EventBatchCollector(
+                eventBatchRouter,
+                configuration.maxOutgoingEventBatchSize,
+                configuration.outgoingEventBatchBuildTime,
+                configuration.numOfEventBatchCollectorWorkers
+            ).apply {
+                createAndStoreRootEvent(codecFactory.protocolName)
+            }
 
-            return ApplicationContext(
-                commonFactory,
-                codec,
-                codecFactory,
-                codecSettings,
-                protoConverter,
-                iMessageConverter,
-                eventBatchRouter
-            )
+            try {
+                val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
+                val codec = codecFactory.createCodec(codecSettings)
+                val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
+                val dictionary =
+                    checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
+                val protoConverter = ProtoToIMessageConverter(
+                    DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
+                )
+                return ApplicationContext(
+                    commonFactory,
+                    codec,
+                    codecFactory,
+                    codecSettings,
+                    protoConverter,
+                    IMessageToProtoConverter(),
+                    eventBatchCollector
+                )
+            } catch (e: RuntimeException) {
+                eventBatchCollector.createAndStoreErrorEvent("An error occurred while initializing the codec", e)
+                throw e
+            }
         }
 
         private fun createSettings(
@@ -106,7 +121,7 @@ class ApplicationContext(
             if (clazz == null) {
                 logger.warn { "unknown codec parameter '$propertyName'" }
             } else {
-                settings[propertyName] = when(clazz) {
+                settings[propertyName] = when (clazz) {
                     Boolean::class.javaPrimitiveType,
                     Boolean::class.javaObjectType -> toBoolean(propertyValue)
                     Byte::class.javaPrimitiveType,
@@ -114,7 +129,7 @@ class ApplicationContext(
                     Short::class.javaPrimitiveType,
                     Short::class.javaObjectType -> toShort(propertyValue)
                     Integer::class.javaPrimitiveType,
-                    Integer::class.javaObjectType-> toInt(propertyValue)
+                    Integer::class.javaObjectType -> toInt(propertyValue)
                     Long::class.javaPrimitiveType,
                     Long::class.javaObjectType -> toLong(propertyValue)
                     Float::class.javaPrimitiveType,
