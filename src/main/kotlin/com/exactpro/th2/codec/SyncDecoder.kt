@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,8 +13,6 @@
 
 package com.exactpro.th2.codec
 
-import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.grpc.MessageBatch
 import com.exactpro.th2.common.grpc.RawMessageBatch
 import com.exactpro.th2.common.schema.message.MessageRouter
@@ -22,26 +20,19 @@ import com.exactpro.th2.common.schema.message.MessageRouter
 class SyncDecoder(
     sourceRouter: MessageRouter<RawMessageBatch>,
     targetRouter: MessageRouter<MessageBatch>,
-    applicationContext: ApplicationContext,
     processor: AbstractCodecProcessor<RawMessageBatch, MessageBatch>,
-    codecRootID: EventID?
-): AbstractSyncCodec< RawMessageBatch,  MessageBatch>(
+    eventBatchCollector: EventBatchCollector
+) : AbstractSyncCodec<RawMessageBatch, MessageBatch>(
     sourceRouter,
     targetRouter,
-    applicationContext,
     processor,
-    codecRootID
+    eventBatchCollector
 ) {
-    override fun getParentEventId(
-        codecRootID: EventID?,
-        protoSource: RawMessageBatch?,
-        protoResult: MessageBatch?
-    ): EventID? {
-        return codecRootID
-    }
 
     override fun parseProtoSourceFrom(data: ByteArray): RawMessageBatch = RawMessageBatch.parseFrom(data)
 
     override fun checkResult(protoResult: MessageBatch): Boolean = protoResult.messagesCount != 0
+
+    override fun getDirection(): Direction = Direction.DECODE
 
 }

@@ -43,7 +43,8 @@ import mu.KotlinLogging
 class CombinedDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    messageToProtoConverter: IMessageToProtoConverter
+    messageToProtoConverter: IMessageToProtoConverter,
+    private val eventBatchCollector: EventBatchCollector
 ) : RawBatchDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter) {
 
     private val logger = KotlinLogging.logger { }

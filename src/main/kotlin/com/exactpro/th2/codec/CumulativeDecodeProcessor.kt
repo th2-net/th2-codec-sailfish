@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package com.exactpro.th2.codec
 import com.exactpro.sf.common.messages.IMessage
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
+import com.exactpro.sf.messages.service.ErrorMessage
 import com.exactpro.th2.codec.util.codecContext
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.codec.util.toHexString
@@ -31,13 +32,14 @@ import mu.KotlinLogging
 /**
  * This processor joins data from all messages in [RawMessageBatch] to a single buffer.
  * After that, it decodes the cumulated buffer using [com.exactpro.sf.externalapi.codec.IExternalCodec].
- * The result of the decoding must produce the same number of messages as [RawMessageBatch] has.
+ * The result of the decoding must produce the same number of messages as [RawMessageBatch].
  * Also, the raw data from the decoded messages must match the data from the corresponding [RawMessage].
  */
 class CumulativeDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    messageToProtoConverter: IMessageToProtoConverter
+    messageToProtoConverter: IMessageToProtoConverter,
+    private val eventBatchCollector: EventBatchCollector
 ) : RawBatchDecodeProcessor(codecFactory, codecSettings, messageToProtoConverter) {
 
     private val logger = KotlinLogging.logger { }
@@ -49,6 +51,18 @@ class CumulativeDecodeProcessor(
             val decodedMessageList: List<IMessage> = getCodec().decode(batchData, source.codecContext)
             logger.debug {
                 "decoded messages: {${decodedMessageList.joinToString { message -> "${message.name}: $message" }}}"
+            }
+            decodedMessageList.forEachIndexed { index, msg ->
+                if (msg.name == ErrorMessage.MESSAGE_NAME) {
+                    eventBatchCollector.createAndStoreDecodeErrorEvent(
+                        "Error during decode msg: ${ErrorMessage(msg).cause}",
+                        if (index < source.messagesList.size) {
+                            source.messagesList[index]
+                        } else {
+                            null
+                        }
+                    )
+                }
             }
             if (checkSizeAndContext(source, decodedMessageList)) {
                 for (pair in source.messagesList.zip(decodedMessageList)) {

@@ -31,7 +31,6 @@ import com.nhaarman.mockitokotlin2.eq
 import com.nhaarman.mockitokotlin2.inOrder
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.same
-import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.whenever
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
@@ -42,7 +41,8 @@ class TestCombinedDecodeProcessor {
     private val codecFactory = mock<IExternalCodecFactory> {
         on { createCodec(same(codecSettings)) }.thenReturn(codec)
     }
-    private val processor = CombinedDecodeProcessor(codecFactory, codecSettings, IMessageToProtoConverter())
+    private val eventBatchCollector = mock<EventBatchCollector> { }
+    private val processor = CombinedDecodeProcessor(codecFactory, codecSettings, IMessageToProtoConverter(), eventBatchCollector)
 
     @Test
     fun `correctly splits the batch`() {

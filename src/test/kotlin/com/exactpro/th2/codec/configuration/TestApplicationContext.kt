@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,15 @@ import com.exactpro.sf.common.messages.structures.loaders.XmlDictionaryStructure
 import com.exactpro.sf.configuration.suri.SailfishURI
 import com.exactpro.sf.configuration.workspace.FolderType
 import com.exactpro.sf.externalapi.codec.*
+import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.common.schema.grpc.configuration.GrpcRouterConfiguration
 import com.exactpro.th2.common.schema.grpc.router.GrpcRouter
+import com.exactpro.th2.common.schema.message.MessageRouter
 import com.google.common.collect.HashBasedTable
 import com.google.common.collect.Table
+import com.nhaarman.mockitokotlin2.mock
 import io.grpc.BindableService
 import io.grpc.Server
 import org.apache.commons.io.FileUtils
@@ -54,6 +57,8 @@ class TestApplicationContext {
             override fun <T : Any?> getService(p0: Class<T>): T? = null
             override fun startServer(vararg p0: BindableService?): Server = TODO("Not yet implemented")
         })
+
+        `when`(commonFactory.eventBatchRouter).thenReturn(mock<MessageRouter<EventBatch>> {})
 
         val mainDictionary = """<dictionary xmlns="http://exactprosystems.com/dictionary" name="MAIN"></dictionary>"""
         val level1Dictionary = """<dictionary xmlns="http://exactprosystems.com/dictionary" name="LEVEL1"></dictionary>"""

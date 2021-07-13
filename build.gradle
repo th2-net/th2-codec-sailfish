@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -75,8 +75,8 @@ dependencies {
 
     implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
 
-    testImplementation "org.junit.jupiter:junit-jupiter:5.4.2"
     testImplementation 'org.mockito:mockito-inline:3.5.6'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
     testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
 }
 
@@ -119,4 +119,3 @@ compileKotlin {
 application {
     mainClassName = "com.exactpro.th2.codec.MainKt"
 }
-

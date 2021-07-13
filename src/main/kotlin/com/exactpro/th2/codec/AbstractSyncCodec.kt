@@ -13,12 +13,6 @@
 
 package com.exactpro.th2.codec
 
-import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.common.event.Event
-import com.exactpro.th2.common.event.Event.Status.FAILED
-import com.exactpro.th2.common.event.bean.Message
-import com.exactpro.th2.common.grpc.EventBatch
-import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.schema.message.MessageListener
 import com.exactpro.th2.common.schema.message.MessageRouter
 import com.google.protobuf.GeneratedMessageV3
@@ -26,19 +20,15 @@ import mu.KotlinLogging
 import java.io.IOException
 import java.util.concurrent.TimeoutException
 
-abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
+abstract class AbstractSyncCodec<T : GeneratedMessageV3, R : GeneratedMessageV3>(
     protected val sourceRouter: MessageRouter<T>,
     protected val targetRouter: MessageRouter<R>,
-    applicationContext: ApplicationContext,
     protected val processor: AbstractCodecProcessor<T, R>,
-    protected val codecRootEvent: EventID?
-): AutoCloseable, MessageListener<T> {
+    protected val eventBatchCollector: EventBatchCollector
+) : AutoCloseable, MessageListener<T> {
 
     protected val logger = KotlinLogging.logger {}
-    protected val eventBatchRouter: MessageRouter<EventBatch>? = applicationContext.eventBatchRouter
-    protected val context = applicationContext;
-
-    protected var tagretAttributes : String = ""
+    protected var tagretAttributes: String = ""
 
 
     fun start(sourceAttributes: String, targetAttributes: String) {
@@ -46,7 +36,7 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
             this.tagretAttributes = targetAttributes
             sourceRouter.subscribeAll(this, sourceAttributes)
         } catch (exception: Exception) {
-            when(exception) {
+            when (exception) {
                 is IOException,
                 is TimeoutException -> throw DecodeException("could not start rabbit mq subscriber", exception)
                 else -> throw DecodeException("could not start decoder", exception)
@@ -83,38 +73,21 @@ abstract class AbstractSyncCodec<T: GeneratedMessageV3, R: GeneratedMessageV3>(
                 targetRouter.sendAll(protoResult, this.tagretAttributes)
 
 
-        } catch (exception: CodecException) {
-            val parentEventId = getParentEventId(codecRootEvent, message, protoResult)
-            if (parentEventId != null) {
-                createAndStoreErrorEvent(exception, parentEventId)
-            }
-            logger.error(exception) {}
+        } catch (exception: RuntimeException) {
+            eventBatchCollector.createAndStoreErrorEvent(
+                "Cannot process message",
+                exception,
+                getDirection(),
+                message
+            )
         }
     }
 
-    private fun createAndStoreErrorEvent(exception: CodecException, parentEventID: EventID) {
-        if (eventBatchRouter != null) {
-            try {
-                eventBatchRouter.send(
-                    EventBatch.newBuilder().addEvents(
-                    Event.start()
-                        .name("Codec error")
-                        .type("CodecError")
-                        .status(FAILED)
-                        .bodyData(Message().apply {
-                            data = exception.getAllMessages()
-                        })
-                        .toProto(parentEventID)
-                ).build(),
-                    "publish", "event"
-                )
-            } catch (exception: Exception) {
-                logger.warn(exception) { "could not send codec error event" }
-            }
-        }
+    enum class Direction {
+        ENCODE, DECODE
     }
 
-    abstract fun getParentEventId(codecRootID: EventID?, protoSource: T?, protoResult: R?): EventID?
+    protected abstract fun getDirection(): Direction
     abstract fun parseProtoSourceFrom(data: ByteArray): T
     abstract fun checkResult(protoResult: R): Boolean
 }
