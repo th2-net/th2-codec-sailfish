@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -30,7 +30,11 @@ import java.nio.file.Paths
 internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(YAMLFactory()).apply { registerModule(KotlinModule()) }
     .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
-class Configuration() {
+class Configuration(
+    val outgoingEventBatchBuildTime: Long = 1000,
+    val maxOutgoingEventBatchSize: Int = 99,
+    val numOfEventBatchCollectorWorkers: Int = 1
+) {
     var codecClassName: String? = null
 
     var codecParameters: Map<String, String>? = null
@@ -49,7 +53,7 @@ class Configuration() {
 
     companion object {
 
-        fun create(commonFactory : CommonFactory, sailfishCodecParamsPath: String?) : Configuration{
+        fun create(commonFactory: CommonFactory, sailfishCodecParamsPath: String?): Configuration {
 
             val configuration = commonFactory.getCustomConfiguration(Configuration::class.java)
             val implementationParams = readSailfishParameters(sailfishCodecParamsPath)
@@ -68,8 +72,8 @@ class Configuration() {
             }
             try {
                 return OBJECT_MAPPER.readValue(
-                        newInputStream(codecParameterFile),
-                        object : TypeReference<LinkedHashMap<String, String>>() {}
+                    newInputStream(codecParameterFile),
+                    object : TypeReference<LinkedHashMap<String, String>>() {}
                 )
             } catch (exception: Exception) {
                 when (exception) {

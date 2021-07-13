@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2020 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -20,31 +20,17 @@ import com.exactpro.th2.common.schema.message.MessageRouter
 class SyncEncoder(
     router: MessageRouter<MessageGroupBatch>,
     applicationContext: ApplicationContext,
-    private val processor: AbstractCodecProcessor<Message, RawMessage.Builder>,
-    codecRootID: EventID?
-): AbstractSyncCodec(
+    private val processor: AbstractCodecProcessor<Message, RawMessage.Builder>
+) : AbstractSyncCodec(
     router,
-    applicationContext,
-    codecRootID
+    applicationContext
 ) {
+    override fun getDirection(): Direction = Direction.ENCODE
 
-    override fun getParentEventId(
-        codecRootID: EventID?,
-        protoSource: MessageGroup?,
-        protoResult: MessageGroup?
-    ): EventID? {
-        if (protoSource != null && protoSource.messagesCount != 0) {
-            val parsedMessage = protoSource.messagesList.first { it.hasMessage() }.message
-            if (parsedMessage.hasParentEventId()) {
-                return parsedMessage.parentEventId
-            }
-        }
-        return codecRootID
-    }
 
     override fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean = resultBatch.groupsCount > 0
 
-    override fun checkResult(protoResult: MessageGroup): Boolean  = protoResult.messagesCount > 0
+    override fun checkResult(protoResult: MessageGroup): Boolean = protoResult.messagesCount > 0
 
     override fun processMessageGroup(it: MessageGroup): MessageGroup? {
         if (it.messagesCount < 1) {

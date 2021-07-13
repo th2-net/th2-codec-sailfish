@@ -40,7 +40,8 @@ internal class TestDecodeProcessor {
         on { createCodec(same(settings)) }.thenReturn(codec)
         on { protocolName }.thenReturn("mock")
     }
-    private val processor = DecodeProcessor(factory, settings, IMessageToProtoConverter())
+
+    private val processor = DecodeProcessor(factory, settings, IMessageToProtoConverter(), mock {})
 
     @Test
     internal fun `decodes one to one`() {
