@@ -5,6 +5,10 @@ on:
     branches-ignore:
       - master
       - version-*
+      - dependabot*
+    paths-ignore:
+      - README.md
+#    - package_info.json
 
 jobs:
   build:
