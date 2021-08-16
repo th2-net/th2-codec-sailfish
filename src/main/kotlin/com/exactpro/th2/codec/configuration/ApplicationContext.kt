@@ -26,6 +26,7 @@ import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
+import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter.createParameters
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
@@ -77,7 +78,8 @@ class ApplicationContext(
                 val dictionary =
                     checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
                 val protoConverter = ProtoToIMessageConverter(
-                    DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace)
+                    DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace),
+                    createParameters().setAllowUnknownEnumValues(configuration.allowUnknownEnumValues)
                 )
                 return ApplicationContext(
                     commonFactory,
