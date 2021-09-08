@@ -77,9 +77,10 @@ class ApplicationContext(
                 val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
                 val dictionary =
                     checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
+                val converterParameters = configuration.converterParameters
                 val protoConverter = ProtoToIMessageConverter(
                     DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace),
-                    createParameters().setAllowUnknownEnumValues(configuration.allowUnknownEnumValues)
+                    converterParameters.toEncodeParameters()
                 )
                 return ApplicationContext(
                     commonFactory,
@@ -87,7 +88,7 @@ class ApplicationContext(
                     codecFactory,
                     codecSettings,
                     protoConverter,
-                    IMessageToProtoConverter(),
+                    IMessageToProtoConverter(converterParameters.toDecodeParameters()),
                     eventBatchCollector
                 )
             } catch (e: RuntimeException) {
@@ -95,6 +96,14 @@ class ApplicationContext(
                 throw e
             }
         }
+
+        private fun ConverterParameters.toEncodeParameters(): ProtoToIMessageConverter.Parameters =
+            createParameters().setAllowUnknownEnumValues(allowUnknownEnumValues)
+
+        private fun ConverterParameters.toDecodeParameters(): IMessageToProtoConverter.Parameters =
+            IMessageToProtoConverter.parametersBuilder()
+                .setStripTrailingZeros(stripTrailingZeros)
+                .build()
 
         private fun createSettings(
             commonFactory: CommonFactory,

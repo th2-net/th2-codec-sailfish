@@ -1,4 +1,4 @@
-# How it works (3.10.1)
+# How it works (3.11.0)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -63,7 +63,9 @@ They should be defined in the `custom-config` section of the component configura
 ```yaml
 codecClassName: fully.qualified.class.name.for.Factory
 decodeProcessorType: CUMULATIVE
-allowUnknownEnumValues: false # allows unknown enum values during message encoding
+converterParameters:
+  allowUnknownEnumValues: false # allows unknown enum values during message encoding
+  stripTrailingZeros: false # removes trailing zeroes for `BigDecimal` (_0.100000_ -> _0.1_)
 ```
 
 ## Publishing events parameters
@@ -104,7 +106,9 @@ spec:
   custom-config:
     codecClassName: fully.qualified.class.name.for.Factory
     decodeProcessorType: CUMULATIVE
-    allowUnknownEnumValues: false
+    converterParameters:
+      allowUnknownEnumValues: false
+      stripTrailingZeros: false
     codecParameters:
       param1: value1
       param2: value2
@@ -134,7 +138,9 @@ spec:
   custom-config:
     codecClassName: fully.qualified.class.name.for.Factory
     decodeProcessorType: CUMULATIVE
-    allowUnknownEnumValues: false
+    converterParameters:
+      allowUnknownEnumValues: false
+      stripTrailingZeros: false
   pins:
     # encoder
     - name: in_codec_encode
@@ -206,6 +212,11 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 3.11.0
+    + Update sailfish-utils to 3.8.0
+    + Add **stripTrailingZeros** parameter for removing trailing zeroes for `BigDecimal` values during the decoding
+    + Move converter parameters to a separate object
 
 + 3.10.1
     + Update sailfish-core version to 3.2.1655 (fix problem with properties in settings that have setters created using builder pattern)

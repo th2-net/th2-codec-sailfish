@@ -21,7 +21,6 @@ import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import org.apache.commons.lang3.StringUtils
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Files.newInputStream
@@ -34,7 +33,12 @@ class Configuration(
     val outgoingEventBatchBuildTime: Long = 1000,
     val maxOutgoingEventBatchSize: Int = 99,
     val numOfEventBatchCollectorWorkers: Int = 1,
-    val allowUnknownEnumValues: Boolean = false
+    @Deprecated(
+        "Please, use ConverterParameters.allowUnknownEnumValues instead",
+        ReplaceWith("converterParameters.allowUnknownEnumValues", imports = ["com.exactpro.th2.codec.configuration.ConverterParameters"])
+    )
+    val allowUnknownEnumValues: Boolean = false,
+    val converterParameters: ConverterParameters = ConverterParameters(allowUnknownEnumValues = allowUnknownEnumValues)
 ) {
     var codecClassName: String? = null
 
@@ -64,7 +68,7 @@ class Configuration(
 
 
         private fun readSailfishParameters(sailfishCodecParamsPath: String?): Map<String, String> {
-            if (StringUtils.isBlank(sailfishCodecParamsPath)) {
+            if (sailfishCodecParamsPath.isNullOrBlank()) {
                 return mapOf()
             }
             val codecParameterFile = Paths.get(sailfishCodecParamsPath)
@@ -97,6 +101,11 @@ class Configuration(
         }
     }
 }
+
+class ConverterParameters(
+    val stripTrailingZeros: Boolean = false,
+    val allowUnknownEnumValues: Boolean = false
+)
 
 
 
