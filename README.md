@@ -214,7 +214,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 3.12.0
-    + Update sailfish-core version to 3.2.1674 (fix problem with truncation of fractions of seconds in time fields)
+    + Update `sailfish-core` version to `3.2.1674`
 
 + 3.11.0
     + Update sailfish-utils to 3.8.0
