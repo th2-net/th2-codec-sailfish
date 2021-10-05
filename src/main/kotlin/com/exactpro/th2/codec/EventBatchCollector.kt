@@ -18,13 +18,14 @@ package com.exactpro.th2.codec
 
 
 import com.exactpro.th2.codec.util.toDebugString
-import com.exactpro.th2.common.event.bean.Message
+import com.exactpro.th2.common.event.EventUtils
 import com.exactpro.th2.common.grpc.Event
 import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.grpc.MessageGroup
 import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.schema.message.MessageRouter
 import mu.KotlinLogging
 import java.time.LocalDateTime
@@ -107,11 +108,14 @@ class EventBatchCollector(
         }
     }
 
-    fun createAndStoreDecodeErrorEvent(errorText: String, rawMessage: RawMessage) {
+    fun createAndStoreDecodeErrorEvent(errorText: String, rawMessage: RawMessage, exception: Exception? = null) {
         try {
             val parentEventID =
                 if (rawMessage.hasParentEventId()) rawMessage.parentEventId else getDecodeErrorGroupEventID()
-            val event = createErrorEvent(errorText, null, parentEventID, listOf<MessageID>(rawMessage.metadata.id))
+            val event = createErrorEvent(
+                "Cannot decode message for ${rawMessage.metadata.id.connectionId.toJson()}", errorText, exception, parentEventID,
+                listOf<MessageID>(rawMessage.metadata.id)
+            )
             logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
             putEvent(event)
         } catch (exception: Exception) {
@@ -128,7 +132,7 @@ class EventBatchCollector(
         try {
             val parentEventID = getParentEventIdFromGroup(direction, group)
             val messageIDs = getMessageIDsFromGroup(group)
-            val event = createErrorEvent(errorText, exception, parentEventID, messageIDs)
+            val event = createErrorEvent("Cannot process message group", errorText, exception, parentEventID, messageIDs)
             logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
             putEvent(event)
         } catch (exception: Exception) {
@@ -137,11 +141,12 @@ class EventBatchCollector(
     }
 
     fun createAndStoreErrorEvent(
+        name: String,
         errorText: String,
         exception: RuntimeException
     ) {
         try {
-            val event = createErrorEvent(errorText, exception, rootEventID)
+            val event = createErrorEvent(name, errorText, exception, rootEventID)
             logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
             putEvent(event)
         } catch (exception: Exception) {
@@ -222,18 +227,17 @@ class EventBatchCollector(
     }
 
     private fun createErrorEvent(
+        name: String,
         errorText: String,
         exception: Exception?,
         parentEventID: EventID,
         messageIDS: List<MessageID> = mutableListOf()
     ): Event = com.exactpro.th2.common.event.Event.start()
-        .name(exception?.message ?: errorText)
+        .name(name)
         .type("CodecError")
         .status(com.exactpro.th2.common.event.Event.Status.FAILED)
-        .bodyData(Message().apply {
-            data = errorText
-            type = "message"
-        }).apply {
+        .bodyData(EventUtils.createMessageBean(errorText))
+        .apply {
             if (exception != null) {
                 exception(exception, true)
             }

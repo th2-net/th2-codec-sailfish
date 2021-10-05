@@ -1,4 +1,4 @@
-# How it works (3.12.0)
+# How it works (3.12.1)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -212,6 +212,9 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 3.12.1
+    + Publish error event when no message was produced during decoding and the th2-error-message is published instead.
 
 + 3.12.0
     + Update `sailfish-core` version to `3.2.1674`

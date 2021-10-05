@@ -22,6 +22,7 @@ import com.exactpro.sf.common.util.EvolutionBatch
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.sf.messages.service.ErrorMessage
+import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.codec.util.toErrorMessage
@@ -72,6 +73,9 @@ class DecodeProcessor(
             }
         } catch (ex: Exception) {
             logger.error(ex) { "Cannot decode message from $source. Creating th2-codec-error message with description." }
+            eventBatchCollector.createAndStoreDecodeErrorEvent(
+                "Cannot decode message: ${ex.message ?: "blank error message"}. $ERROR_TYPE_MESSAGE with cause published instead",
+                source, ex)
             return listOf(source.toErrorMessage(ex, protocol))
         }
     }
