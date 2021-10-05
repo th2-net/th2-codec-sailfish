@@ -92,7 +92,7 @@ class ApplicationContext(
                     eventBatchCollector
                 )
             } catch (e: RuntimeException) {
-                eventBatchCollector.createAndStoreErrorEvent("An error occurred while initializing the codec", e)
+                eventBatchCollector.createAndStoreErrorEvent("Codec was not initialized", "An error occurred while initializing the codec", e)
                 throw e
             }
         }
@@ -132,6 +132,7 @@ class ApplicationContext(
             if (clazz == null) {
                 logger.warn { "unknown codec parameter '$propertyName'" }
             } else {
+                @Suppress("IMPLICIT_CAST_TO_ANY")
                 settings[propertyName] = when (clazz) {
                     Boolean::class.javaPrimitiveType,
                     Boolean::class.javaObjectType -> toBoolean(propertyValue)
