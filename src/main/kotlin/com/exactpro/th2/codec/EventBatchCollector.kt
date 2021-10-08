@@ -60,7 +60,7 @@ class EventBatchCollector(
     private val eventBatchRouter: MessageRouter<EventBatch>,
     private val maxBatchSize: Int,
     private val timeout: Long,
-    private val numOfEventBatchCollectorWorkers: Int
+    numOfEventBatchCollectorWorkers: Int
 ) : AutoCloseable {
     private val collectorTasks = ConcurrentHashMap<EventID, CollectorTask>()
     private val scheduler = Executors.newScheduledThreadPool(numOfEventBatchCollectorWorkers)
@@ -154,7 +154,7 @@ class EventBatchCollector(
         }
     }
 
-    fun createAndStoreRootEvent(codecName: String) {
+    fun initEventStructure(codecName: String) {
         try {
             val event = com.exactpro.th2.common.event.Event.start()
                 .name("Codec_${codecName}_${LocalDateTime.now()}")
@@ -168,62 +168,53 @@ class EventBatchCollector(
                     .addEvents(event)
                     .build()
             )
+            initDecodeEventRoot(rootEventID)
+            initEncodeEventRoot(rootEventID)
 
         } catch (exception: Exception) {
-            logger.warn(exception) { "could not store root event" }
+            logger.warn(exception) { "could not init root event structure" }
+            throw exception
         }
     }
 
     private fun getDecodeErrorGroupEventID(): EventID {
-        try {
-            if (!::decodeErrorGroupEventID.isInitialized) {
-                synchronized(decodeErrorGroupEventID) {
-                    if (!::decodeErrorGroupEventID.isInitialized) {
-                        val event = com.exactpro.th2.common.event.Event.start()
-                            .name("DecodeError")
-                            .type("CodecErrorGroup")
-                            .toProto(rootEventID)
-                        decodeErrorGroupEventID = event.id
-
-                        logger.info { "DecodeError group event id: ${event.id.toDebugString()}" }
-                        eventBatchRouter.send(
-                            EventBatch.newBuilder()
-                                .addEvents(event)
-                                .build()
-                        )
-                    }
-                }
-            }
-        } catch (exception: Exception) {
-            logger.warn(exception) { "could not store DecodeError group event" }
-        }
+        check(::decodeErrorGroupEventID.isInitialized) { "Decode root is not initialized" }
         return decodeErrorGroupEventID
     }
 
-    private fun getEncodeErrorGroupEventID(): EventID {
-        try {
-            if (!::encodeErrorGroupEventID.isInitialized) {
-                synchronized(encodeErrorGroupEventID) {
-                    if (!::encodeErrorGroupEventID.isInitialized) {
-                        val event = com.exactpro.th2.common.event.Event.start()
-                            .name("EncodeError")
-                            .type("CodecErrorGroup")
-                            .toProto(rootEventID)
-                        encodeErrorGroupEventID = event.id
+    private fun initDecodeEventRoot(parent: EventID) {
+        val event = com.exactpro.th2.common.event.Event.start()
+            .name("DecodeError")
+            .type("CodecErrorGroup")
+            .toProto(parent)
+        decodeErrorGroupEventID = event.id
 
-                        logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
-                        eventBatchRouter.send(
-                            EventBatch.newBuilder()
-                                .addEvents(event)
-                                .build()
-                        )
-                    }
-                }
-            }
-        } catch (exception: Exception) {
-            logger.warn(exception) { "could not store EncodeError group event" }
-        }
+        logger.info { "DecodeError group event id: ${event.id.toDebugString()}" }
+        eventBatchRouter.send(
+            EventBatch.newBuilder()
+                .addEvents(event)
+                .build()
+        )
+    }
+
+    private fun getEncodeErrorGroupEventID(): EventID {
+        check(::encodeErrorGroupEventID.isInitialized) { "Encode root is not initialized" }
         return encodeErrorGroupEventID
+    }
+
+    private fun initEncodeEventRoot(parent: EventID) {
+        val event = com.exactpro.th2.common.event.Event.start()
+            .name("EncodeError")
+            .type("CodecErrorGroup")
+            .toProto(parent)
+        encodeErrorGroupEventID = event.id
+
+        logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
+        eventBatchRouter.send(
+            EventBatch.newBuilder()
+                .addEvents(event)
+                .build()
+        )
     }
 
     private fun createErrorEvent(

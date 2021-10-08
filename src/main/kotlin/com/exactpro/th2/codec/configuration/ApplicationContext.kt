@@ -68,7 +68,7 @@ class ApplicationContext(
                 configuration.outgoingEventBatchBuildTime,
                 configuration.numOfEventBatchCollectorWorkers
             ).apply {
-                createAndStoreRootEvent(codecFactory.protocolName)
+                initEventStructure(codecFactory.protocolName)
             }
 
             try {
