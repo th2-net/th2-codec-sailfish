@@ -68,7 +68,7 @@ class ApplicationContext(
                 configuration.outgoingEventBatchBuildTime,
                 configuration.numOfEventBatchCollectorWorkers
             ).apply {
-                initEventStructure(codecFactory.protocolName)
+                initEventStructure(commonFactory.boxConfiguration?.boxName ?: codecFactory.protocolName, configuration.codecParameters)
             }
 
             try {
