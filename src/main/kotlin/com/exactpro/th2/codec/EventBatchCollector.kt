@@ -17,6 +17,8 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.common.event.EventUtils
+import com.exactpro.th2.common.event.bean.IRow
+import com.exactpro.th2.common.event.bean.builder.TableBuilder
 import com.exactpro.th2.common.grpc.Event
 import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.grpc.EventID
@@ -25,6 +27,7 @@ import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.schema.message.MessageRouter
+import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import mu.KotlinLogging
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
@@ -152,11 +155,26 @@ class EventBatchCollector(
         }
     }
 
-    fun initEventStructure(codecName: String) {
+    fun initEventStructure(codecName: String, protocol: String, codecParameters: Map<String, String>?) {
         try {
             val event = com.exactpro.th2.common.event.Event.start()
                 .name("Codec_${codecName}_${LocalDateTime.now()}")
                 .type("CodecRoot")
+                .apply {
+                    bodyData(EventUtils.createMessageBean("Protocol: $protocol"))
+                    if (codecParameters == null || codecParameters.isEmpty()) {
+                        bodyData(EventUtils.createMessageBean("No parameters specified for codec"))
+                    } else {
+                        bodyData(EventUtils.createMessageBean("Codec parameters:"))
+                        bodyData(TableBuilder<ParametersRow>()
+                            .apply {
+                                codecParameters.forEach { (name, value) ->
+                                    row(ParametersRow(name, value))
+                                }
+                            }
+                            .build())
+                    }
+                }
                 .toProto(null)
 
             rootEventID = event.id
@@ -286,4 +304,7 @@ class EventBatchCollector(
         }
         logger.info { "EventBatchCollector is closed. " }
     }
+
+    @JsonPropertyOrder("name", "value")
+    private class ParametersRow(val name: String, val value: String) : IRow
 }

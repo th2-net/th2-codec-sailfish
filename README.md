@@ -225,6 +225,8 @@ The filtering can also be applied for pins with  `subscribe` attribute.
     + Change default value for `outgoingEventBatchBuildTime`.
       The value defines time in seconds the previous default value caused a long delay before event reporting
     + Replaced custom protobuf message printing with `MessageUtils.toJson()`
+    + Use name from the schema for codec's root event
+    + Add information about codec's parameters into a body for root event
 
 + 3.12.2
     + Fix error when we try to synchronize on `lateinit` property when it is not initialized yet
