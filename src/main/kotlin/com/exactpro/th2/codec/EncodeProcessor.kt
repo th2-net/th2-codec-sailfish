@@ -22,9 +22,9 @@ import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.grpc.RawMessageMetadata
+import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.google.protobuf.ByteString
-import com.google.protobuf.util.JsonFormat
 import mu.KotlinLogging
 
 class EncodeProcessor(
@@ -48,10 +48,7 @@ class EncodeProcessor(
             }
             body = ByteString.copyFrom(encodedMessageData)
             metadata = toRawMessageMetadataBuilder(source).also {
-                logger.debug {
-                    val jsonRawMessage = JsonFormat.printer().omittingInsignificantWhitespace().print(it)
-                    "message metadata: $jsonRawMessage"
-                }
+                logger.debug { "message metadata: ${it.toJson()}" }
             }
         }
     }
