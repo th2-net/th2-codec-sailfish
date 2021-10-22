@@ -1,4 +1,4 @@
-# How it works (3.12.2)
+# How it works (3.12.3)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -70,13 +70,20 @@ converterParameters:
 
 ## Publishing events parameters
 
-These parameters determine the size of the EventBatch, and the time (milliseconds) during which the EventBatch is built.
+These parameters determine the size of the EventBatch, and the time (seconds) during which the EventBatch is built.
 
 ```yaml
-outgoingEventBatchBuildTime: 1000
+outgoingEventBatchBuildTime: 30
 maxOutgoingEventBatchSize: 99
 numOfEventBatchCollectorWorkers: 1
 ```
+
+**outgoingEventBatchBuildTime** - time interval in seconds to publish the collected events reported by the codec
+**maxOutgoingEventBatchSize** - the max number of events in a single batch.
+If events count exceeds that amount the batch will be published earlier than the `outgoingEventBatchBuildTime`.
+**numOfEventBatchCollectorWorkers** - the number of threads to process published events.
+Higher number means that there might be more batches published concurrently.
+But increasing that number might affect performance if number of available cores is less than this number.
 
 ## Codec implementation parameters
 
@@ -212,6 +219,11 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 3.12.3
+    + Update sailfish dependencies from `3.2.1674` to `3.2.1712`
+    + Change default value for `outgoingEventBatchBuildTime`.
+      The value defines time in seconds the previous default value caused a long delay before event reporting
 
 + 3.12.2
     + Fix error when we try to synchronize on `lateinit` property when it is not initialized yet
