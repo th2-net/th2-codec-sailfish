@@ -157,12 +157,13 @@ class EventBatchCollector(
         }
     }
 
-    fun initEventStructure(codecName: String, codecParameters: Map<String, String>?) {
+    fun initEventStructure(codecName: String, protocol: String, codecParameters: Map<String, String>?) {
         try {
             val event = com.exactpro.th2.common.event.Event.start()
                 .name("Codec_${codecName}_${LocalDateTime.now()}")
                 .type("CodecRoot")
                 .apply {
+                    bodyData(EventUtils.createMessageBean("Protocol: $protocol"))
                     if (codecParameters == null || codecParameters.isEmpty()) {
                         bodyData(EventUtils.createMessageBean("No parameters specified for codec"))
                     } else {
