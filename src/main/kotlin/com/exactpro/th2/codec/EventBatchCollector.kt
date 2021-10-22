@@ -16,8 +16,6 @@
 
 package com.exactpro.th2.codec
 
-
-import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.EventUtils
 import com.exactpro.th2.common.event.bean.IRow
 import com.exactpro.th2.common.event.bean.builder.TableBuilder
@@ -119,7 +117,7 @@ class EventBatchCollector(
                 "Cannot decode message for ${rawMessage.metadata.id.connectionId.toJson()}", errorText, exception, parentEventID,
                 listOf<MessageID>(rawMessage.metadata.id)
             )
-            logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
+            logger.error { "${errorText}. Error event id: ${event.id.toJson()}" }
             putEvent(event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
@@ -136,7 +134,7 @@ class EventBatchCollector(
             val parentEventID = getParentEventIdFromGroup(direction, group)
             val messageIDs = getMessageIDsFromGroup(group)
             val event = createErrorEvent("Cannot process message group", errorText, exception, parentEventID, messageIDs)
-            logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
+            logger.error(exception) { "${errorText}. Error event id: ${event.id.toJson()}" }
             putEvent(event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
@@ -150,7 +148,7 @@ class EventBatchCollector(
     ) {
         try {
             val event = createErrorEvent(name, errorText, exception, rootEventID)
-            logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
+            logger.error(exception) { "${errorText}. Error event id: ${event.id.toJson()}" }
             putEvent(event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
@@ -180,7 +178,7 @@ class EventBatchCollector(
                 .toProto(null)
 
             rootEventID = event.id
-            logger.info { "root event id: ${event.id.toDebugString()}" }
+            logger.info { "root event id: ${event.id.toJson()}" }
             eventBatchRouter.send(
                 EventBatch.newBuilder()
                     .addEvents(event)
@@ -207,7 +205,7 @@ class EventBatchCollector(
             .toProto(parent)
         decodeErrorGroupEventID = event.id
 
-        logger.info { "DecodeError group event id: ${event.id.toDebugString()}" }
+        logger.info { "DecodeError group event id: ${event.id.toJson()}" }
         eventBatchRouter.send(
             EventBatch.newBuilder()
                 .addEvents(event)
@@ -227,7 +225,7 @@ class EventBatchCollector(
             .toProto(parent)
         encodeErrorGroupEventID = event.id
 
-        logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
+        logger.info { "EncodeError group event id: ${event.id.toJson()}" }
         eventBatchRouter.send(
             EventBatch.newBuilder()
                 .addEvents(event)
