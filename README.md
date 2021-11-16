@@ -227,6 +227,8 @@ The filtering can also be applied for pins with  `subscribe` attribute.
     + Replaced custom protobuf message printing with `MessageUtils.toJson()`
     + Use name from the schema for codec's root event
     + Add information about codec's parameters into a body for root event
+    + The common library update from 3.25.1 to 3.29.1
+      + Fix filtering by `message_type` for pins
 
 + 3.12.2
     + Fix error when we try to synchronize on `lateinit` property when it is not initialized yet
