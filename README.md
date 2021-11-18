@@ -221,7 +221,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 3.12.3
-    + Update sailfish dependencies from `3.2.1674` to `3.2.1712`
+    + Update sailfish dependencies from `3.2.1674` to `3.2.1741`
     + Change default value for `outgoingEventBatchBuildTime`.
       The value defines time in seconds the previous default value caused a long delay before event reporting
     + Replaced custom protobuf message printing with `MessageUtils.toJson()`
