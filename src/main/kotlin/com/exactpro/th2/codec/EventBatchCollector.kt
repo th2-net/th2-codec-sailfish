@@ -228,7 +228,7 @@ class EventBatchCollector(
         parentEventID: EventID,
         messageIDS: List<MessageID> = mutableListOf()
     ): Event = com.exactpro.th2.common.event.Event.start()
-        .bookName(boxBookName)
+        .bookName(parentEventID.bookName.ifEmpty { boxBookName })
         .name(name)
         .type("CodecError")
         .status(com.exactpro.th2.common.event.Event.Status.FAILED)
