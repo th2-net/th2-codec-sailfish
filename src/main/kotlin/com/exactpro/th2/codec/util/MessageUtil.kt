@@ -51,22 +51,19 @@ fun Message.toCodecContext(): IExternalCodecContext {
     return metadata.id.direction.toRole().toContext(properties)
 }
 
-fun RawMessage.toMessageMetadataBuilder(boxBookName: String, protocol: String): MessageMetadata.Builder =
-    MessageMetadata.newBuilder()
-        .setId(
-            metadata.id
-                .toBuilder()
-                .setBookName(parentEventId.bookName.ifEmpty { boxBookName })
-        )
+fun RawMessage.toMessageMetadataBuilder(protocol: String): MessageMetadata.Builder {
+    return MessageMetadata.newBuilder()
+        .setId(metadata.id)
         .setTimestamp(metadata.timestamp)
         .setProtocol(protocol)
         .putAllProperties(metadata.propertiesMap)
+}
 
-fun RawMessage.toErrorMessage(bookName: String, exception: Exception, protocol: String): Message.Builder = Message.newBuilder().apply {
+fun RawMessage.toErrorMessage(exception: Exception, protocol: String): Message.Builder = Message.newBuilder().apply {
     if (hasParentEventId()) {
         parentEventId = parentEventId
     }
-    metadata = toMessageMetadataBuilder(bookName, protocol).setMessageType(ERROR_TYPE_MESSAGE).build()
+    metadata = toMessageMetadataBuilder(protocol).setMessageType(ERROR_TYPE_MESSAGE).build()
 
     val content = buildString {
         var throwable: Throwable? = exception

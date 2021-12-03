@@ -36,8 +36,7 @@ class DecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
     private val messageToProtoConverter: IMessageToProtoConverter,
-    private val eventBatchCollector: EventBatchCollector,
-    private val boxBookName: String
+    private val eventBatchCollector: EventBatchCollector
 ) : AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
     private val protocol = codecFactory.protocolName
@@ -67,7 +66,7 @@ class DecodeProcessor(
                     if (source.hasParentEventId()) {
                         parentEventId = source.parentEventId
                     }
-                    metadata = source.toMessageMetadataBuilder(boxBookName, protocol).apply {
+                    metadata = source.toMessageMetadataBuilder(protocol).apply {
                         messageType = msg.name
                     }.build()
                 }
@@ -77,7 +76,7 @@ class DecodeProcessor(
             eventBatchCollector.createAndStoreDecodeErrorEvent(
                 "Cannot decode message: ${ex.message ?: "blank error message"}. $ERROR_TYPE_MESSAGE with cause published instead",
                 source, ex)
-            return listOf(source.toErrorMessage(boxBookName, ex, protocol))
+            return listOf(source.toErrorMessage(ex, protocol))
         }
     }
 

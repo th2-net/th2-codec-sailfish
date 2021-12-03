@@ -31,7 +31,7 @@ class EncodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
     private val converter: ProtoToIMessageConverter,
-    private val boxBookName: String
+    private val eventBatchCollector: EventBatchCollector
 ) : AbstractCodecProcessor<Message, RawMessage.Builder>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
     private val protocol = codecFactory.protocolName
@@ -56,15 +56,12 @@ class EncodeProcessor(
         }
     }
 
-    private fun toRawMessageMetadataBuilder(sourceMessage: Message): RawMessageMetadata =
-        RawMessageMetadata.newBuilder()
-            .setId(
-                sourceMessage.metadata.id
-                    .toBuilder()
-                    .setBookName(sourceMessage.parentEventId.bookName.ifEmpty { boxBookName })
-            )
+    private fun toRawMessageMetadataBuilder(sourceMessage: Message): RawMessageMetadata {
+        return RawMessageMetadata.newBuilder()
+            .setId(sourceMessage.metadata.id)
             .setTimestamp(sourceMessage.metadata.timestamp)
             .setProtocol(protocol)
             .putAllProperties(sourceMessage.metadata.propertiesMap)
             .build()
+    }
 }

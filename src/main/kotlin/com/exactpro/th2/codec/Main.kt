@@ -77,8 +77,7 @@ class CodecCommand : CliktCommand() {
                         applicationContext.codecFactory,
                         applicationContext.codecSettings,
                         applicationContext.messageToProtoConverter,
-                        applicationContext.eventBatchCollector,
-                        applicationContext.commonFactory.boxConfiguration.bookName
+                        applicationContext.eventBatchCollector
                     )
                 ).also { it.start(configuration.decoderInputAttribute, configuration.decoderOutputAttribute) }
             }
@@ -91,7 +90,7 @@ class CodecCommand : CliktCommand() {
                         applicationContext.codecFactory,
                         applicationContext.codecSettings,
                         applicationContext.protoToIMessageConverter,
-                        applicationContext.commonFactory.boxConfiguration.bookName
+                        applicationContext.eventBatchCollector
                     )
                 ).also { it.start(configuration.encoderInputAttribute, configuration.encoderOutputAttribute) }
             }
@@ -118,7 +117,7 @@ class CodecCommand : CliktCommand() {
                     context.codecFactory,
                     context.codecSettings,
                     context.protoToIMessageConverter,
-                    context.commonFactory.boxConfiguration.bookName
+                    context.eventBatchCollector
                 )
             ).also { it.start(configuration.generalEncoderInputAttribute, configuration.generalEncoderOutputAttribute) }
         }
@@ -137,8 +136,7 @@ class CodecCommand : CliktCommand() {
                     context.codecFactory,
                     context.codecSettings,
                     context.messageToProtoConverter,
-                    context.eventBatchCollector,
-                    context.commonFactory.boxConfiguration.bookName
+                    context.eventBatchCollector
                 )
             ).also { it.start(configuration.generalDecoderInputAttribute, configuration.generalDecoderOutputAttribute) }
         }

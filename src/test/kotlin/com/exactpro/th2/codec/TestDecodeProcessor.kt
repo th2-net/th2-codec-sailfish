@@ -51,7 +51,6 @@ internal class TestDecodeProcessor {
         settings,
         IMessageToProtoConverter(),
         mock {},
-        commonFactory.boxConfiguration.bookName
     )
 
     @Test
