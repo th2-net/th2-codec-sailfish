@@ -60,7 +60,8 @@ class EventBatchCollector(
     private val eventBatchRouter: MessageRouter<EventBatch>,
     private val maxBatchSize: Int,
     private val timeout: Long,
-    numOfEventBatchCollectorWorkers: Int
+    numOfEventBatchCollectorWorkers: Int,
+    private val boxBookName: String
 ) : AutoCloseable {
     private val collectorTasks = ConcurrentHashMap<EventID, CollectorTask>()
     private val scheduler = Executors.newScheduledThreadPool(numOfEventBatchCollectorWorkers)
@@ -157,6 +158,7 @@ class EventBatchCollector(
     fun initEventStructure(codecName: String) {
         try {
             val event = com.exactpro.th2.common.event.Event.start()
+                .bookName(boxBookName)
                 .name("Codec_${codecName}_${LocalDateTime.now()}")
                 .type("CodecRoot")
                 .toProto(null)
@@ -184,6 +186,7 @@ class EventBatchCollector(
 
     private fun initDecodeEventRoot(parent: EventID) {
         val event = com.exactpro.th2.common.event.Event.start()
+            .bookName(boxBookName)
             .name("DecodeError")
             .type("CodecErrorGroup")
             .toProto(parent)
@@ -204,6 +207,7 @@ class EventBatchCollector(
 
     private fun initEncodeEventRoot(parent: EventID) {
         val event = com.exactpro.th2.common.event.Event.start()
+            .bookName(boxBookName)
             .name("EncodeError")
             .type("CodecErrorGroup")
             .toProto(parent)
@@ -224,6 +228,7 @@ class EventBatchCollector(
         parentEventID: EventID,
         messageIDS: List<MessageID> = mutableListOf()
     ): Event = com.exactpro.th2.common.event.Event.start()
+        .bookName(boxBookName)
         .name(name)
         .type("CodecError")
         .status(com.exactpro.th2.common.event.Event.Status.FAILED)

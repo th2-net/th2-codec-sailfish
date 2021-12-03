@@ -66,7 +66,8 @@ class ApplicationContext(
                 eventBatchRouter,
                 configuration.maxOutgoingEventBatchSize,
                 configuration.outgoingEventBatchBuildTime,
-                configuration.numOfEventBatchCollectorWorkers
+                configuration.numOfEventBatchCollectorWorkers,
+                commonFactory.boxConfiguration.bookName
             ).apply {
                 initEventStructure(codecFactory.protocolName)
             }
