@@ -19,9 +19,10 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.util.ERROR_CONTENT_FIELD
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
-import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.message.getField
+import com.exactpro.th2.common.schema.box.configuration.BoxConfiguration
+import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.google.protobuf.ByteString
 import com.nhaarman.mockitokotlin2.any
@@ -32,6 +33,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
+import org.mockito.Mockito.`when`
 
 internal class TestDecodeProcessor {
     private val settings = mock<IExternalCodecSettings> { }
@@ -40,8 +42,16 @@ internal class TestDecodeProcessor {
         on { createCodec(same(settings)) }.thenReturn(codec)
         on { protocolName }.thenReturn("mock")
     }
-
-    private val processor = DecodeProcessor(factory, settings, IMessageToProtoConverter(), mock {})
+    private val commonFactory = mock<CommonFactory> {
+        `when`(it.newMessageIDBuilder()).thenCallRealMethod()
+        `when`(it.boxConfiguration).thenReturn(BoxConfiguration())
+    }
+    private val processor = DecodeProcessor(
+        factory,
+        settings,
+        IMessageToProtoConverter(),
+        mock {},
+    )
 
     @Test
     internal fun `decodes one to one`() {
@@ -52,7 +62,7 @@ internal class TestDecodeProcessor {
 
         whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
 
-        val messageID = MessageID.newBuilder()
+        val messageID = commonFactory.newMessageIDBuilder()
             .setSequence(1)
             .build()
         val result = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
@@ -74,7 +84,7 @@ internal class TestDecodeProcessor {
 
         whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage1, decodedMessage2))
 
-        val messageID = MessageID.newBuilder()
+        val messageID = commonFactory.newMessageIDBuilder()
             .setSequence(1)
             .build()
         val result = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
@@ -99,7 +109,7 @@ internal class TestDecodeProcessor {
 
         whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
 
-        val messageID = MessageID.newBuilder()
+        val messageID = commonFactory.newMessageIDBuilder()
             .setSequence(1)
             .build()
 
@@ -111,7 +121,7 @@ internal class TestDecodeProcessor {
     internal fun `creates an error message if there was DecodeException`() {
         whenever(codec.decode(any(), any())).thenThrow(DecodeException("Test"))
 
-        val messageID = MessageID.newBuilder()
+        val messageID = commonFactory.newMessageIDBuilder()
             .setSequence(1)
             .build()
 
@@ -130,7 +140,7 @@ internal class TestDecodeProcessor {
 
         whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
 
-        val messageID = MessageID.newBuilder()
+        val messageID = commonFactory.newMessageIDBuilder()
             .setSequence(1)
             .build()
 

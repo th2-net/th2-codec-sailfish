@@ -1,4 +1,4 @@
-# How it works (3.12.2)
+# How it works (4.0.0)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -212,6 +212,9 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 4.0.0
+    + Adaptation to books/pages cradleapi 4.0.0
 
 + 3.12.2
     + Fix error when we try to synchronize on `lateinit` property when it is not initialized yet
