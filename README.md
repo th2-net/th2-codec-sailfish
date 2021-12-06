@@ -214,7 +214,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 4.0.0
-    + Adaptation to books/pages cradleapi 4.0.0
+    + Migration to books/pages cradle 4.0.0
 
 + 3.12.2
     + Fix error when we try to synchronize on `lateinit` property when it is not initialized yet
