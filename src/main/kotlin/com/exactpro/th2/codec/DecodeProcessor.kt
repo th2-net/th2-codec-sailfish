@@ -24,11 +24,11 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.sf.messages.service.ErrorMessage
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
 import com.exactpro.th2.codec.util.toCodecContext
-import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.codec.util.toErrorMessage
 import com.exactpro.th2.codec.util.toMessageMetadataBuilder
 import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import mu.KotlinLogging
 
@@ -44,8 +44,8 @@ class DecodeProcessor(
     override fun process(source: RawMessage): List<Message.Builder> {
         try {
             val data: ByteArray = source.body.toByteArray()
-            logger.debug { "Start decoding message with id: '${source.metadata.id.toDebugString()}'" }
-            logger.trace { "Decoding message: ${source.toDebugString()}" }
+            logger.debug { "Start decoding message with id: '${source.metadata.id.toJson()}'" }
+            logger.trace { "Decoding message: ${source.toJson()}" }
 
             val decodedMessages = getCodec().decode(data, source.toCodecContext())
                 .flatMap {
@@ -59,7 +59,7 @@ class DecodeProcessor(
             checkErrorMessageContains(decodedMessages, source)
             checkRawData(decodedMessages, data)
             logger.trace { "Decoded messages: $decodedMessages" }
-            logger.debug { "Message with id: '${source.metadata.id.toDebugString()}' successfully decoded" }
+            logger.debug { "Message with id: '${source.metadata.id.toJson()}' successfully decoded" }
 
             return decodedMessages.map { msg ->
                 messageToProtoConverter.toProtoMessage(msg).apply {
@@ -72,7 +72,7 @@ class DecodeProcessor(
                 }
             }
         } catch (ex: Exception) {
-            logger.error(ex) { "Cannot decode message from $source. Creating th2-codec-error message with description." }
+            logger.error(ex) { "Cannot decode message from ${source.toJson()}. Creating th2-codec-error message with description." }
             eventBatchCollector.createAndStoreDecodeErrorEvent(
                 "Cannot decode message: ${ex.message ?: "blank error message"}. $ERROR_TYPE_MESSAGE with cause published instead",
                 source, ex)
