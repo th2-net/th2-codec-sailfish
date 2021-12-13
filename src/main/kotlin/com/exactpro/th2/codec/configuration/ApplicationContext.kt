@@ -68,7 +68,8 @@ class ApplicationContext(
                 configuration.outgoingEventBatchBuildTime,
                 configuration.numOfEventBatchCollectorWorkers
             ).apply {
-                initEventStructure(codecFactory.protocolName)
+                val protocolName = codecFactory.protocolName
+                initEventStructure(commonFactory.boxConfiguration?.boxName ?: protocolName, protocolName, configuration.codecParameters)
             }
 
             try {
