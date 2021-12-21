@@ -16,7 +16,6 @@
 
 package com.exactpro.th2.codec
 
-
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.EventUtils
 import com.exactpro.th2.common.grpc.Event
@@ -111,10 +110,10 @@ class EventBatchCollector(
 
     fun createAndStoreDecodeErrorEvent(errorText: String, rawMessage: RawMessage, exception: Exception? = null) {
         try {
-            val parentEventID =
+            val parentEventId =
                 if (rawMessage.hasParentEventId()) rawMessage.parentEventId else getDecodeErrorGroupEventID()
             val event = createErrorEvent(
-                "Cannot decode message for ${rawMessage.metadata.id.connectionId.toJson()}", errorText, exception, parentEventID,
+                "Cannot decode message for ${rawMessage.metadata.id.connectionId.toJson()}", errorText, exception, parentEventId,
                 listOf<MessageID>(rawMessage.metadata.id)
             )
             logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
@@ -131,9 +130,9 @@ class EventBatchCollector(
         group: MessageGroup
     ) {
         try {
-            val parentEventID = getParentEventIdFromGroup(direction, group)
+            val parentEventId = getParentEventIdFromGroup(direction, group)
             val messageIDs = getMessageIDsFromGroup(group)
-            val event = createErrorEvent("Cannot process message group", errorText, exception, parentEventID, messageIDs)
+            val event = createErrorEvent("Cannot process message group", errorText, exception, parentEventId, messageIDs)
             logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
             putEvent(event)
         } catch (exception: Exception) {
@@ -157,11 +156,11 @@ class EventBatchCollector(
 
     fun initEventStructure(codecName: String) {
         try {
-            val event = com.exactpro.th2.common.event.Event.start()
-                .bookName(boxBookName)
+            val event = com.exactpro.th2.common.event.Event
+                .start()
                 .name("Codec_${codecName}_${LocalDateTime.now()}")
                 .type("CodecRoot")
-                .toProto(null)
+                .toProto(boxBookName)
 
             rootEventID = event.id
             logger.info { "root event id: ${event.id.toDebugString()}" }
@@ -184,12 +183,12 @@ class EventBatchCollector(
         return decodeErrorGroupEventID
     }
 
-    private fun initDecodeEventRoot(parent: EventID) {
-        val event = com.exactpro.th2.common.event.Event.start()
-            .bookName(boxBookName)
+    private fun initDecodeEventRoot(parentEventId: EventID) {
+        val event = com.exactpro.th2.common.event.Event
+            .start()
             .name("DecodeError")
             .type("CodecErrorGroup")
-            .toProto(parent)
+            .toProto(parentEventId)
         decodeErrorGroupEventID = event.id
 
         logger.info { "DecodeError group event id: ${event.id.toDebugString()}" }
@@ -205,12 +204,12 @@ class EventBatchCollector(
         return encodeErrorGroupEventID
     }
 
-    private fun initEncodeEventRoot(parent: EventID) {
-        val event = com.exactpro.th2.common.event.Event.start()
-            .bookName(boxBookName)
+    private fun initEncodeEventRoot(parentEventId: EventID) {
+        val event = com.exactpro.th2.common.event.Event
+            .start()
             .name("EncodeError")
             .type("CodecErrorGroup")
-            .toProto(parent)
+            .toProto(parentEventId)
         encodeErrorGroupEventID = event.id
 
         logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
@@ -225,10 +224,10 @@ class EventBatchCollector(
         name: String,
         errorText: String,
         exception: Exception?,
-        parentEventID: EventID,
+        parentEventId: EventID,
         messageIDS: List<MessageID> = mutableListOf()
-    ): Event = com.exactpro.th2.common.event.Event.start()
-        .bookName(parentEventID.bookName.ifEmpty { boxBookName })
+    ): Event = com.exactpro.th2.common.event.Event
+        .start()
         .name(name)
         .type("CodecError")
         .status(com.exactpro.th2.common.event.Event.Status.FAILED)
@@ -241,7 +240,7 @@ class EventBatchCollector(
                 messageID(it)
             }
         }
-        .toProto(parentEventID)
+        .toProto(parentEventId)
 
 
     private fun getMessageIDsFromGroup(group: MessageGroup) = mutableListOf<MessageID>().apply {
