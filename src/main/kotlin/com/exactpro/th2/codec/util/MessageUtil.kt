@@ -54,7 +54,6 @@ fun Message.toCodecContext(): IExternalCodecContext {
 fun RawMessage.toMessageMetadataBuilder(protocol: String): MessageMetadata.Builder {
     return MessageMetadata.newBuilder()
         .setId(metadata.id)
-        .setTimestamp(metadata.timestamp)
         .setProtocol(protocol)
         .putAllProperties(metadata.propertiesMap)
 }

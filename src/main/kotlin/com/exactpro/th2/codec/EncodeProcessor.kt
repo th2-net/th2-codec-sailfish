@@ -59,7 +59,6 @@ class EncodeProcessor(
     private fun toRawMessageMetadataBuilder(sourceMessage: Message): RawMessageMetadata {
         return RawMessageMetadata.newBuilder()
             .setId(sourceMessage.metadata.id)
-            .setTimestamp(sourceMessage.metadata.timestamp)
             .setProtocol(protocol)
             .putAllProperties(sourceMessage.metadata.propertiesMap)
             .build()
