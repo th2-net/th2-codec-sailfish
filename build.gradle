@@ -24,7 +24,7 @@ plugins {
 ext {
     genDir             = file('src/gen')
     sharedDir          = file("${project.rootDir}/shared")
-    sailfishVersion    = '3.2.1741'
+    sailfishVersion    = '3.2.1771'
 }
 
 group 'com.exactpro.th2'
