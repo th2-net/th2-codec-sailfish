@@ -25,8 +25,6 @@ class SyncDecoder(
     router,
     applicationContext
 ) {
-
-
     override fun checkResult(protoResult: MessageGroup): Boolean = protoResult.messagesCount > 0
     override fun getDirection(): Direction = Direction.DECODE
 
@@ -42,17 +40,23 @@ class SyncDecoder(
         for (notTypeMessage in it.messagesList) {
             if (notTypeMessage.hasRawMessage()) {
                 val rawMessage = notTypeMessage.rawMessage
-                var startSeq = DEFAULT_SUBSEQUENCE_NUMBER
-                processor.process(rawMessage).forEach {
-                    it.metadataBuilder.idBuilder.addSubsequence(startSeq++)
-                    groupBuilder.addMessages(AnyMessage.newBuilder().setMessage(it))
+                if (checkProtocol(rawMessage)) {
+                    var startSeq = DEFAULT_SUBSEQUENCE_NUMBER
+                    processor.process(rawMessage).forEach {
+                        it.metadataBuilder.idBuilder.addSubsequence(startSeq++)
+                        groupBuilder.addMessages(AnyMessage.newBuilder().setMessage(it))
+                    }
+                    continue
                 }
-            } else {
-                groupBuilder.addMessages(notTypeMessage)
             }
+            groupBuilder.addMessages(notTypeMessage)
         }
 
         return if (groupBuilder.messagesCount > 0) groupBuilder.build() else null
+    }
+
+    private fun checkProtocol(rawMessage: RawMessage) = rawMessage.metadata.protocol.let {
+        it.isNullOrEmpty() || it == processor.protocol
     }
 
     companion object {

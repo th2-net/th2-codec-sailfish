@@ -42,13 +42,19 @@ class SyncEncoder(
         for (notTypeMessage in it.messagesList) {
             if (notTypeMessage.hasMessage()) {
                 val message = notTypeMessage.message
-                groupBuilder.addMessages(AnyMessage.newBuilder().setRawMessage(processor.process(message)).build())
-            } else {
-                groupBuilder.addMessages(notTypeMessage)
+                if (checkProtocol(message)) {
+                    groupBuilder.addMessages(AnyMessage.newBuilder().setRawMessage(processor.process(message)).build())
+                    continue
+                }
             }
+            groupBuilder.addMessages(notTypeMessage)
         }
 
         return groupBuilder.build()
+    }
+
+    private fun checkProtocol(message: Message) = message.metadata.protocol.let {
+        it.isNullOrEmpty() || it == processor.protocol
     }
 }
 
