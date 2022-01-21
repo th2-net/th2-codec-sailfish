@@ -44,7 +44,7 @@ class SyncDecoder(
                     var startSeq = DEFAULT_SUBSEQUENCE_NUMBER
                     processor.process(rawMessage).forEach {
                         it.metadataBuilder.idBuilder.addSubsequence(startSeq++)
-                        groupBuilder.addMessages(AnyMessage.newBuilder().setMessage(it))
+                        groupBuilder += it.apply { metadataBuilder.idBuilder.addSubsequence(startSeq++) }
                     }
                     continue
                 }

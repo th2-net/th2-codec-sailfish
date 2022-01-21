@@ -43,7 +43,7 @@ class SyncEncoder(
             if (notTypeMessage.hasMessage()) {
                 val message = notTypeMessage.message
                 if (checkProtocol(message)) {
-                    groupBuilder.addMessages(AnyMessage.newBuilder().setRawMessage(processor.process(message)).build())
+groupBuilder += processor.process(message)
                     continue
                 }
             }
