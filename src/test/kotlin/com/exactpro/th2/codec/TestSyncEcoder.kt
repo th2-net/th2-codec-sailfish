@@ -56,7 +56,7 @@ internal class TestSyncEcoder {
     internal fun `encode protocol`() {
         val rawData = byteArrayOf(42, 43)
 
-        whenever(converter.fromProtoMessage(any<Message>(), any())).thenReturn(mock {  })
+        whenever(converter.fromProtoMessage(any<Message>(), any())).thenReturn(mock { })
         whenever(codec.encode(any(), any())).thenReturn(rawData)
 
         val messageBuilder = Message.newBuilder().apply {
@@ -66,11 +66,9 @@ internal class TestSyncEcoder {
         }
 
         encoder.handler("tag", MessageGroupBatch.newBuilder().apply {
-            addGroups(MessageGroup.newBuilder().apply {
-                addMessages(createAnyMessage(messageBuilder, 1)) // empty protocol
-                addMessages(createAnyMessage(messageBuilder, 2, factory.protocolName)) // codec protocol
-                addMessages(createAnyMessage(messageBuilder, 3, "test")) // another protocol
-            })
+            addGroups(createAnyMessage(messageBuilder, 1)) // empty protocol
+            addGroups(createAnyMessage(messageBuilder, 2, factory.protocolName)) // codec protocol
+            addGroups(createAnyMessage(messageBuilder, 3, "test")) // another protocol
         }.build())
 
         val captor = argumentCaptor<MessageGroupBatch>()
@@ -78,38 +76,49 @@ internal class TestSyncEcoder {
 
         val result = captor.lastValue
 
-        Assertions.assertEquals(1, result.groupsCount) { "Groups count: ${shortDebugString(result)}" }
-        val group = result.getGroups(0)
-        Assertions.assertEquals(3, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
+        Assertions.assertEquals(3, result.groupsCount) { "Groups count: ${shortDebugString(result)}" }
 
-        val first = group.getMessages(0)
-        assertAll(
-            { Assertions.assertEquals(KindCase.RAW_MESSAGE, first.kindCase) { "Type of first: ${shortDebugString(first)}" } },
-            { Assertions.assertEquals(1, first.rawMessage.metadata.id.sequence) { "Seq of first: ${shortDebugString(first)}" } }
-        )
-        val second = group.getMessages(1)
-        assertAll(
-            { Assertions.assertEquals(KindCase.RAW_MESSAGE, second.kindCase) { "Type of second: ${shortDebugString(first)}" } },
-            { Assertions.assertEquals(2, second.rawMessage.metadata.id.sequence) { "Seq of second: ${shortDebugString(first)}" } }
-        )
-        val third = group.getMessages(2)
-        assertAll(
-            { Assertions.assertEquals(KindCase.MESSAGE, third.kindCase) { "Type of third: ${shortDebugString(third)}" } },
-            { Assertions.assertEquals(3, third.message.sequence) { "Seq of third: ${shortDebugString(third)}" } }
-        )
+        (result.getGroups(0)).let { group ->
+            Assertions.assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
+            val message = group.getMessages(0)
+            assertAll(
+                { Assertions.assertEquals(KindCase.RAW_MESSAGE, message.kindCase) { "Type of first: ${shortDebugString(message)}" } },
+                { Assertions.assertEquals(KindCase.RAW_MESSAGE, message.kindCase) { "Type of first: ${shortDebugString(message)}" } },
+                { Assertions.assertEquals(1, message.rawMessage.metadata.id.sequence) { "Seq of first: ${shortDebugString(message)}" } }
+            )
+        }
+        (result.getGroups(1)).let { group ->
+            Assertions.assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
+            val message = group.getMessages(0)
+            assertAll(
+                { Assertions.assertEquals(KindCase.RAW_MESSAGE, message.kindCase) { "Type of second: ${shortDebugString(message)}" } },
+                { Assertions.assertEquals(2, message.rawMessage.metadata.id.sequence) { "Seq of second: ${shortDebugString(message)}" } }
+            )
+        }
+        (result.getGroups(2)).let { group ->
+            Assertions.assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
+            val message = group.getMessages(0)
+            assertAll(
+                { Assertions.assertEquals(KindCase.MESSAGE, message.kindCase) { "Type of third: ${shortDebugString(message)}" } },
+                { Assertions.assertEquals(3, message.sequence) { "Seq of third: ${shortDebugString(message)}" } }
+            )
+        }
     }
 
-    private fun createAnyMessage(messageBuilder: Builder, sequence: Long, protocol: String? = null) = AnyMessage.newBuilder().apply {
-        message =
-            messageBuilder.apply {
-                metadataBuilder.apply {
-                    if (protocol != null) {
-                        this.protocol = protocol
-                    }
-                    idBuilder.apply {
-                        this.sequence = sequence
-                    }
-                }
+    private fun createAnyMessage(messageBuilder: Builder, sequence: Long, protocol: String? = null) = MessageGroup.newBuilder()
+        .addMessages(
+            AnyMessage.newBuilder().apply {
+                message =
+                    messageBuilder.apply {
+                        metadataBuilder.apply {
+                            if (protocol != null) {
+                                this.protocol = protocol
+                            }
+                            idBuilder.apply {
+                                this.sequence = sequence
+                            }
+                        }
+                    }.build()
             }.build()
-    }.build()
+        ).build()
 }

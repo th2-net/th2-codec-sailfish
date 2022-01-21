@@ -11,6 +11,12 @@ One instance of the codec implements the logic for encoding and decoding one pro
 The version-specific protocol messages are described in a separate XML file called "dictionary".
 Codec operates with arrays of messages (parsed batch to raw batch in case of encoding and raw batch to parsed batch upon decoding).
 
+## Encode 
+During encoding codec must replace each parsed message of supported or unknown protocol in a message group with a raw one by encoding parsed message's content.
+
+## Decode
+During decoding codec must replace each raw message of supported or unknown protocol in a message group with one or several parsed by decoding raw message's body.
+
 ## Appointment
 
 This project includes only one adapter logic between Sailfish and the th2 packed into the Docker Image.
