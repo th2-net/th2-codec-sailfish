@@ -100,7 +100,7 @@ abstract class AbstractSyncCodec(
 
     protected abstract fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean
 
-    protected abstract fun processMessageGroup(it: MessageGroup): MessageGroup?
+    protected abstract fun processMessageGroup(messageGroup: MessageGroup): MessageGroup?
 
     abstract fun checkResult(protoResult: MessageGroup): Boolean
 }
