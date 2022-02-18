@@ -104,7 +104,8 @@ class Configuration(
 
 class ConverterParameters(
     val stripTrailingZeros: Boolean = false,
-    val allowUnknownEnumValues: Boolean = false
+    val allowUnknownEnumValues: Boolean = false,
+    val replaceValuesWithEnumNames: Boolean = false,
 )
 
 

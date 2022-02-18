@@ -72,6 +72,7 @@ decodeProcessorType: CUMULATIVE
 converterParameters:
   allowUnknownEnumValues: false # allows unknown enum values during message encoding
   stripTrailingZeros: false # removes trailing zeroes for `BigDecimal` (_0.100000_ -> _0.1_)
+  replaceValuesWithEnumNames: false # the values will be replaced with their enum names if they exist
 ```
 
 ## Publishing events parameters

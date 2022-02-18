@@ -89,7 +89,7 @@ class ApplicationContext(
                     codecFactory,
                     codecSettings,
                     protoConverter,
-                    IMessageToProtoConverter(converterParameters.toDecodeParameters()),
+                    IMessageToProtoConverter(dictionary, converterParameters.toDecodeParameters()),
                     eventBatchCollector
                 )
             } catch (e: RuntimeException) {
@@ -103,6 +103,7 @@ class ApplicationContext(
 
         private fun ConverterParameters.toDecodeParameters(): IMessageToProtoConverter.Parameters =
             IMessageToProtoConverter.parametersBuilder()
+                .setReplaceValuesWithEnumNames(replaceValuesWithEnumNames)
                 .setStripTrailingZeros(stripTrailingZeros)
                 .build()
 
