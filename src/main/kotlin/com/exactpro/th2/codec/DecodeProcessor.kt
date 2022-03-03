@@ -39,7 +39,7 @@ class DecodeProcessor(
     private val eventBatchCollector: EventBatchCollector
 ) : AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
-    private val protocol = codecFactory.protocolName
+    override val protocol = codecFactory.protocolName
 
     override fun process(source: RawMessage): List<Message.Builder> {
         try {
@@ -94,7 +94,7 @@ class DecodeProcessor(
         if (decodedMessages.isEmpty()) {
             throw DecodeException("No message was decoded")
         }
-        val totalDecodedRawSize = decodedMessages.sumBy {
+        val totalDecodedRawSize = decodedMessages.sumOf {
             val size = requireNotNull(it.metaData.rawMessage) { "Raw data is null for message: ${it.name}" }.size
             check(size > 0) { "Message ${it.name} has empty raw data" }
             size
