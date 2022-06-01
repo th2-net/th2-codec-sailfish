@@ -63,7 +63,7 @@ abstract class AbstractSyncCodec(
         }
     }
 
-    override fun handler(consumerTag: String?, groupBatch: MessageGroupBatch) {
+    override fun handle(consumerTag: String?, groupBatch: MessageGroupBatch) {
         if (groupBatch.groupsCount < 1) {
             return
         }
