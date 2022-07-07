@@ -229,7 +229,8 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 + 3.13.0
     + Codec handles messages with its protocol or empty during encode/decode
     + The common library update from 3.29.2 to 3.39.2 
-    + The sailfish-utils library update from 3.8.0 to 3.12.3 
+    + The sailfish-utils library update from 3.8.0 to 3.12.4
+      + Changed the format for time and date time (always includes milliseconds part)
     + The sailfish-core library update from 3.2.1741 to 3.2.1776 
     + The kotlin update from 1.3.71 to 1.5.30 
     + The kotlin-logging library update from 1.7.+ to 2.0.11 
