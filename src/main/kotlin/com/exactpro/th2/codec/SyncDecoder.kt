@@ -66,7 +66,7 @@ class SyncDecoder(
     }
 
     private fun checkProtocol(rawMessage: RawMessage) = rawMessage.metadata.protocol.let {
-        it.isNullOrEmpty() || it == processor.protocol
+        it.isNullOrEmpty() || processor.protocol.equals(it, ignoreCase = true)
     }
 
     private fun MessageGroup.isDecodable(): Boolean {
@@ -75,7 +75,7 @@ class SyncDecoder(
             .map { it.rawMessage.metadata.protocol }
             .toList()
 
-        return protocols.all(String::isBlank) || protocols.none(String::isBlank) && protocol in protocols
+        return protocols.all(String::isBlank) || protocols.none(String::isBlank) && protocols.any { protocol.equals(it, ignoreCase = true) }
     }
 
     companion object {
