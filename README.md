@@ -11,6 +11,12 @@ One instance of the codec implements the logic for encoding and decoding one pro
 The version-specific protocol messages are described in a separate XML file called "dictionary".
 Codec operates with arrays of messages (parsed batch to raw batch in case of encoding and raw batch to parsed batch upon decoding).
 
+## Encode 
+During encoding codec must replace each parsed message of supported or unknown protocol in a message group with a raw one by encoding parsed message's content.
+
+## Decode
+During decoding codec must replace each raw message of supported or unknown protocol in a message group with one or several parsed by decoding raw message's body.
+
 ## Appointment
 
 This project includes only one adapter logic between Sailfish and the th2 packed into the Docker Image.
@@ -70,13 +76,20 @@ converterParameters:
 
 ## Publishing events parameters
 
-These parameters determine the size of the EventBatch, and the time (milliseconds) during which the EventBatch is built.
+These parameters determine the size of the EventBatch, and the time (seconds) during which the EventBatch is built.
 
 ```yaml
-outgoingEventBatchBuildTime: 1000
+outgoingEventBatchBuildTime: 30
 maxOutgoingEventBatchSize: 99
 numOfEventBatchCollectorWorkers: 1
 ```
+
+**outgoingEventBatchBuildTime** - time interval in seconds to publish the collected events reported by the codec
+**maxOutgoingEventBatchSize** - the max number of events in a single batch.
+If events count exceeds that amount the batch will be published earlier than the `outgoingEventBatchBuildTime`.
+**numOfEventBatchCollectorWorkers** - the number of threads to process published events.
+Higher number means that there might be more batches published concurrently.
+But increasing that number might affect performance if number of available cores is less than this number.
 
 ## Codec implementation parameters
 
@@ -215,6 +228,24 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 + 4.0.0
     + Migration to books/pages cradle 4.0.0
+
++ 3.13.0
+    + Codec handles messages with its protocol or empty during encode/decode
+    + The common library update from 3.29.2 to 3.32.0 
+    + The sailfish-utils library update from 3.8.0 to 3.12.3 
+    + The sailfish-core library update from 3.2.1741 to 3.2.1776 
+    + The kotlin update from 1.3.71 to 1.5.30 
+    + The kotlin-logging library update from 1.7.+ to 2.0.11 
+
++ 3.12.3
+    + Update sailfish dependencies from `3.2.1674` to `3.2.1741`
+    + Change default value for `outgoingEventBatchBuildTime`.
+      The value defines time in seconds the previous default value caused a long delay before event reporting
+    + Replaced custom protobuf message printing with `MessageUtils.toJson()`
+    + Use name from the schema for codec's root event
+    + Add information about codec's parameters into a body for root event
+    + The common library update from 3.25.1 to 3.29.2
+      + Fix filtering by `message_type` for pins
 
 + 3.12.2
     + Fix error when we try to synchronize on `lateinit` property when it is not initialized yet

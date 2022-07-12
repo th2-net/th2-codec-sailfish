@@ -17,5 +17,7 @@
 package com.exactpro.th2.codec
 
 interface MessageProcessor<T, R> {
+    val protocol: String
+
     fun process(source: T): R
 }
