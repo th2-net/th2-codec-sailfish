@@ -234,6 +234,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
     + The sailfish-core library update from 3.2.1741 to 3.2.1776 
     + The kotlin update from 1.3.71 to 1.5.30 
     + The kotlin-logging library update from 1.7.+ to 2.0.11 
+    + Deprecated `registerModule(KotlinModule())` was replaced with `registerKotlinModule()`
 
 + 3.12.3
     + Update sailfish dependencies from `3.2.1674` to `3.2.1741`
