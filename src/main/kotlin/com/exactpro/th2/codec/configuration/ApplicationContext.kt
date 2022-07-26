@@ -30,15 +30,10 @@ import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter.createParameters
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
-import org.apache.commons.lang3.math.NumberUtils.toByte
-import org.apache.commons.lang3.math.NumberUtils.toDouble
-import org.apache.commons.lang3.math.NumberUtils.toFloat
-import org.apache.commons.lang3.math.NumberUtils.toInt
-import org.apache.commons.lang3.math.NumberUtils.toLong
-import org.apache.commons.lang3.math.NumberUtils.toShort
+import org.apache.commons.lang3.math.NumberUtils.*
 import java.io.File
 import java.net.URLClassLoader
-import java.util.ServiceLoader
+import java.util.*
 
 class ApplicationContext(
     val commonFactory: CommonFactory,
@@ -73,7 +68,7 @@ class ApplicationContext(
             }
 
             try {
-                val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
+                val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters, configuration)
                 val codec = codecFactory.createCodec(codecSettings)
                 val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
                 val dictionary =
@@ -109,7 +104,8 @@ class ApplicationContext(
         private fun createSettings(
             commonFactory: CommonFactory,
             codecFactory: IExternalCodecFactory,
-            codecParameters: Map<String, String>?
+            codecParameters: Map<String, String>?,
+            configuration: Configuration
         ): IExternalCodecSettings {
             val settings = codecFactory.createSettings()
 
@@ -119,9 +115,20 @@ class ApplicationContext(
                 }
             }
 
-            settings.dictionaryTypes.forEach { type ->
-                commonFactory.readDictionary(DictionaryType.valueOf(type.name)).use { stream ->
-                    settings[type] = XmlDictionaryStructureLoader().load(stream)
+            val dictionaries = configuration.dictionaries
+            if (!dictionaries.isNullOrEmpty()) {
+                logger.debug { "Loading dictionaries by aliases" }
+                dictionaries.forEach { (type, alias) ->
+                    commonFactory.loadDictionary(alias).use { stream ->
+                        settings[type] = XmlDictionaryStructureLoader().load(stream)
+                    }
+                }
+            } else {
+                logger.debug { "Loading dictionaries by type" }
+                settings.dictionaryTypes.forEach { type ->
+                    commonFactory.readDictionary(DictionaryType.valueOf(type.name)).use { stream ->
+                        settings[type] = XmlDictionaryStructureLoader().load(stream)
+                    }
                 }
             }
 
