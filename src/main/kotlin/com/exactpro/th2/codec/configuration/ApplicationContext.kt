@@ -30,7 +30,12 @@ import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter.createParameters
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
-import org.apache.commons.lang3.math.NumberUtils.*
+import org.apache.commons.lang3.math.NumberUtils.toByte
+import org.apache.commons.lang3.math.NumberUtils.toDouble
+import org.apache.commons.lang3.math.NumberUtils.toFloat
+import org.apache.commons.lang3.math.NumberUtils.toInt
+import org.apache.commons.lang3.math.NumberUtils.toLong
+import org.apache.commons.lang3.math.NumberUtils.toShort
 import java.io.File
 import java.net.URLClassLoader
 import java.util.*
@@ -68,7 +73,8 @@ class ApplicationContext(
             }
 
             try {
-                val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters, configuration)
+                val codecSettings =
+                    createSettings(commonFactory, codecFactory, configuration.codecParameters, configuration)
                 val codec = codecFactory.createCodec(codecSettings)
                 val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
                 val dictionary =
@@ -88,7 +94,11 @@ class ApplicationContext(
                     eventBatchCollector
                 )
             } catch (e: RuntimeException) {
-                eventBatchCollector.createAndStoreErrorEvent("Codec was not initialized", "An error occurred while initializing the codec", e)
+                eventBatchCollector.createAndStoreErrorEvent(
+                    "Codec was not initialized",
+                    "An error occurred while initializing the codec",
+                    e
+                )
                 throw e
             }
         }
