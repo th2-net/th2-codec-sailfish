@@ -153,8 +153,6 @@ class ApplicationContext(
             settings: IExternalCodecSettings
         ) {
             logger.debug { "Loading dictionaries by aliases" }
-            logger.debug { "Dictionaries from config: ${dictionariesFromConfig.values.joinToString(",")}" }
-            logger.debug { "Dictionaries from common factory: ${commonFactory.dictionaryAliases.joinToString(",")}" }
             dictionariesFromConfig.forEach { (type, alias) ->
                 val dictionaryTypeFromSettings = settings.dictionaryTypes.find { it.name.equals(type, true) }
                 if (dictionaryTypeFromSettings != null) {
