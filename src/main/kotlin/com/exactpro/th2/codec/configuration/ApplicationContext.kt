@@ -125,27 +125,46 @@ class ApplicationContext(
                 }
             }
 
-            val dictionaries = configuration.dictionaries
-            if (!dictionaries.isNullOrEmpty()) {
-                logger.debug { "Loading dictionaries by aliases" }
-                logger.debug { "Dictionaries from config: ${dictionaries.values.joinToString(",")}" }
-                logger.debug { "Dictionaries from common factory: ${commonFactory.dictionaryAliases.joinToString(",")}" }
-                dictionaries.forEach { (type, alias) ->
-                    logger.debug { "Loading dictionary with type $type and alias $alias..." }
-                    commonFactory.loadDictionary(alias).use { stream ->
-                        settings[type] = XmlDictionaryStructureLoader().load(stream)
-                    }
-                }
+            val dictionariesFromConfig = configuration.dictionaries
+            if (!dictionariesFromConfig.isNullOrEmpty()) {
+                loadDictionariesByAliases(dictionariesFromConfig, commonFactory, settings)
             } else {
-                logger.debug { "Loading dictionaries by type" }
-                settings.dictionaryTypes.forEach { type ->
-                    commonFactory.readDictionary(DictionaryType.valueOf(type.name)).use { stream ->
-                        settings[type] = XmlDictionaryStructureLoader().load(stream)
-                    }
-                }
+                loadDictionariesByType(settings, commonFactory)
             }
 
             return settings
+        }
+
+        private fun loadDictionariesByType(
+            settings: IExternalCodecSettings,
+            commonFactory: CommonFactory
+        ) {
+            logger.debug { "Loading dictionaries by type" }
+            settings.dictionaryTypes.forEach { type ->
+                commonFactory.readDictionary(DictionaryType.valueOf(type.name)).use { stream ->
+                    settings[type] = XmlDictionaryStructureLoader().load(stream)
+                }
+            }
+        }
+
+        private fun loadDictionariesByAliases(
+            dictionariesFromConfig: Map<String, String>,
+            commonFactory: CommonFactory,
+            settings: IExternalCodecSettings
+        ) {
+            logger.debug { "Loading dictionaries by aliases" }
+            logger.debug { "Dictionaries from config: ${dictionariesFromConfig.values.joinToString(",")}" }
+            logger.debug { "Dictionaries from common factory: ${commonFactory.dictionaryAliases.joinToString(",")}" }
+            dictionariesFromConfig.forEach { (type, alias) ->
+                val dictionaryTypeFromSettings = settings.dictionaryTypes.find { it.name.equals(type, true) }
+                if (dictionaryTypeFromSettings != null) {
+                    commonFactory.loadDictionary(alias).use { stream ->
+                        settings[dictionaryTypeFromSettings] = XmlDictionaryStructureLoader().load(stream)
+                    }
+                } else {
+                    logger.warn { "Dictionary type $type can't be loaded" }
+                }
+            }
         }
 
         private fun convertAndSet(settings: IExternalCodecSettings, propertyName: String, propertyValue: String) {
