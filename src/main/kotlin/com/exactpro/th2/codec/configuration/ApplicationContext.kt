@@ -128,7 +128,10 @@ class ApplicationContext(
             val dictionaries = configuration.dictionaries
             if (!dictionaries.isNullOrEmpty()) {
                 logger.debug { "Loading dictionaries by aliases" }
+                logger.debug { "Dictionaries from config: ${dictionaries.values.joinToString(",")}" }
+                logger.debug { "Dictionaries from common factory: ${commonFactory.dictionaryAliases.joinToString(",")}" }
                 dictionaries.forEach { (type, alias) ->
+                    logger.debug { "Loading dictionary with type $type and alias $alias..." }
                     commonFactory.loadDictionary(alias).use { stream ->
                         settings[type] = XmlDictionaryStructureLoader().load(stream)
                     }
