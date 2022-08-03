@@ -153,14 +153,26 @@ class ApplicationContext(
             settings: IExternalCodecSettings
         ) {
             logger.debug { "Loading dictionaries by aliases" }
-            dictionariesFromConfig.forEach { (type, alias) ->
-                val dictionaryTypeFromSettings = settings.dictionaryTypes.find { it.name.equals(type, true) }
-                if (dictionaryTypeFromSettings != null) {
+            settings.dictionaryTypes.forEach { dictionaryTypeFromSettings ->
+                val dictionaryTypeFromConfig = dictionariesFromConfig.entries.find {
+                    it.key.equals(dictionaryTypeFromSettings.toString(), true)
+                }
+
+                if (dictionaryTypeFromConfig != null) {
+                    val alias = dictionaryTypeFromConfig.value
                     commonFactory.loadDictionary(alias).use { stream ->
                         settings[dictionaryTypeFromSettings] = XmlDictionaryStructureLoader().load(stream)
                     }
                 } else {
-                    logger.warn { "Dictionary type $type can't be loaded" }
+                    val foundedTypes = dictionariesFromConfig.entries.joinToString(", ", "[", "]") {
+                        "(${it.key} as ${it.value})\n"
+                    }
+                    val expectedTypes = settings.dictionaryTypes.joinToString()
+                    logger.error {
+                        "Dictionary with type $dictionaryTypeFromConfig not found. " +
+                                "Expected types: $expectedTypes. Found: $foundedTypes"
+                    }
+                    throw IllegalArgumentException("Dictionary type $dictionaryTypeFromConfig can't be loaded")
                 }
             }
         }

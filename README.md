@@ -132,6 +132,7 @@ The first one is used to receive messages to decode/encode while the second one 
 
 You can set desired dictionaries using its aliases.
 Note that this part of the configuration is optional. If it is not specified, dictionaries will be loaded based on type.
+If a dictionary with the required type is not found, an exception will be thrown. A detailed list with found and required dictionaries will also be logged.
 
 Example: 
 
