@@ -165,14 +165,14 @@ class ApplicationContext(
                     }
                 } else {
                     val foundedTypes = dictionariesFromConfig.entries.joinToString(", ", "[", "]") {
-                        "(${it.key} as ${it.value})\n"
+                        "'${it.key}' with alias '${it.value}'"
                     }
-                    val expectedTypes = settings.dictionaryTypes.joinToString()
+                    val expectedTypes = settings.dictionaryTypes.joinToString(prefix = "[", postfix = "]")
                     logger.error {
-                        "Dictionary with type $dictionaryTypeFromConfig not found. " +
+                        "Dictionary with type $dictionaryTypeFromSettings not found. " +
                                 "Expected types: $expectedTypes. Found: $foundedTypes"
                     }
-                    throw IllegalArgumentException("Dictionary type $dictionaryTypeFromConfig can't be loaded")
+                    throw IllegalArgumentException("Dictionary type $dictionaryTypeFromSettings can't be loaded")
                 }
             }
         }
