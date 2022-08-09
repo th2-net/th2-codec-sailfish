@@ -68,8 +68,8 @@ repositories {
 
 
 dependencies {
-    api platform('com.exactpro.th2:bom:3.1.0')
-    implementation 'com.exactpro.th2:common:3.32.0'
+    api platform('com.exactpro.th2:bom:3.0.0')
+    implementation 'com.exactpro.th2:common:3.34.0-TH2-2552-backpressure-test-2824855098-SNAPSHOT'
     implementation 'com.exactpro.th2:sailfish-utils:3.12.3'
 
     implementation 'io.github.microutils:kotlin-logging:2.0.11'
