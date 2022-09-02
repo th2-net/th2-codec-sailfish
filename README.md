@@ -227,7 +227,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 3.14.0
-    + The common library update from 3.32.0 to 3.39.2 
+    + The common library update from 3.32.0 to 3.41.0
+      + Filter behavior is corrected: only messages that does not match filter are dropped instead of the whole group
+      + Log4j2 is used. Requires logging configuration updates
     + The sailfish-utils library update from 3.12.3 to 3.12.4
       + Changed the format for time and date time (always includes milliseconds part)
     + The sailfish-core library update from 3.2.1776 to 3.2.1881
