@@ -54,7 +54,7 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: ghcr.io/${{ github.repository }}:${{ steps.release_ver.outputs.value }}
-        format: 'table'
+        format: 'github'
         exit-code: '0'
         ignore-unfixed: false
         vuln-type: 'os,library'
