@@ -20,7 +20,7 @@ buildscript {
     }
 
     ext {
-        kotlin_version = "1.5.30"
+        kotlin_version = "1.6.21"
     }
 
     dependencies {
@@ -74,9 +74,9 @@ repositories {
 
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.0.0-vulnerabilities-2919290091-SNAPSHOT')
+    api platform('com.exactpro.th2:bom:4.0.1')
 
-    implementation 'com.exactpro.th2:common:3.40.0-vulnerabilities-3021258849-SNAPSHOT'
+    implementation 'com.exactpro.th2:common:3.41.0'
     implementation 'com.exactpro.th2:sailfish-utils:3.12.3'
 
     implementation 'org.slf4j:slf4j-log4j12:1.7.26'
