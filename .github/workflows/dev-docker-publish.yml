@@ -54,13 +54,12 @@ jobs:
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: ghcr.io/${{ github.repository }}:${{ steps.release_ver.outputs.value }}
-        format: 'template'
-        template: '@/contrib/sarif.tpl'
-        output: 'trivy-results-fs.sarif'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
         exit-code: '0'
         ignore-unfixed: false
         vuln-type: 'os,library'
-    - name: DEBUG Upload Trivy scan results to GitHub Security tab
-      uses: github/codeql-action/upload-sarif@v1
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
       with:
-        sarif_file: 'debug-trivy-results.sarif'
+        sarif_file: 'trivy-results.sarif'
