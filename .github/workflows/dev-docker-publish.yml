@@ -56,6 +56,8 @@ jobs:
         image-ref: ghcr.io/${{ github.repository }}:${{ steps.release_ver.outputs.value }}
         format: 'sarif'
         output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH,MEDIUM'
+        trivyignores: '/'
         exit-code: '0'
         ignore-unfixed: false
         vuln-type: 'os,library'
