@@ -18,7 +18,6 @@ import com.exactpro.th2.codec.configuration.Configuration
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
-import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import java.util.Deque
 import java.util.concurrent.ConcurrentLinkedDeque
@@ -50,7 +49,7 @@ class CodecCommand : CliktCommand() {
         })
     }
 
-    override fun run() = runBlocking {
+    override fun run() {
         try {
             val commonFactory = (if (configs == null)
                 CommonFactory()
