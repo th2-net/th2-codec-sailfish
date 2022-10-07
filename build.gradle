@@ -85,7 +85,7 @@ repositories {
 dependencies {
     api platform('com.exactpro.th2:bom:4.0.1')
     implementation 'com.exactpro.th2:common:3.42.0-dev-3174619150-SNAPSHOT'
-    implementation 'com.exactpro.th2:sailfish-utils:3.13.0-ts-1148-3196538057-SNAPSHOT'
+    implementation 'com.exactpro.th2:sailfish-utils:3.13.0-dev-3204703314-SNAPSHOT'
 
     implementation 'io.github.microutils:kotlin-logging:2.1.23'
 
