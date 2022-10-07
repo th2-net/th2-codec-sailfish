@@ -227,12 +227,13 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 3.14.0
-    + The common library update from 3.32.0 to 3.41.0
+    + Dependencies with vulnerabilities was updated
+    + The common library update from 3.32.0 to 3.42.0
       + Filter behavior is corrected: only messages that does not match filter are dropped instead of the whole group
       + Log4j2 is used. Requires logging configuration updates
-    + The sailfish-utils library update from 3.12.3 to 3.12.4
+    + The sailfish-utils library update from 3.12.3 to 3.13.0
       + Changed the format for time and date time (always includes milliseconds part)
-    + The sailfish-core library update from 3.2.1776 to 3.2.1881
+    + The sailfish-core library update from 3.2.1776 to 3.3.11
     + Deprecated `registerModule(KotlinModule())` was replaced with `registerKotlinModule()`
 
 + 3.13.0
