@@ -65,7 +65,10 @@ abstract class AbstractSyncCodec(
         }
     }
 
-    private fun processMessageGroupAsync(group: MessageGroup) = CompletableFuture.supplyAsync { processMessageGroup(group) }
+    private fun processMessageGroupAsync(
+        group: MessageGroup,
+        resultBuilder: MessageGroupBatch.Builder,
+        index: Int) = CompletableFuture.supplyAsync { runProcessMessageGroup(group, resultBuilder, index) }
 
     private val async = Runtime.getRuntime().availableProcessors() > 1
     override fun handler(consumerTag: String?, groupBatch: MessageGroupBatch) {
@@ -76,35 +79,45 @@ abstract class AbstractSyncCodec(
 
         if (async) {
             val messageGroupFutures = Array<CompletableFuture<MessageGroup?>> (groupBatch.groupsCount) {
-                processMessageGroupAsync(groupBatch.getGroups(it))
+                processMessageGroupAsync(groupBatch.getGroups(it), resultBuilder, it)
             }
 
             CompletableFuture.allOf(*messageGroupFutures).whenComplete { _, _ ->
                 messageGroupFutures.forEach { it.get()?.run(resultBuilder::addGroups) }
             }.get()
         } else {
+
             groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
-                try {
-                    processMessageGroup(group).apply {
-                        if (this != null && checkResult(this)) {
-                            resultBuilder.addGroups(this)
-                        }
-                    }
-                } catch (exception: Exception) {
-                    applicationContext.eventBatchCollector.createAndStoreErrorEvent(
-                        "Cannot process not empty group number ${index + 1}",
-                        exception,
-                        getDirection(),
-                        group
-                    )
-                }
+                runProcessMessageGroup(group, resultBuilder, index)
             }
         }
-
         val result = resultBuilder.build()
         if (checkResultBatch(result)) {
             router.sendAll(result, this.tagretAttributes)
         }
+    }
+
+    private fun runProcessMessageGroup(
+        group: MessageGroup,
+        resultBuilder: MessageGroupBatch.Builder,
+        index: Int
+    ): MessageGroup? {
+        try {
+            return processMessageGroup(group).apply {
+                if (this != null && checkResult(this)) {
+                    resultBuilder.addGroups(this)
+                }
+            }
+        } catch (exception: Exception) {
+            applicationContext.eventBatchCollector.createAndStoreErrorEvent(
+                "Cannot process not empty group number ${index + 1}",
+                exception,
+                getDirection(),
+                group
+            )
+        }
+
+        return null
     }
 
     enum class Direction {
