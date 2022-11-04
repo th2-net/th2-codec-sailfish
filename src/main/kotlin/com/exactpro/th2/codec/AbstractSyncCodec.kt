@@ -14,12 +14,14 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
+import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.MessageGroup
 import com.exactpro.th2.common.grpc.MessageGroupBatch
 import com.exactpro.th2.common.schema.message.MessageListener
 import com.exactpro.th2.common.schema.message.MessageRouter
 import mu.KotlinLogging
 import java.io.IOException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
 
 abstract class AbstractSyncCodec(
@@ -63,26 +65,39 @@ abstract class AbstractSyncCodec(
         }
     }
 
+    private fun processMessageGroupAsync(group: MessageGroup) = CompletableFuture.supplyAsync { processMessageGroup(group) }
+
+    private val async = Runtime.getRuntime().availableProcessors() > 1
     override fun handler(consumerTag: String?, groupBatch: MessageGroupBatch) {
         if (groupBatch.groupsCount < 1) {
             return
         }
-
         val resultBuilder = MessageGroupBatch.newBuilder()
-        groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
-            try {
-                processMessageGroup(group).apply {
-                    if (this != null && checkResult(this)) {
-                        resultBuilder.addGroups(this)
+
+        if (async) {
+            val messageGroupFutures = Array<CompletableFuture<MessageGroup?>> (groupBatch.groupsCount) {
+                processMessageGroupAsync(groupBatch.getGroups(it))
+            }
+
+            CompletableFuture.allOf(*messageGroupFutures).whenComplete { _, _ ->
+                messageGroupFutures.forEach { it.get()?.run(resultBuilder::addGroups) }
+            }.get()
+        } else {
+            groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
+                try {
+                    processMessageGroup(group).apply {
+                        if (this != null && checkResult(this)) {
+                            resultBuilder.addGroups(this)
+                        }
                     }
+                } catch (exception: Exception) {
+                    applicationContext.eventBatchCollector.createAndStoreErrorEvent(
+                        "Cannot process not empty group number ${index + 1}",
+                        exception,
+                        getDirection(),
+                        group
+                    )
                 }
-            } catch (exception: Exception) {
-                applicationContext.eventBatchCollector.createAndStoreErrorEvent(
-                    "Cannot process not empty group number ${index + 1}",
-                    exception,
-                    getDirection(),
-                    group
-                )
             }
         }
 
