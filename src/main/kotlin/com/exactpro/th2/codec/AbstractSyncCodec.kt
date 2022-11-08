@@ -14,7 +14,6 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.MessageGroup
 import com.exactpro.th2.common.grpc.MessageGroupBatch
 import com.exactpro.th2.common.schema.message.MessageListener
@@ -65,10 +64,7 @@ abstract class AbstractSyncCodec(
         }
     }
 
-    private fun processMessageGroupAsync(
-        group: MessageGroup,
-        resultBuilder: MessageGroupBatch.Builder,
-        index: Int) = CompletableFuture.supplyAsync { runProcessMessageGroup(group, resultBuilder, index) }
+    private fun processMessageGroupAsync(group: MessageGroup, index: Int) = CompletableFuture.supplyAsync { runProcessMessageGroup(group, index) }
 
     private val async = Runtime.getRuntime().availableProcessors() > 1
     override fun handler(consumerTag: String?, groupBatch: MessageGroupBatch) {
@@ -79,16 +75,25 @@ abstract class AbstractSyncCodec(
 
         if (async) {
             val messageGroupFutures = Array<CompletableFuture<MessageGroup?>> (groupBatch.groupsCount) {
-                processMessageGroupAsync(groupBatch.getGroups(it), resultBuilder, it)
+                processMessageGroupAsync(groupBatch.getGroups(it), it)
             }
 
             CompletableFuture.allOf(*messageGroupFutures).whenComplete { _, _ ->
-                messageGroupFutures.forEach { it.get()?.run(resultBuilder::addGroups) }
+                messageGroupFutures.forEach { it.get()?.apply {
+                    if (it.get() != null && checkResult(it.get()!!)) {
+                        resultBuilder.addGroups(it.get())
+                    }
+                }
+                }
             }.get()
         } else {
 
             groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
-                runProcessMessageGroup(group, resultBuilder, index)
+                runProcessMessageGroup(group, index).apply {
+                    if (this != null && checkResult(this)) {
+                        resultBuilder.addGroups(this)
+                    }
+                }
             }
         }
         val result = resultBuilder.build()
@@ -99,15 +104,10 @@ abstract class AbstractSyncCodec(
 
     private fun runProcessMessageGroup(
         group: MessageGroup,
-        resultBuilder: MessageGroupBatch.Builder,
         index: Int
     ): MessageGroup? {
         try {
-            return processMessageGroup(group).apply {
-                if (this != null && checkResult(this)) {
-                    resultBuilder.addGroups(this)
-                }
-            }
+            return processMessageGroup(group)
         } catch (exception: Exception) {
             applicationContext.eventBatchCollector.createAndStoreErrorEvent(
                 "Cannot process not empty group number ${index + 1}",
