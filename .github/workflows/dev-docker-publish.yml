@@ -5,9 +5,12 @@ on:
     branches-ignore:
       - master
       - version-*
+      - dependabot**
 #     paths:
 #    - gradle.properties
 #    - package_info.json
+    path-ignore:
+      - README.md
 
 jobs:
   build:
