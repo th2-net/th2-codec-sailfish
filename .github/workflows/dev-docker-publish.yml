@@ -9,7 +9,7 @@ on:
 #     paths:
 #    - gradle.properties
 #    - package_info.json
-    path-ignore:
+    paths-ignore:
       - README.md
 
 jobs:
