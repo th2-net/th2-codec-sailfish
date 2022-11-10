@@ -226,6 +226,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 3.14.1
+  + MessageGroupBatches can be processed in Async mode
+
 + 3.14.0
     + Dependencies with vulnerabilities was updated
     + The common library update from 3.32.0 to 3.42.0
