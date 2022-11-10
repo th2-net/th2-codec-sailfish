@@ -68,9 +68,8 @@ abstract class AbstractSyncCodec(
 
     private val async = Runtime.getRuntime().availableProcessors() > 1
     override fun handler(consumerTag: String?, groupBatch: MessageGroupBatch) {
-        if (groupBatch.groupsCount < 1) {
-            return
-        }
+        if (groupBatch.groupsCount < 1) { return }
+
         val resultBuilder = MessageGroupBatch.newBuilder()
 
         if (async) {
@@ -87,7 +86,6 @@ abstract class AbstractSyncCodec(
                 }
             }.get()
         } else {
-
             groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
                 runProcessMessageGroup(group, index).apply {
                     if (this != null && checkResult(this)) {
