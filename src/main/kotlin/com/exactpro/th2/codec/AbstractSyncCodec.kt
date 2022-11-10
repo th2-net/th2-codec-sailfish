@@ -123,7 +123,6 @@ abstract class AbstractSyncCodec(
     enum class Direction {
         ENCODE, DECODE
     }
-//
     protected abstract fun getDirection(): Direction
 
     protected abstract fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean
