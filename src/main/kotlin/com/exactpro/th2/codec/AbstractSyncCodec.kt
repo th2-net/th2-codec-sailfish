@@ -77,22 +77,23 @@ abstract class AbstractSyncCodec(
             }
 
             CompletableFuture.allOf(*messageGroupFutures).whenComplete { _, _ ->
-                messageGroupFutures.filter { it.get() != null && it.get()!!.messagesCount > 0 }.forEach {
-                    it.get()!!.apply {
-                        if (checkResult(this)) {
-                            resultBuilder.addGroups(this)
+                messageGroupFutures
+                    .filter { it.get() != null && it.get()!!.messagesCount > 0 }
+                    .forEach {
+                        it.get()!!.apply {
+                            if (checkResult(this)) {
+                                resultBuilder.addGroups(this)
+                            }
                         }
                     }
-                }
             }.get()
         } else {
-            groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
-                runProcessMessageGroup(index, group).apply {
-                    if (this != null && checkResult(this)) {
-                        resultBuilder.addGroups(this)
-                    }
-                }
-            }
+            groupBatch.groupsList
+                .asSequence()
+                .filter { it.messagesCount > 0 }
+                .mapIndexedNotNull(::runProcessMessageGroup)
+                .filter(::checkResult)
+                .forEach(resultBuilder::addGroups)
         }
         val result = resultBuilder.build()
         if (checkResultBatch(result)) {
