@@ -77,8 +77,8 @@ abstract class AbstractSyncCodec(
             }
 
             CompletableFuture.allOf(*messageGroupFutures).whenComplete { _, _ ->
-                messageGroupFutures.forEach {
-                    it.get()?.apply {
+                messageGroupFutures.filter { it.get() != null && it.get()!!.messagesCount > 0 }.forEach {
+                    it.get()!!.apply {
                         if (checkResult(this)) {
                             resultBuilder.addGroups(this)
                         }
