@@ -227,7 +227,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 3.14.1
-  + MessageGroupBatches can be processed in Async mode
+  + message batch will be processed asynchronously if more than one CPU core is available
 
 + 3.14.0
     + Dependencies with vulnerabilities was updated
