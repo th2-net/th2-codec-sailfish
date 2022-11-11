@@ -30,7 +30,7 @@ abstract class AbstractSyncCodec(
 
     protected val logger = KotlinLogging.logger {}
     protected var tagretAttributes: String = ""
-
+    private val async = Runtime.getRuntime().availableProcessors() > 1
 
     fun start(sourceAttributes: String, targetAttributes: String) {
         try {
@@ -64,9 +64,8 @@ abstract class AbstractSyncCodec(
         }
     }
 
-    private fun processMessageGroupAsync(group: MessageGroup, index: Int) = CompletableFuture.supplyAsync { runProcessMessageGroup(group, index) }
+    private fun processMessageGroupAsync(index: Int, group: MessageGroup) = CompletableFuture.supplyAsync { runProcessMessageGroup(index, group) }
 
-    private val async = Runtime.getRuntime().availableProcessors() > 1
     override fun handler(consumerTag: String?, groupBatch: MessageGroupBatch) {
         if (groupBatch.groupsCount < 1) { return }
 
@@ -74,7 +73,7 @@ abstract class AbstractSyncCodec(
 
         if (async) {
             val messageGroupFutures = Array<CompletableFuture<MessageGroup?>> (groupBatch.groupsCount) {
-                processMessageGroupAsync(groupBatch.getGroups(it), it)
+                processMessageGroupAsync(it, groupBatch.getGroups(it))
             }
 
             CompletableFuture.allOf(*messageGroupFutures).whenComplete { _, _ ->
@@ -87,7 +86,7 @@ abstract class AbstractSyncCodec(
             }.get()
         } else {
             groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
-                runProcessMessageGroup(group, index).apply {
+                runProcessMessageGroup(index, group).apply {
                     if (this != null && checkResult(this)) {
                         resultBuilder.addGroups(this)
                     }
@@ -101,8 +100,8 @@ abstract class AbstractSyncCodec(
     }
 
     private fun runProcessMessageGroup(
-        group: MessageGroup,
-        index: Int
+        index: Int,
+        group: MessageGroup
     ): MessageGroup? {
         try {
             return processMessageGroup(group)
@@ -117,7 +116,7 @@ abstract class AbstractSyncCodec(
 
         return null
     }
-//
+
     enum class Direction {
         ENCODE, DECODE
     }
