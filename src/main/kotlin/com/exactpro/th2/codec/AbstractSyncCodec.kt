@@ -100,8 +100,7 @@ abstract class AbstractSyncCodec(
             return null
 
         try {
-            val processedGroup = processMessageGroup(group)
-            return if (processedGroup != null && checkResult(processedGroup)) processedGroup else null
+            return processMessageGroup(group)?.takeIf(::checkResult)
         } catch (exception: Exception) {
             applicationContext.eventBatchCollector.createAndStoreErrorEvent(
                 "Cannot process not empty group number ${index + 1}",
