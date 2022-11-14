@@ -94,8 +94,7 @@ abstract class AbstractSyncCodec(
         index: Int,
         group: MessageGroup
     ): MessageGroup? {
-        if (group.messagesCount <= 0)
-            return null
+        if (group.messagesCount == 0) return null
 
         try {
             return processMessageGroup(group)?.takeIf(::checkResult)
