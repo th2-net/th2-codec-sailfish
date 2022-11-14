@@ -81,9 +81,7 @@ abstract class AbstractSyncCodec(
             }.get()
         } else {
             groupBatch.groupsList.forEachIndexed { index, group ->
-                if (group.messagesCount == 0) return@forEachIndexed
-                val processedGroup = runProcessMessageGroup(index, group) ?: return@forEachIndexed
-                if (checkResult(processedGroup)) resultBuilder.addGroups(processedGroup)
+                runProcessMessageGroup(index, group)?.run(resultBuilder::addGroups)
             }
         }
         val result = resultBuilder.build()
