@@ -82,7 +82,6 @@ abstract class AbstractSyncCodec(
         } else {
             groupBatch.groupsList
                 .asSequence()
-                .filter { it.messagesCount > 0 }
                 .mapIndexedNotNull(::runProcessMessageGroup)
                 .filter { it != null }
                 .forEach(resultBuilder::addGroups)
