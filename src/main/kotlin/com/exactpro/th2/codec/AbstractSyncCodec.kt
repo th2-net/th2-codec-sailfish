@@ -77,22 +77,14 @@ abstract class AbstractSyncCodec(
             }
 
             CompletableFuture.allOf(*messageGroupFutures).whenComplete { _, _ ->
-                messageGroupFutures
-                    .filter { it.get() != null && it.get()!!.messagesCount > 0 }
-                    .forEach {
-                        it.get()!!.apply {
-                            if (checkResult(this)) {
-                                resultBuilder.addGroups(this)
-                            }
-                        }
-                    }
+                messageGroupFutures.forEach { it.get()?.run(resultBuilder::addGroups) }
             }.get()
         } else {
             groupBatch.groupsList
                 .asSequence()
                 .filter { it.messagesCount > 0 }
                 .mapIndexedNotNull(::runProcessMessageGroup)
-                .filter(::checkResult)
+                .filter { it != null }
                 .forEach(resultBuilder::addGroups)
         }
         val result = resultBuilder.build()
@@ -106,7 +98,8 @@ abstract class AbstractSyncCodec(
         group: MessageGroup
     ): MessageGroup? {
         try {
-            return processMessageGroup(group)
+            val group = processMessageGroup(group)
+            return if (group != null && group.messagesCount > 0 && checkResult(group)) group else null
         } catch (exception: Exception) {
             applicationContext.eventBatchCollector.createAndStoreErrorEvent(
                 "Cannot process not empty group number ${index + 1}",
