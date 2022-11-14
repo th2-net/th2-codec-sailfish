@@ -80,11 +80,11 @@ abstract class AbstractSyncCodec(
                 messageGroupFutures.forEach { it.get()?.run(resultBuilder::addGroups) }
             }.get()
         } else {
-            groupBatch.groupsList
-                .asSequence()
-                .mapIndexedNotNull(::runProcessMessageGroup)
-                .filter { it != null }
-                .forEach(resultBuilder::addGroups)
+            groupBatch.groupsList.forEachIndexed { index, group ->
+                if (group.messagesCount == 0) return@forEachIndexed
+                val processedGroup = runProcessMessageGroup(index, group) ?: return@forEachIndexed
+                if (checkResult(processedGroup)) resultBuilder.addGroups(processedGroup)
+            }
         }
         val result = resultBuilder.build()
         if (checkResultBatch(result)) {
@@ -96,9 +96,12 @@ abstract class AbstractSyncCodec(
         index: Int,
         group: MessageGroup
     ): MessageGroup? {
+        if (group.messagesCount <= 0)
+            return null
+
         try {
-            val group = processMessageGroup(group)
-            return if (group != null && group.messagesCount > 0 && checkResult(group)) group else null
+            val processedGroup = processMessageGroup(group)
+            return if (processedGroup != null && checkResult(processedGroup)) processedGroup else null
         } catch (exception: Exception) {
             applicationContext.eventBatchCollector.createAndStoreErrorEvent(
                 "Cannot process not empty group number ${index + 1}",
