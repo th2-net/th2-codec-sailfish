@@ -69,7 +69,7 @@ repositories {
     }
 }
 
-ar {
+jar {
     manifest {
         attributes(
                 'Created-By':               "${System.getProperty('java.version')} (${System.getProperty('java.vendor')})",
