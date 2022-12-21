@@ -231,7 +231,11 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 4.0.0
-    + Migration to books/pages cradle 4.0.0
+    * Migration to kotlin:1.6.21
+    * Migration to sailfish:3.3.26
+    * Migration to bom:4.0.2
+    * Migration to common:5.0.0
+    + Migration to books/pages cradle 5.0.0
     + Added ability to define dictionaries via custom config in based on sailfish adapters
 
 + 3.12.2

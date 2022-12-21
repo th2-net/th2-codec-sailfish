@@ -16,24 +16,22 @@ package com.exactpro.th2.codec
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.common.grpc.MessageGroup
 import com.exactpro.th2.common.grpc.MessageGroupBatch
+import com.exactpro.th2.common.schema.message.DeliveryMetadata
 import com.exactpro.th2.common.schema.message.MessageListener
 import com.exactpro.th2.common.schema.message.MessageRouter
-import mu.KotlinLogging
 import java.io.IOException
 import java.util.concurrent.TimeoutException
 
 abstract class AbstractSyncCodec(
-    protected val router: MessageRouter<MessageGroupBatch>,
-    protected val applicationContext: ApplicationContext
+    private val router: MessageRouter<MessageGroupBatch>,
+    private val applicationContext: ApplicationContext
 ) : AutoCloseable, MessageListener<MessageGroupBatch> {
 
-    protected val logger = KotlinLogging.logger {}
-    protected var tagretAttributes: String = ""
-
+    private var targetAttributes: String = ""
 
     fun start(sourceAttributes: String, targetAttributes: String) {
         try {
-            this.tagretAttributes = targetAttributes
+            this.targetAttributes = targetAttributes
             router.subscribeAll(this, sourceAttributes)
         } catch (exception: Exception) {
             when (exception) {
@@ -45,25 +43,10 @@ abstract class AbstractSyncCodec(
     }
 
     override fun close() {
-        val exceptions = mutableListOf<Exception>()
-
         router.close()
-        if (exceptions.isNotEmpty()) {
-            throw RuntimeException("could not close decoder").also {
-                exceptions.forEach { exception -> it.addSuppressed(exception) }
-            }
-        }
     }
 
-    private fun close(closeable: AutoCloseable, name: String, exceptions: MutableList<Exception>) {
-        try {
-            closeable.close()
-        } catch (exception: Exception) {
-            exceptions.add(RuntimeException("could not close '$name'. Reason: ${exception.message}", exception))
-        }
-    }
-
-    override fun handle(consumerTag: String?, groupBatch: MessageGroupBatch) {
+    override fun handle(deliveryMetadata: DeliveryMetadata, groupBatch: MessageGroupBatch) {
         if (groupBatch.groupsCount < 1) {
             return
         }
@@ -88,7 +71,7 @@ abstract class AbstractSyncCodec(
 
         val result = resultBuilder.build()
         if (checkResultBatch(result)) {
-            router.sendAll(result, this.tagretAttributes)
+            router.sendAll(result, this.targetAttributes)
         }
     }
 

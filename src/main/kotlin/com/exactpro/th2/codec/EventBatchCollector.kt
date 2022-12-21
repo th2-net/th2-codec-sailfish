@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2022 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.grpc.MessageGroup
 import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.message.logId
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.schema.message.MessageRouter
 import mu.KotlinLogging
@@ -52,6 +53,11 @@ class CollectorTask {
         eventBatchBuilder = EventBatch.newBuilder().setParentEventId(event.parentId)
         scheduledFuture = scheduleCollectorTask(this)
         isSent = false
+    }
+
+    override fun toString(): String {
+        val parentEventId: String = if (::eventBatchBuilder.isInitialized) eventBatchBuilder.parentEventId.toDebugString() else ""
+        return "parent event id: $parentEventId, is sent: $isSent"
     }
 }
 
@@ -93,9 +99,13 @@ class EventBatchCollector(
     }
 
     private fun scheduleCollectorTask(collectorTask: CollectorTask): ScheduledFuture<*> =
-        scheduler.schedule(
-            { executeCollectorTask(collectorTask) },
-            timeout, TimeUnit.SECONDS
+        scheduler.schedule({
+                try {
+                    executeCollectorTask(collectorTask)
+                } catch (e: Exception) {
+                    logger.error(e) { "Could not execute send event task $collectorTask" }
+                }
+            }, timeout, TimeUnit.SECONDS
         )
 
     private fun executeCollectorTask(collectorTask: CollectorTask) {
@@ -118,8 +128,8 @@ class EventBatchCollector(
             )
             logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
             putEvent(event)
-        } catch (exception: Exception) {
-            logger.warn(exception) { "could not send codec error event" }
+        } catch (e: Exception) {
+            logger.error(e) { "could not send codec error event. text: $errorText, message id: ${rawMessage.metadata.id.toDebugString()}, cause: $exception" }
         }
     }
 
@@ -135,8 +145,8 @@ class EventBatchCollector(
             val event = createErrorEvent("Cannot process message group", errorText, exception, parentEventId, messageIDs)
             logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
             putEvent(event)
-        } catch (exception: Exception) {
-            logger.warn(exception) { "could not send codec error event" }
+        } catch (e: Exception) {
+            logger.error(e) { "could not send codec error event. text: $errorText, group id: ${ if (group.messagesList.isEmpty()) "" else group.getMessages(0).logId }, direction: $direction, cause: $exception" }
         }
     }
 
@@ -150,7 +160,7 @@ class EventBatchCollector(
             logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
             putEvent(event)
         } catch (exception: Exception) {
-            logger.warn(exception) { "could not send codec error event" }
+            logger.error(exception) { "could not send codec error event. name: $name, text: $errorText, cause: $exception" }
         }
     }
 
@@ -173,7 +183,7 @@ class EventBatchCollector(
             initEncodeEventRoot(rootEventID)
 
         } catch (exception: Exception) {
-            logger.warn(exception) { "could not init root event structure" }
+            logger.error(exception) { "could not init root event structure" }
             throw exception
         }
     }
