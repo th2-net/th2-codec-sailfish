@@ -128,6 +128,20 @@ The first one is used to receive messages to decode/encode while the second one 
 + Pin for the stream decoding input: `general_decoder_in` `raw` `subscribe`
 + Pin for the stream decoding output: `general_decoder_out` `parsed` `publish`
 
+## Dictionaries definition based on aliases
+
+You can set desired dictionaries using its aliases.
+Note that this part of the configuration is optional. If it is not specified, dictionaries will be loaded based on type.
+If a dictionary with the required type is not found, an exception will be thrown. A detailed list with found and required dictionaries will also be logged.
+
+Example: 
+
+```yaml
+    dictionaries:
+      MAIN: aliasA
+      LEVEL1: aliasB
+```
+
 ### Configuration example
 ```yaml
 apiVersion: th2.exactpro.com/v1
@@ -141,6 +155,9 @@ spec:
     converterParameters:
       allowUnknownEnumValues: false
       stripTrailingZeros: false
+    dictionaries:
+      MAIN: aliasA
+      LEVEL1: aliasB
   pins:
     # encoder
     - name: in_codec_encode
@@ -215,6 +232,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 + 4.0.0
     + Migration to books/pages cradle 4.0.0
+    + Added ability to define dictionaries via custom config in based on sailfish adapters
 
 + 3.12.2
     + Fix error when we try to synchronize on `lateinit` property when it is not initialized yet

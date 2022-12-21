@@ -27,6 +27,9 @@ import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter.createParameters
+import java.io.File
+import java.net.URLClassLoader
+import java.util.ServiceLoader
 import mu.KotlinLogging
 import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
@@ -36,9 +39,6 @@ import org.apache.commons.lang3.math.NumberUtils.toFloat
 import org.apache.commons.lang3.math.NumberUtils.toInt
 import org.apache.commons.lang3.math.NumberUtils.toLong
 import org.apache.commons.lang3.math.NumberUtils.toShort
-import java.io.File
-import java.net.URLClassLoader
-import java.util.ServiceLoader
 
 class ApplicationContext(
     val commonFactory: CommonFactory,
@@ -73,7 +73,8 @@ class ApplicationContext(
             }
 
             try {
-                val codecSettings = createSettings(commonFactory, codecFactory, configuration.codecParameters)
+                val codecSettings =
+                    createSettings(commonFactory, codecFactory, configuration.codecParameters, configuration)
                 val codec = codecFactory.createCodec(codecSettings)
                 val dictionaryType = if (OUTGOING in codecSettings.dictionaryTypes) OUTGOING else MAIN
                 val dictionary =
@@ -93,7 +94,11 @@ class ApplicationContext(
                     eventBatchCollector
                 )
             } catch (e: RuntimeException) {
-                eventBatchCollector.createAndStoreErrorEvent("Codec was not initialized", "An error occurred while initializing the codec", e)
+                eventBatchCollector.createAndStoreErrorEvent(
+                    "Codec was not initialized",
+                    "An error occurred while initializing the codec",
+                    e
+                )
                 throw e
             }
         }
@@ -109,7 +114,8 @@ class ApplicationContext(
         private fun createSettings(
             commonFactory: CommonFactory,
             codecFactory: IExternalCodecFactory,
-            codecParameters: Map<String, String>?
+            codecParameters: Map<String, String>?,
+            configuration: Configuration
         ): IExternalCodecSettings {
             val settings = codecFactory.createSettings()
 
@@ -119,13 +125,56 @@ class ApplicationContext(
                 }
             }
 
+            val dictionariesFromConfig = configuration.dictionaries
+            if (!dictionariesFromConfig.isNullOrEmpty()) {
+                loadDictionariesByAliases(dictionariesFromConfig, commonFactory, settings)
+            } else {
+                loadDictionariesByType(settings, commonFactory)
+            }
+
+            return settings
+        }
+
+        private fun loadDictionariesByType(
+            settings: IExternalCodecSettings,
+            commonFactory: CommonFactory
+        ) {
+            logger.debug { "Loading dictionaries by type" }
             settings.dictionaryTypes.forEach { type ->
                 commonFactory.readDictionary(DictionaryType.valueOf(type.name)).use { stream ->
                     settings[type] = XmlDictionaryStructureLoader().load(stream)
                 }
             }
+        }
 
-            return settings
+        private fun loadDictionariesByAliases(
+            dictionariesFromConfig: Map<String, String>,
+            commonFactory: CommonFactory,
+            settings: IExternalCodecSettings
+        ) {
+            logger.debug { "Loading dictionaries by aliases" }
+            settings.dictionaryTypes.forEach { dictionaryTypeFromSettings ->
+                val dictionaryTypeFromConfig = dictionariesFromConfig.entries.find {
+                    it.key.equals(dictionaryTypeFromSettings.toString(), true)
+                }
+
+                if (dictionaryTypeFromConfig != null) {
+                    val alias = dictionaryTypeFromConfig.value
+                    commonFactory.loadDictionary(alias).use { stream ->
+                        settings[dictionaryTypeFromSettings] = XmlDictionaryStructureLoader().load(stream)
+                    }
+                } else {
+                    val foundedTypes = dictionariesFromConfig.entries.joinToString(", ", "[", "]") {
+                        "'${it.key}' with alias '${it.value}'"
+                    }
+                    val expectedTypes = settings.dictionaryTypes.joinToString(prefix = "[", postfix = "]")
+                    logger.error {
+                        "Dictionary with type $dictionaryTypeFromSettings not found. " +
+                                "Expected types: $expectedTypes. Found: $foundedTypes"
+                    }
+                    throw IllegalArgumentException("Dictionary type $dictionaryTypeFromSettings can't be loaded")
+                }
+            }
         }
 
         private fun convertAndSet(settings: IExternalCodecSettings, propertyName: String, propertyValue: String) {
