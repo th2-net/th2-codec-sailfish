@@ -15,7 +15,7 @@ jobs:
     with:
       build-target: 'Docker'
       docker-username: ${{ github.repository_owner }}
-      trivy-enabled: false
+      scanner-enabled: false
     secrets:
       docker-password: ${{ secrets.CR_PAT }}
 
