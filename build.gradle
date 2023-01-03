@@ -20,11 +20,7 @@ buildscript {
     }
 
     ext {
-        kotlin_version = "1.5.30"
-    }
-
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+        kotlin_version = "1.6.21"
     }
 }
 
@@ -38,7 +34,7 @@ plugins {
 ext {
     genDir             = file('src/gen')
     sharedDir          = file("${project.rootDir}/shared")
-    sailfishVersion    = '3.2.1776'
+    sailfishVersion    = '3.3.11'
 }
 
 group 'com.exactpro.th2'
@@ -49,14 +45,33 @@ repositories {
         name 'MavenLocal'
         url sharedDir
     }
-    mavenCentral()
+    // ignoreGradleMetadataRedirection is used for sonatype because
+    // Sailfish dependencies have constrains that interfere with our BOM
+    // so we exclude Gradle metadata for this repositories
+
     maven {
         name 'Sonatype_snapshots'
         url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+        metadataSources {
+            mavenPom()
+            artifact()
+            ignoreGradleMetadataRedirection()
+        }
     }
     maven {
         name 'Sonatype_releases'
         url 'https://s01.oss.sonatype.org/content/repositories/releases/'
+        metadataSources {
+            mavenPom()
+            artifact()
+            ignoreGradleMetadataRedirection()
+        }
+    }
+    mavenCentral {
+        metadataSources {
+            mavenPom()
+            artifact()
+        }
     }
     mavenLocal()
 
@@ -68,29 +83,32 @@ repositories {
 
 
 dependencies {
-    api platform('com.exactpro.th2:bom:3.1.0')
-    implementation 'com.exactpro.th2:common:3.32.0'
-    implementation 'com.exactpro.th2:sailfish-utils:3.12.3'
+    api platform('com.exactpro.th2:bom:4.0.2')
+    implementation ('com.exactpro.th2:common:3.42.0-dev-3477755558-SNAPSHOT') {
+        because('senging to direct queues')
+        exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
+    }
+    implementation 'com.exactpro.th2:common-utils:0.0.1-TH2-4571-event-batcher-size-limit-3829146537-SNAPSHOT'
+    implementation 'com.exactpro.th2:sailfish-utils:3.13.0-dev-3241711314-SNAPSHOT'
 
-    implementation 'io.github.microutils:kotlin-logging:2.0.11'
+    implementation 'io.github.microutils:kotlin-logging:3.0.4'
 
     implementation 'org.slf4j:slf4j-api'
-    implementation 'org.slf4j:slf4j-log4j12'
+    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.19.0'
+    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl'
 
     implementation 'com.fasterxml.jackson.core:jackson-core'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
 
-    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.7'
-
-    implementation("com.github.ajalt:clikt:2.7.0")
+    implementation 'com.github.ajalt.clikt:clikt:3.5.0'
 
     implementation 'com.google.protobuf:protobuf-java-util'
 
-    implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
-
-    testImplementation 'org.mockito:mockito-inline:3.5.6'
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
+    testImplementation('org.apache.logging.log4j:log4j-slf4j-impl') {
+        because('logging in testing')
+    }
+    testImplementation 'org.mockito:mockito-inline:3.12.4'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
     testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
 }
 
@@ -115,7 +133,7 @@ jar {
 applicationName = 'service'
 
 distTar {
-    archiveName "${applicationName}.tar"
+    archiveFileName.set("${applicationName}.tar")
 }
 
 dockerPrepare {
@@ -135,5 +153,5 @@ compileTestKotlin {
 }
 
 application {
-    mainClassName = "com.exactpro.th2.codec.MainKt"
+    mainClass.set("com.exactpro.th2.codec.MainKt")
 }

@@ -1,4 +1,4 @@
-# How it works (3.13.0)
+# How it works (3.14.1)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -225,6 +225,24 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 3.14.1 +
+  + Uses event batcher which supports publication by timeout and packs events into a batch by specified count and size in bytes.
+  + Updated bom to 4.0.2
+  + Migrated to log4j2
+
++ 3.14.1
+  + message batch will be processed asynchronously if more than one CPU core is available
+
++ 3.14.0
+    + Dependencies with vulnerabilities was updated
+    + The common library update from 3.32.0 to 3.42.0
+      + Filter behavior is corrected: only messages that does not match filter are dropped instead of the whole group
+      + Log4j2 is used. Requires logging configuration updates
+    + The sailfish-utils library update from 3.12.3 to 3.13.0
+      + Changed the format for time and date time (always includes milliseconds part)
+    + The sailfish-core library update from 3.2.1776 to 3.3.11
+    + Deprecated `registerModule(KotlinModule())` was replaced with `registerKotlinModule()`
 
 + 3.13.0
     + Codec handles messages with its protocol or empty during encode/decode
