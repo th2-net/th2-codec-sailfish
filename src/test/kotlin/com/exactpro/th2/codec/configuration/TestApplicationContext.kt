@@ -22,6 +22,7 @@ import com.exactpro.sf.configuration.suri.SailfishURI
 import com.exactpro.sf.configuration.workspace.FolderType
 import com.exactpro.sf.externalapi.codec.*
 import com.exactpro.th2.common.grpc.EventBatch
+import com.exactpro.th2.common.schema.cradle.CradleConfiguration
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.common.schema.grpc.configuration.GrpcConfiguration
@@ -50,7 +51,12 @@ class TestApplicationContext {
     @Test
     fun testDictionarySetting() {
         val configuration = Configuration().apply { codecClassName = CodecFactory::class.java.name }
-        val commonFactory = Mockito.mock(CommonFactory::class.java)
+        val cradleCfg:CradleConfiguration = mock {
+            on { cradleMaxEventBatchSize }.thenReturn(1_024L * 1_024L)
+        }
+        val commonFactory: CommonFactory = mock {
+            on { cradleConfiguration }.thenReturn(cradleCfg)
+        }
 
         `when`(commonFactory.grpcRouter).thenReturn(object : GrpcRouter {
             override fun close(): Unit = TODO("Not yet implemented")

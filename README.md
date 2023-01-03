@@ -226,6 +226,11 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 3.14.1 +
+  + Uses event batcher which supports publication by timeout and packs events into a batch by specified count and size in bytes.
+  + Updated bom to 4.0.2
+  + Migrated to log4j2
+
 + 3.14.1
   + message batch will be processed asynchronously if more than one CPU core is available
 
