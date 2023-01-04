@@ -25,6 +25,7 @@ import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.grpc.MessageGroup
 import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.message.isValid
 import com.exactpro.th2.common.message.logId
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.schema.message.MessageRouter
@@ -193,7 +194,7 @@ class EventBatchCollector(
         errorText: String,
         exception: Exception?,
         parentEventId: EventID,
-        messageIDS: List<MessageID> = mutableListOf()
+        messageIds: List<MessageID> = mutableListOf()
     ): Event = com.exactpro.th2.common.event.Event
         .start()
         .name(name)
@@ -204,8 +205,10 @@ class EventBatchCollector(
             if (exception != null) {
                 exception(exception, true)
             }
-            messageIDS.forEach {
-                messageID(it)
+            messageIds.forEach {
+                if (it.isValid) {
+                    messageID(it)
+                }
             }
         }
         .toProto(parentEventId)

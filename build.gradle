@@ -89,7 +89,7 @@ repositories {
 
 dependencies {
     api platform('com.exactpro.th2:bom:4.0.2')
-    implementation ('com.exactpro.th2:common:5.0.0-dev-version-5-3539375667-SNAPSHOT') {
+    implementation ('com.exactpro.th2:common:5.0.0-dev-version-5-3836678398-SNAPSHOT') {
         because('senging to direct queues')
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
         exclude group: 'com.exactpro.th2', module: 'cradle-core'
