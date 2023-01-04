@@ -30,9 +30,6 @@ jobs:
         with:
           path: gradle.properties
           properties: release_version
-      - name: Get SHA of the commit
-        id: sha
-        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       - name: Build custom release version
         id: release_ver
         run: echo value="${{ steps.ver.outputs.release_version }}-${{ steps.branch.outputs.branch_name }}-${{ github.run_id }}-${{ steps.sha.outputs.sha_short }}" >> $GITHUB_OUTPUT
