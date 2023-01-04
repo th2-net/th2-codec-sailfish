@@ -72,7 +72,12 @@ repositories {
             ignoreGradleMetadataRedirection()
         }
     }
-    mavenCentral()
+    mavenCentral {
+        metadataSources {
+            mavenPom()
+            artifact()
+        }
+    }
     mavenLocal()
 
     configurations.all {
@@ -90,6 +95,7 @@ dependencies {
         exclude group: 'com.exactpro.th2', module: 'cradle-core'
         exclude group: 'com.exactpro.th2', module: 'cradle-cassandra'
     }
+    implementation 'com.exactpro.th2:common-utils:0.0.1-book-and-page-3836172629-SNAPSHOT'
     implementation 'com.exactpro.th2:sailfish-utils:3.13.0'
 
     implementation 'io.github.microutils:kotlin-logging:3.0.4'
@@ -108,7 +114,7 @@ dependencies {
 
     implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
 
-    testImplementation 'org.mockito:mockito-inline:4.8.0'
+    testImplementation 'org.mockito:mockito-inline:4.10.0'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.9.0'
     testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
 }
@@ -134,7 +140,7 @@ jar {
 applicationName = 'service'
 
 distTar {
-    archiveName "${applicationName}.tar"
+    archiveFileName.set("${applicationName}.tar")
 }
 
 dockerPrepare {
@@ -154,5 +160,5 @@ compileTestKotlin {
 }
 
 application {
-    mainClassName = "com.exactpro.th2.codec.MainKt"
+    mainClass.set("com.exactpro.th2.codec.MainKt")
 }

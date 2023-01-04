@@ -6,9 +6,11 @@ on:
       - master
       - version-*
       - dependabot**
+#     paths:
+#    - gradle.properties
+#    - package_info.json
     paths-ignore:
       - README.md
-#    - package_info.json
 
 jobs:
   build:
@@ -18,7 +20,10 @@ jobs:
       # Prepare custom build version
       - name: Get branch name
         id: branch
-        run: echo ::set-output name=branch_name::${GITHUB_REF#refs/*/}
+        run: echo "branch_name=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
+      - name: Get SHA of the commit
+        id: sha
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
       - name: Get release_version
         id: ver
         uses: christian-draeger/read-properties@1.1.1
@@ -41,7 +46,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - run: echo "::set-output name=REPOSITORY_NAME::$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')"
+      - run: echo "REPOSITORY_NAME=$(echo '${{ github.repository }}' | awk -F '/' '{print $2}')" >> $GITHUB_OUTPUT
         id: meta
       - name: Build and push
         id: docker_build

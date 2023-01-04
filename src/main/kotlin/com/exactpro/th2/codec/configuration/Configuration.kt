@@ -30,7 +30,7 @@ internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(YAMLFactory()).apply { r
     .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
 class Configuration(
-    val outgoingEventBatchBuildTime: Long = 1000,
+    val outgoingEventBatchBuildTime: Long = 30,
     val maxOutgoingEventBatchSize: Int = 99,
     val numOfEventBatchCollectorWorkers: Int = 1,
     @Deprecated(

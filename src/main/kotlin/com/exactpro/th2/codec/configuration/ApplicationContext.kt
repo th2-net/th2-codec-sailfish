@@ -59,17 +59,20 @@ class ApplicationContext(
             val codecFactory = loadFactory(configuration.codecClassName)
 
             val eventBatchRouter = commonFactory.eventBatchRouter
+            val maxEventBatchSizeInBytes = commonFactory.cradleConfiguration.cradleMaxEventBatchSize
             check(configuration.outgoingEventBatchBuildTime > 0) { "The value of outgoingEventBatchBuildTime must be greater than zero" }
             check(configuration.maxOutgoingEventBatchSize > 0) { "The value of maxOutgoingEventBatchSize must be greater than zero" }
             check(configuration.numOfEventBatchCollectorWorkers > 0) { "The value of numOfEventBatchCollectorWorkers must be greater than zero" }
             val eventBatchCollector = EventBatchCollector(
                 eventBatchRouter,
+                maxEventBatchSizeInBytes,
                 configuration.maxOutgoingEventBatchSize,
                 configuration.outgoingEventBatchBuildTime,
                 configuration.numOfEventBatchCollectorWorkers,
                 commonFactory.boxConfiguration.bookName
             ).apply {
-                initEventStructure(codecFactory.protocolName)
+                val protocolName = codecFactory.protocolName
+                initEventStructure(commonFactory.boxConfiguration?.boxName ?: protocolName, protocolName, configuration.codecParameters)
             }
 
             try {

@@ -22,9 +22,10 @@ import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.grpc.RawMessageMetadata
+import com.exactpro.th2.common.message.toJson
+import com.exactpro.th2.sailfish.utils.MessageWrapper
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.google.protobuf.ByteString
-import com.google.protobuf.util.JsonFormat
 import mu.KotlinLogging
 
 class EncodeProcessor(
@@ -34,10 +35,10 @@ class EncodeProcessor(
     private val eventBatchCollector: EventBatchCollector
 ) : AbstractCodecProcessor<Message, RawMessage.Builder>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
-    private val protocol = codecFactory.protocolName
+    override val protocol = codecFactory.protocolName
 
     override fun process(source: Message): RawMessage.Builder {
-        val convertedSourceMessage = converter.fromProtoMessage(source, true).also {
+        val convertedSourceMessage: MessageWrapper = converter.fromProtoMessage(source, true).also {
             logger.debug { "converted source message '${it.name}': $it" }
         }
 
@@ -48,10 +49,7 @@ class EncodeProcessor(
             }
             body = ByteString.copyFrom(encodedMessageData)
             metadata = toRawMessageMetadataBuilder(source).also {
-                logger.debug {
-                    val jsonRawMessage = JsonFormat.printer().omittingInsignificantWhitespace().print(it)
-                    "message metadata: $jsonRawMessage"
-                }
+                logger.debug { "message metadata: ${it.toJson()}" }
             }
         }
     }
