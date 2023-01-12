@@ -20,7 +20,7 @@ buildscript {
     }
 
     ext {
-        kotlin_version = "1.5.30"
+        kotlin_version = "1.6.0"
     }
 
     dependencies {
@@ -35,10 +35,17 @@ plugins {
     id 'com.palantir.docker' version '0.25.0'
 }
 
+
 ext {
     genDir             = file('src/gen')
     sharedDir          = file("${project.rootDir}/shared")
-    sailfishVersion    = '3.2.1776'
+    sailfishVersion    = '3.3.11'
+}
+
+ext.excludeSailfish = { rcd ->
+    rcd.excludeModule("com.exactpro.sf", "sailfish-core")
+    rcd.excludeModule("com.exactpro.sf", "sailfish-common")
+    rcd.excludeModule("com.exactpro.sf", "sailfish-rest-api-client")
 }
 
 group 'com.exactpro.th2'
@@ -49,16 +56,36 @@ repositories {
         name 'MavenLocal'
         url sharedDir
     }
-    mavenCentral()
+
     maven {
         name 'Sonatype_snapshots'
         url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+        metadataSources {
+            mavenPom()
+            artifact()
+            ignoreGradleMetadataRedirection()
+        }
     }
     maven {
         name 'Sonatype_releases'
         url 'https://s01.oss.sonatype.org/content/repositories/releases/'
+        content {
+            excludeSailfish(it)
+        }
+        metadataSources {
+            mavenPom()
+            artifact()
+            ignoreGradleMetadataRedirection()
+        }
     }
     mavenLocal()
+    mavenCentral {
+        metadataSources {
+            mavenPom()
+            artifact()
+            ignoreGradleMetadataRedirection()
+        }
+    }
 
     configurations.all {
         resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
@@ -68,14 +95,13 @@ repositories {
 
 
 dependencies {
-    api platform('com.exactpro.th2:bom:3.1.0')
-    implementation 'com.exactpro.th2:common:3.32.0'
-    implementation 'com.exactpro.th2:sailfish-utils:3.12.3'
+    api platform('com.exactpro.th2:bom:4.0.2')
+    implementation 'com.exactpro.th2:common:3.42.0'
+    implementation 'com.exactpro.th2:sailfish-utils:3.13.0'
 
     implementation 'io.github.microutils:kotlin-logging:2.0.11'
 
     implementation 'org.slf4j:slf4j-api'
-    implementation 'org.slf4j:slf4j-log4j12'
 
     implementation 'com.fasterxml.jackson.core:jackson-core'
     implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
