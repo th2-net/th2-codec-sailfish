@@ -15,6 +15,5 @@ jobs:
     with:
       build-target: 'Docker'
       docker-username: ${{ github.actor }}
-      runsOn: ubuntu-latest
     secrets:
       docker-password: ${{ secrets.GITHUB_TOKEN }}
