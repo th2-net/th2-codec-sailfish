@@ -37,7 +37,6 @@ plugins {
 
 ext {
     genDir             = file('src/gen')
-    sharedDir          = file("${project.rootDir}/shared")
     sailfishVersion    = '3.3.54'
 }
 
@@ -52,11 +51,6 @@ ext.excludeSailfish = { rcd ->
 }
 
 repositories {
-    maven {
-        name 'MavenLocal'
-        url sharedDir
-    }
-
     maven {
         name 'Sonatype_snapshots'
         url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
