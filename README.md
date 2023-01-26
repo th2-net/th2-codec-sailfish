@@ -226,8 +226,10 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 + 3.14.0
-    + Sailfish update to 3.3
+    + Sailfish update to 3.3.54
     + bom version updated to 4.1.0
+    + common updated to 3.44.0
+    + sailfish utils updated to 3.14.0
 
 + 3.13.0
     + Codec handles messages with its protocol or empty during encode/decode
