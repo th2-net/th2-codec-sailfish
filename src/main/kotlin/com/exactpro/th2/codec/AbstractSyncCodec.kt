@@ -16,6 +16,7 @@ package com.exactpro.th2.codec
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.common.grpc.MessageGroup
 import com.exactpro.th2.common.grpc.MessageGroupBatch
+import com.exactpro.th2.common.schema.message.DeliveryMetadata
 import com.exactpro.th2.common.schema.message.MessageListener
 import com.exactpro.th2.common.schema.message.MessageRouter
 import mu.KotlinLogging
@@ -63,7 +64,7 @@ abstract class AbstractSyncCodec(
         }
     }
 
-    override fun handle(consumerTag: String?, groupBatch: MessageGroupBatch) {
+    override fun handle(deliveryMetadata: DeliveryMetadata, groupBatch: MessageGroupBatch) {
         if (groupBatch.groupsCount < 1) {
             return
         }
@@ -100,7 +101,7 @@ abstract class AbstractSyncCodec(
 
     protected abstract fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean
 
-    protected abstract fun processMessageGroup(it: MessageGroup): MessageGroup?
+    protected abstract fun processMessageGroup(messageGroup: MessageGroup): MessageGroup?
 
     abstract fun checkResult(protoResult: MessageGroup): Boolean
 }

@@ -16,11 +16,13 @@
 
 package com.exactpro.th2.codec.util
 
+import com.exactpro.th2.common.message.toJson
 import com.google.protobuf.GeneratedMessageV3
-import com.google.protobuf.util.JsonFormat
 
-fun GeneratedMessageV3.toDebugString(): String {
-    return JsonFormat.printer().omittingInsignificantWhitespace().includingDefaultValueFields().print(this)
-}
+@Deprecated(
+    message = "Please use MessageUtils.toJson() instead",
+    replaceWith = ReplaceWith("toJson()", imports = ["com.exactpro.th2.common.message.toJson"]),
+    level = DeprecationLevel.WARNING)
+fun GeneratedMessageV3.toDebugString(): String = this.toJson()
 
 fun ByteArray.toHexString() = joinToString("") { "%02x".format(it) }
