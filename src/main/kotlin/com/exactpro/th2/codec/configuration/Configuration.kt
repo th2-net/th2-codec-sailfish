@@ -39,6 +39,7 @@ class Configuration(
     )
     val allowUnknownEnumValues: Boolean = false,
     val converterParameters: ConverterParameters = ConverterParameters(allowUnknownEnumValues = allowUnknownEnumValues),
+    val enabledExternalQueueRouting: Boolean = false,
     var dictionaries: Map<String, String>? = null
 ) {
     var codecClassName: String? = null

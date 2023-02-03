@@ -30,6 +30,7 @@ abstract class AbstractSyncCodec(
 
     protected val logger = KotlinLogging.logger {}
     protected var tagretAttributes: String = ""
+    private val enabledExternalRouting: Boolean = applicationContext.enabledExternalRouting
 
 
     fun start(sourceAttributes: String, targetAttributes: String) {
@@ -64,12 +65,13 @@ abstract class AbstractSyncCodec(
         }
     }
 
-    override fun handle(deliveryMetadata: DeliveryMetadata, groupBatch: MessageGroupBatch) {
+    override fun handle(deliveryMetadata: DeliveryMetadata?, groupBatch: MessageGroupBatch) {
         if (groupBatch.groupsCount < 1) {
             return
         }
 
         val resultBuilder = MessageGroupBatch.newBuilder()
+            .setMetadata(groupBatch.metadata)
         groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
             try {
                 processMessageGroup(group).apply {
@@ -89,6 +91,11 @@ abstract class AbstractSyncCodec(
 
         val result = resultBuilder.build()
         if (checkResultBatch(result)) {
+            val externalQueue = result.metadata.externalQueue
+            if (enabledExternalRouting && externalQueue.isNotBlank() && isTransformationComplete(result)) {
+                router.sendExclusive(externalQueue, result)
+                return
+            }
             router.sendAll(result, this.tagretAttributes)
         }
     }
@@ -104,4 +111,6 @@ abstract class AbstractSyncCodec(
     protected abstract fun processMessageGroup(messageGroup: MessageGroup): MessageGroup?
 
     abstract fun checkResult(protoResult: MessageGroup): Boolean
+
+    abstract fun isTransformationComplete(protoResult: MessageGroupBatch): Boolean
 }

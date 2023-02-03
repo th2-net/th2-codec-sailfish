@@ -32,7 +32,12 @@ class SyncDecoder(
     private val protocol = processor.protocol
 
     override fun checkResult(protoResult: MessageGroup): Boolean = protoResult.messagesCount > 0
+
     override fun getDirection(): Direction = Direction.DECODE
+
+    override fun isTransformationComplete(protoResult: MessageGroupBatch): Boolean = protoResult.groupsList.asSequence()
+        .flatMap(MessageGroup::getMessagesList)
+        .all(AnyMessage::hasRawMessage)
 
     override fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean = resultBatch.groupsCount > 0
 

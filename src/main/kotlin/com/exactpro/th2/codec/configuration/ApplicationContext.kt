@@ -47,7 +47,8 @@ class ApplicationContext(
     val codecSettings: IExternalCodecSettings,
     val protoToIMessageConverter: ProtoToIMessageConverter,
     val messageToProtoConverter: IMessageToProtoConverter,
-    val eventBatchCollector: EventBatchCollector
+    val eventBatchCollector: EventBatchCollector,
+    val enabledExternalRouting: Boolean
 ) {
 
     companion object {
@@ -92,7 +93,8 @@ class ApplicationContext(
                     codecSettings,
                     protoConverter,
                     IMessageToProtoConverter(converterParameters.toDecodeParameters()),
-                    eventBatchCollector
+                    eventBatchCollector,
+                    configuration.enabledExternalQueueRouting
                 )
             } catch (e: RuntimeException) {
                 eventBatchCollector.createAndStoreErrorEvent(
