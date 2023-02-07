@@ -37,7 +37,7 @@ class SyncDecoder(
 
     override fun isTransformationComplete(protoResult: MessageGroupBatch): Boolean = protoResult.groupsList.asSequence()
         .flatMap(MessageGroup::getMessagesList)
-        .all(AnyMessage::hasRawMessage)
+        .all(AnyMessage::hasMessage)
 
     override fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean = resultBatch.groupsCount > 0
 
