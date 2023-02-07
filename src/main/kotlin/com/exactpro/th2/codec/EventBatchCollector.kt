@@ -18,6 +18,8 @@ package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.EventUtils
+import com.exactpro.th2.common.event.bean.IRow
+import com.exactpro.th2.common.event.bean.builder.TableBuilder
 import com.exactpro.th2.common.grpc.Event
 import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.grpc.EventID
@@ -26,6 +28,7 @@ import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.schema.message.MessageRouter
+import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import mu.KotlinLogging
 import java.time.LocalDateTime
 import java.util.concurrent.ConcurrentHashMap
@@ -116,7 +119,7 @@ class EventBatchCollector(
                 "Cannot decode message for ${rawMessage.metadata.id.connectionId.toJson()}", errorText, exception, parentEventId,
                 listOf<MessageID>(rawMessage.metadata.id)
             )
-            logger.error { "${errorText}. Error event id: ${event.id.toDebugString()}" }
+            logger.error { "${errorText}. Error event id: ${event.id.toJson()}" }
             putEvent(event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
@@ -147,23 +150,38 @@ class EventBatchCollector(
     ) {
         try {
             val event = createErrorEvent(name, errorText, exception, rootEventID)
-            logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
+            logger.error(exception) { "${errorText}. Error event id: ${event.id.toJson()}" }
             putEvent(event)
         } catch (exception: Exception) {
             logger.warn(exception) { "could not send codec error event" }
         }
     }
 
-    fun initEventStructure(codecName: String) {
+    fun initEventStructure(codecName: String, protocol: String, codecParameters: Map<String, String>?) {
         try {
             val event = com.exactpro.th2.common.event.Event
                 .start()
                 .name("Codec_${codecName}_${LocalDateTime.now()}")
                 .type("CodecRoot")
+                .apply {
+                    bodyData(EventUtils.createMessageBean("Protocol: $protocol"))
+                    if (codecParameters == null || codecParameters.isEmpty()) {
+                        bodyData(EventUtils.createMessageBean("No parameters specified for codec"))
+                    } else {
+                        bodyData(EventUtils.createMessageBean("Codec parameters:"))
+                        bodyData(TableBuilder<ParametersRow>()
+                            .apply {
+                                codecParameters.forEach { (name, value) ->
+                                    row(ParametersRow(name, value))
+                                }
+                            }
+                            .build())
+                    }
+                }
                 .toProto(boxBookName)
 
             rootEventID = event.id
-            logger.info { "root event id: ${event.id.toDebugString()}" }
+            logger.info { "root event id: ${event.id.toJson()}" }
             eventBatchRouter.send(
                 EventBatch.newBuilder()
                     .addEvents(event)
@@ -191,7 +209,7 @@ class EventBatchCollector(
             .toProto(parentEventId)
         decodeErrorGroupEventID = event.id
 
-        logger.info { "DecodeError group event id: ${event.id.toDebugString()}" }
+        logger.info { "DecodeError group event id: ${event.id.toJson()}" }
         eventBatchRouter.send(
             EventBatch.newBuilder()
                 .addEvents(event)
@@ -212,7 +230,7 @@ class EventBatchCollector(
             .toProto(parentEventId)
         encodeErrorGroupEventID = event.id
 
-        logger.info { "EncodeError group event id: ${event.id.toDebugString()}" }
+        logger.info { "EncodeError group event id: ${event.id.toJson()}" }
         eventBatchRouter.send(
             EventBatch.newBuilder()
                 .addEvents(event)
@@ -292,4 +310,7 @@ class EventBatchCollector(
         }
         logger.info { "EventBatchCollector is closed. " }
     }
+
+    @JsonPropertyOrder("name", "value")
+    private class ParametersRow(val name: String, val value: String) : IRow
 }

@@ -14,8 +14,11 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
+import com.exactpro.th2.codec.util.messageIds
 import com.exactpro.th2.common.grpc.*
+import com.exactpro.th2.common.message.plusAssign
 import com.exactpro.th2.common.schema.message.MessageRouter
+import mu.KotlinLogging
 
 class SyncEncoder(
     router: MessageRouter<MessageGroupBatch>,
@@ -25,30 +28,59 @@ class SyncEncoder(
     router,
     applicationContext
 ) {
-    override fun getDirection(): Direction = Direction.ENCODE
+    private val protocol = processor.protocol
 
+    override fun getDirection(): Direction = Direction.ENCODE
 
     override fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean = resultBatch.groupsCount > 0
 
     override fun checkResult(protoResult: MessageGroup): Boolean = protoResult.messagesCount > 0
 
-    override fun processMessageGroup(it: MessageGroup): MessageGroup? {
-        if (it.messagesCount < 1) {
+    override fun isTransformationComplete(protoResult: MessageGroupBatch): Boolean = protoResult.groupsList.asSequence()
+        .flatMap(MessageGroup::getMessagesList)
+        .all(AnyMessage::hasRawMessage)
+
+    override fun processMessageGroup(messageGroup: MessageGroup): MessageGroup? {
+        if (messageGroup.messagesCount < 1) {
             return null
+        }
+
+        if (!messageGroup.isEncodable()) {
+            LOGGER.debug { "No messages of $protocol protocol or mixed empty and non-empty protocols are present, ids ${messageGroup.messageIds}" }
+            return messageGroup
         }
 
         val groupBuilder = MessageGroup.newBuilder()
 
-        for (notTypeMessage in it.messagesList) {
+        for (notTypeMessage in messageGroup.messagesList) {
             if (notTypeMessage.hasMessage()) {
                 val message = notTypeMessage.message
-                groupBuilder.addMessages(AnyMessage.newBuilder().setRawMessage(processor.process(message)).build())
-            } else {
-                groupBuilder.addMessages(notTypeMessage)
+                if (checkProtocol(message)) {
+                    groupBuilder += processor.process(message)
+                    continue
+                }
             }
+            groupBuilder.addMessages(notTypeMessage)
         }
 
         return groupBuilder.build()
+    }
+
+    private fun checkProtocol(message: Message) = message.metadata.protocol.let {
+        it.isNullOrEmpty() || it == protocol
+    }
+
+    private fun MessageGroup.isEncodable(): Boolean {
+        val protocols = messagesList.asSequence()
+            .filter(AnyMessage::hasMessage)
+            .map { it.message.metadata.protocol }
+            .toList()
+
+        return protocols.all(String::isBlank) || protocols.none(String::isBlank) && protocol in protocols
+    }
+
+    companion object {
+        private val LOGGER = KotlinLogging.logger { }
     }
 }
 
