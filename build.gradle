@@ -19,11 +19,12 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.6.21'
     id 'application'
     id 'com.palantir.docker' version '0.25.0'
+    id "org.owasp.dependencycheck" version "8.1.0"
 }
 
 ext {
     genDir             = file('src/gen')
-    sailfishVersion    = '3.3.26'
+    sailfishVersion    = '3.3.54'
     excludeSailfish = { rcd ->
         rcd.excludeModule("com.exactpro.sf", "sailfish-core")
         rcd.excludeModule("com.exactpro.sf", "sailfish-common")
@@ -88,8 +89,8 @@ repositories {
 
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.0.2')
-    implementation ('com.exactpro.th2:common:5.0.0-dev-version-5-3836678398-SNAPSHOT') {
+    api platform('com.exactpro.th2:bom:4.1.0')
+    implementation ('com.exactpro.th2:common:5.1.0-dev-version-5-4085018593-8adee33-SNAPSHOT') {
         because('senging to direct queues')
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
         exclude group: 'com.exactpro.th2', module: 'cradle-core'
