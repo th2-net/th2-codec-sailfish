@@ -245,9 +245,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 + 4.0.0
   * Migration to kotlin:1.6.21
-  * Migration to sailfish:3.3.26
-  * Migration to bom:4.0.2
-  * Migration to common:5.0.0
+  * Migration to sailfish:3.3.54
+  * Migration to bom:4.1.0
+  * Migration to common:5.1.0
   + Migration to books/pages cradle 5.0.0
   + Added ability to define dictionaries via custom config in based on sailfish adapters
   + Uses event batcher which supports publication by timeout and packs events into a batch by specified count and size in bytes.
