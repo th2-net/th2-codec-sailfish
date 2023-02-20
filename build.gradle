@@ -89,7 +89,7 @@ repositories {
 
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.1.0')
+    api platform('com.exactpro.th2:bom:4.2.0')
     implementation ('com.exactpro.th2:common:5.1.0-dev-version-5-4085018593-8adee33-SNAPSHOT') {
         because('senging to direct queues')
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
@@ -97,7 +97,7 @@ dependencies {
         exclude group: 'com.exactpro.th2', module: 'cradle-cassandra'
     }
     implementation 'com.exactpro.th2:common-utils:0.0.1-book-and-page-3836172629-SNAPSHOT'
-    implementation 'com.exactpro.th2:sailfish-utils:3.13.0'
+    implementation 'com.exactpro.th2:sailfish-utils:3.14.0'
 
     implementation 'io.github.microutils:kotlin-logging:3.0.4'
 
