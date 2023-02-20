@@ -14,9 +14,23 @@
  *  limitations under the License.
  */
 
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    ext {
+        kotlin_version = "1.6.21"
+    }
+
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
+    }
+}
+
 plugins {
     id 'java'
-    id 'org.jetbrains.kotlin.jvm' version '1.6.21'
+    id 'org.jetbrains.kotlin.jvm' version "${kotlin_version}"
     id 'application'
     id 'com.palantir.docker' version '0.25.0'
     id "org.owasp.dependencycheck" version "8.1.0"
@@ -30,11 +44,17 @@ ext {
         rcd.excludeModule("com.exactpro.sf", "sailfish-common")
         rcd.excludeModule("com.exactpro.sf", "sailfish-rest-api-client")
         rcd.excludeModule("com.exactpro.sf", "service-http")
-    }
-}
+    }}
 
 group 'com.exactpro.th2'
 version release_version
+
+ext.excludeSailfish = { rcd ->
+    rcd.excludeModule("com.exactpro.sf", "sailfish-core")
+    rcd.excludeModule("com.exactpro.sf", "sailfish-common")
+    rcd.excludeModule("com.exactpro.sf", "sailfish-rest-api-client")
+    rcd.excludeModule("com.exactpro.sf", "service-http")
+}
 
 repositories {
     maven {
@@ -73,17 +93,14 @@ repositories {
             ignoreGradleMetadataRedirection()
         }
     }
-    mavenCentral {
-        metadataSources {
-            mavenPom()
-            artifact()
-        }
-    }
+    mavenCentral()
     mavenLocal()
 
     configurations.all {
-        resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
-        resolutionStrategy.cacheDynamicVersionsFor 0, 'seconds'
+        resolutionStrategy {
+            cacheChangingModulesFor 0, 'seconds'
+            cacheDynamicVersionsFor 0, 'seconds'
+        }
     }
 }
 

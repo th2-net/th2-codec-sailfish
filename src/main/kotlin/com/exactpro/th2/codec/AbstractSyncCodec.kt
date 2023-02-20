@@ -22,14 +22,20 @@ import com.exactpro.th2.common.schema.message.MessageRouter
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
+import mu.KotlinLogging
+
 
 abstract class AbstractSyncCodec(
     private val router: MessageRouter<MessageGroupBatch>,
     private val applicationContext: ApplicationContext
 ) : AutoCloseable, MessageListener<MessageGroupBatch> {
 
+    protected val logger = KotlinLogging.logger {}
     private var targetAttributes: String = ""
+    private val enabledExternalRouting: Boolean = applicationContext.enabledExternalRouting
     private val async = Runtime.getRuntime().availableProcessors() > 1
+
+
 
     fun start(sourceAttributes: String, targetAttributes: String) {
         try {
@@ -58,8 +64,10 @@ abstract class AbstractSyncCodec(
 
     private fun processMessageGroupAsync(index: Int, group: MessageGroup) = CompletableFuture.supplyAsync { runProcessMessageGroup(index, group) }
 
-    override fun handle(deliveryMetadata: DeliveryMetadata, groupBatch: MessageGroupBatch) {
-        if (groupBatch.groupsCount < 1) { return }
+    override fun handle(deliveryMetadata: DeliveryMetadata?, groupBatch: MessageGroupBatch) {
+        if (groupBatch.groupsCount < 1) {
+            return
+        }
 
         val resultBuilder = MessageGroupBatch.newBuilder()
 
@@ -78,6 +86,11 @@ abstract class AbstractSyncCodec(
         }
         val result = resultBuilder.build()
         if (checkResultBatch(result)) {
+            val externalQueue = result.metadata.externalQueue
+            if (enabledExternalRouting && externalQueue.isNotBlank() && isTransformationComplete(result)) {
+                router.sendExclusive(externalQueue, result)
+                return
+            }
             router.sendAll(result, this.targetAttributes)
         }
     }
@@ -112,4 +125,6 @@ abstract class AbstractSyncCodec(
     protected abstract fun processMessageGroup(messageGroup: MessageGroup): MessageGroup?
 
     abstract fun checkResult(protoResult: MessageGroup): Boolean
+
+    abstract fun isTransformationComplete(protoResult: MessageGroupBatch): Boolean
 }

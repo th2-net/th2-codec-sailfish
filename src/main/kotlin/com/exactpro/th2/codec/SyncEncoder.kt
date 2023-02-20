@@ -36,6 +36,10 @@ class SyncEncoder(
 
     override fun checkResult(protoResult: MessageGroup): Boolean = protoResult.messagesCount > 0
 
+    override fun isTransformationComplete(protoResult: MessageGroupBatch): Boolean = protoResult.groupsList.asSequence()
+        .flatMap(MessageGroup::getMessagesList)
+        .all(AnyMessage::hasRawMessage)
+
     override fun processMessageGroup(messageGroup: MessageGroup): MessageGroup? {
         if (messageGroup.messagesCount < 1) {
             return null

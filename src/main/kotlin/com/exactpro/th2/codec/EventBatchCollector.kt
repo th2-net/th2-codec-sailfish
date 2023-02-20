@@ -16,6 +16,7 @@
 
 package com.exactpro.th2.codec
 
+import com.exactpro.th2.codec.util.toDebugString
 import com.exactpro.th2.common.event.EventUtils
 import com.exactpro.th2.common.event.bean.IRow
 import com.exactpro.th2.common.event.bean.builder.TableBuilder

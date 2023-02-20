@@ -67,6 +67,7 @@ These parameters specify the codec that will be used for the messages decoding/e
 They should be defined in the `custom-config` section of the component configuration.
 
 ```yaml
+enabledExternalQueueRouting: false #option to enable/disable external queue routing logic. Default value is false.
 codecClassName: fully.qualified.class.name.for.Factory
 decodeProcessorType: CUMULATIVE
 converterParameters:
@@ -163,6 +164,7 @@ metadata:
   name: codec
 spec:
   custom-config:
+    enabledExternalQueueRouting: false
     codecClassName: fully.qualified.class.name.for.Factory
     decodeProcessorType: CUMULATIVE
     converterParameters:
@@ -251,6 +253,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
   + Migration to books/pages cradle 5.0.0
   + Added ability to define dictionaries via custom config in based on sailfish adapters
   + Uses event batcher which supports publication by timeout and packs events into a batch by specified count and size in bytes.
+  + Added ability to redirect messages using externalQueue attribute
   + Migrated to log4j2
 
 + 3.14.1
@@ -267,12 +270,12 @@ The filtering can also be applied for pins with  `subscribe` attribute.
     + Deprecated `registerModule(KotlinModule())` was replaced with `registerKotlinModule()`
 
 + 3.13.0
-    + Codec handles messages with its protocol or empty during encode/decode
-    + The common library update from 3.29.2 to 3.32.0 
-    + The sailfish-utils library update from 3.8.0 to 3.12.3 
-    + The sailfish-core library update from 3.2.1741 to 3.2.1776 
-    + The kotlin update from 1.3.71 to 1.5.30 
-    + The kotlin-logging library update from 1.7.+ to 2.0.11 
+  + Codec handles messages with its protocol or empty during encode/decode
+  + The common library update from 3.29.2 to 3.32.0
+  + The sailfish-utils library update from 3.8.0 to 3.12.3
+  + The sailfish-core library update from 3.2.1741 to 3.2.1776
+  + The kotlin update from 1.3.71 to 1.5.30
+  + The kotlin-logging library update from 1.7.+ to 2.0.11
 
 + 3.12.3
     + Update sailfish dependencies from `3.2.1674` to `3.2.1741`
