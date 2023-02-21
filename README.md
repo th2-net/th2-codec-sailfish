@@ -1,4 +1,4 @@
-# How it works (4.0.0)
+# How it works (4.0.1)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -246,6 +246,9 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 4.0.1
+  * Fixed: codec does not publish error events
 
 + 4.0.0
   * Migration to kotlin:1.6.21
