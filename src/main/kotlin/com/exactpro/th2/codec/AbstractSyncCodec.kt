@@ -19,21 +19,22 @@ import com.exactpro.th2.common.grpc.MessageGroupBatch
 import com.exactpro.th2.common.schema.message.DeliveryMetadata
 import com.exactpro.th2.common.schema.message.MessageListener
 import com.exactpro.th2.common.schema.message.MessageRouter
+import mu.KotlinLogging
 import java.io.IOException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
-import mu.KotlinLogging
 
 
 abstract class AbstractSyncCodec(
     private val router: MessageRouter<MessageGroupBatch>,
-    private val applicationContext: ApplicationContext
+    private val applicationContext: ApplicationContext,
+    enabledVerticalScaling: Boolean = false
 ) : AutoCloseable, MessageListener<MessageGroupBatch> {
 
     protected val logger = KotlinLogging.logger {}
     private var targetAttributes: String = ""
     private val enabledExternalRouting: Boolean = applicationContext.enabledExternalRouting
-    private val async = Runtime.getRuntime().availableProcessors() > 1
+    private val async = enabledVerticalScaling && Runtime.getRuntime().availableProcessors() > 1
 
 
 

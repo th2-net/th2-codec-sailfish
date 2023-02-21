@@ -24,10 +24,12 @@ import mu.KotlinLogging
 class SyncDecoder(
     router: MessageRouter<MessageGroupBatch>,
     applicationContext: ApplicationContext,
-    private val processor: AbstractCodecProcessor<RawMessage, List<Message.Builder>>
+    private val processor: AbstractCodecProcessor<RawMessage, List<Message.Builder>>,
+    enabledVerticalScaling: Boolean = false
 ) : AbstractSyncCodec(
     router,
-    applicationContext
+    applicationContext,
+    enabledVerticalScaling
 ) {
     private val protocol = processor.protocol
 

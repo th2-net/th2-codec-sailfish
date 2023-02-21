@@ -23,10 +23,12 @@ import mu.KotlinLogging
 class SyncEncoder(
     router: MessageRouter<MessageGroupBatch>,
     applicationContext: ApplicationContext,
-    private val processor: AbstractCodecProcessor<Message, RawMessage.Builder>
+    private val processor: AbstractCodecProcessor<Message, RawMessage.Builder>,
+    enabledVerticalScaling: Boolean = false
 ) : AbstractSyncCodec(
     router,
-    applicationContext
+    applicationContext,
+    enabledVerticalScaling
 ) {
     private val protocol = processor.protocol
 

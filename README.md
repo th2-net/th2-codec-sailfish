@@ -68,6 +68,7 @@ They should be defined in the `custom-config` section of the component configura
 
 ```yaml
 enabledExternalQueueRouting: false #option to enable/disable external queue routing logic. Default value is false.
+enableVerticalScaling: false #option to control vertical scaling mode. Codec splits an incoming batch into message groups and process each of them via the CompletableFuture. The default value is `false`. Please note this is experimental feature.
 codecClassName: fully.qualified.class.name.for.Factory
 decodeProcessorType: CUMULATIVE
 converterParameters:
@@ -248,13 +249,14 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 + 4.0.0
   * Migration to kotlin:1.6.21
   * Migration to sailfish:3.3.54
-  * Migration to bom:4.1.0
+  * Migration to bom:4.2.0
   * Migration to common:5.1.0
-  + Migration to books/pages cradle 5.0.0
+  + Migration to books & pages concept
   + Added ability to define dictionaries via custom config in based on sailfish adapters
   + Uses event batcher which supports publication by timeout and packs events into a batch by specified count and size in bytes.
   + Added ability to redirect messages using externalQueue attribute
   + Migrated to log4j2
+  + Added option to disable vertical scaling
 
 + 3.14.1
   + message batch will be processed asynchronously if more than one CPU core is available

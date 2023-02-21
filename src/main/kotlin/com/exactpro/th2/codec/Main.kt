@@ -77,7 +77,8 @@ class CodecCommand : CliktCommand() {
                         applicationContext.codecSettings,
                         applicationContext.messageToProtoConverter,
                         applicationContext.eventBatchCollector
-                    )
+                    ),
+                    configuration.enableVerticalScaling
                 ).also { it.start(configuration.decoderInputAttribute, configuration.decoderOutputAttribute) }
             }
 
@@ -90,7 +91,8 @@ class CodecCommand : CliktCommand() {
                         applicationContext.codecSettings,
                         applicationContext.protoToIMessageConverter,
                         applicationContext.eventBatchCollector
-                    )
+                    ),
+                    configuration.enableVerticalScaling
                 ).also { it.start(configuration.encoderInputAttribute, configuration.encoderOutputAttribute) }
             }
 
@@ -117,7 +119,8 @@ class CodecCommand : CliktCommand() {
                     context.codecSettings,
                     context.protoToIMessageConverter,
                     context.eventBatchCollector
-                )
+                ),
+                configuration.enableVerticalScaling
             ).also { it.start(configuration.generalEncoderInputAttribute, configuration.generalEncoderOutputAttribute) }
         }
     }
@@ -136,7 +139,8 @@ class CodecCommand : CliktCommand() {
                     context.codecSettings,
                     context.messageToProtoConverter,
                     context.eventBatchCollector
-                )
+                ),
+                configuration.enableVerticalScaling
             ).also { it.start(configuration.generalDecoderInputAttribute, configuration.generalDecoderOutputAttribute) }
         }
     }
