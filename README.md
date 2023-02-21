@@ -166,6 +166,7 @@ metadata:
 spec:
   custom-config:
     enabledExternalQueueRouting: false
+    enableVerticalScaling: false
     codecClassName: fully.qualified.class.name.for.Factory
     decodeProcessorType: CUMULATIVE
     converterParameters:
