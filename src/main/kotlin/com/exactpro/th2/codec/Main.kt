@@ -18,7 +18,6 @@ import com.exactpro.th2.codec.configuration.Configuration
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.parameters.options.option
-import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import java.util.Deque
 import java.util.concurrent.ConcurrentLinkedDeque
@@ -50,7 +49,7 @@ class CodecCommand : CliktCommand() {
         })
     }
 
-    override fun run() = runBlocking {
+    override fun run() {
         try {
             val commonFactory = (if (configs == null)
                 CommonFactory()
@@ -78,7 +77,8 @@ class CodecCommand : CliktCommand() {
                         applicationContext.codecSettings,
                         applicationContext.messageToProtoConverter,
                         applicationContext.eventBatchCollector
-                    )
+                    ),
+                    configuration.enableVerticalScaling
                 ).also { it.start(configuration.decoderInputAttribute, configuration.decoderOutputAttribute) }
             }
 
@@ -91,7 +91,8 @@ class CodecCommand : CliktCommand() {
                         applicationContext.codecSettings,
                         applicationContext.protoToIMessageConverter,
                         applicationContext.eventBatchCollector
-                    )
+                    ),
+                    configuration.enableVerticalScaling
                 ).also { it.start(configuration.encoderInputAttribute, configuration.encoderOutputAttribute) }
             }
 
@@ -118,7 +119,8 @@ class CodecCommand : CliktCommand() {
                     context.codecSettings,
                     context.protoToIMessageConverter,
                     context.eventBatchCollector
-                )
+                ),
+                configuration.enableVerticalScaling
             ).also { it.start(configuration.generalEncoderInputAttribute, configuration.generalEncoderOutputAttribute) }
         }
     }
@@ -137,7 +139,8 @@ class CodecCommand : CliktCommand() {
                     context.codecSettings,
                     context.messageToProtoConverter,
                     context.eventBatchCollector
-                )
+                ),
+                configuration.enableVerticalScaling
             ).also { it.start(configuration.generalDecoderInputAttribute, configuration.generalDecoderOutputAttribute) }
         }
     }

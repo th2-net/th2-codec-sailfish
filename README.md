@@ -68,6 +68,7 @@ They should be defined in the `custom-config` section of the component configura
 
 ```yaml
 enabledExternalQueueRouting: false #option to enable/disable external queue routing logic. Default value is false.
+enableVerticalScaling: false #option to control vertical scaling mode. Codec splits an incoming batch into message groups and process each of them via the CompletableFuture. The default value is `false`. Please note this is experimental feature.
 codecClassName: fully.qualified.class.name.for.Factory
 decodeProcessorType: CUMULATIVE
 converterParameters:
@@ -165,6 +166,7 @@ metadata:
 spec:
   custom-config:
     enabledExternalQueueRouting: false
+    enableVerticalScaling: false
     codecClassName: fully.qualified.class.name.for.Factory
     decodeProcessorType: CUMULATIVE
     converterParameters:
@@ -244,16 +246,31 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
 + 4.0.0
-    + Migration to books/pages cradle 4.0.0
-    + Added ability to define dictionaries via custom config in based on sailfish adapters
-    + Added ability to redirect messages using externalQueue attribute
-  
+  * Migration to kotlin:1.6.21
+  * Migration to sailfish:3.3.54
+  * Migration to bom:4.2.0
+  * Migration to common:5.1.0
+  + Migration to books & pages concept
+  + Added ability to define dictionaries via custom config in based on sailfish adapters
+  + Uses event batcher which supports publication by timeout and packs events into a batch by specified count and size in bytes.
+  + Added ability to redirect messages using externalQueue attribute
+  + Migrated to log4j2
+  + Added option to disable vertical scaling
+
++ 3.14.1
+  + message batch will be processed asynchronously if more than one CPU core is available
+
 + 3.14.0
-    + Sailfish update to 3.3.54
-    + bom version updated to 4.1.0
-    + common updated to 3.44.0
-    + sailfish utils updated to 3.14.0
+    + Dependencies with vulnerabilities was updated
+    + The common library update from 3.32.0 to 3.42.0
+      + Filter behavior is corrected: only messages that does not match filter are dropped instead of the whole group
+      + Log4j2 is used. Requires logging configuration updates
+    + The sailfish-utils library update from 3.12.3 to 3.13.0
+      + Changed the format for time and date time (always includes milliseconds part)
+    + The sailfish-core library update from 3.2.1776 to 3.3.11
+    + Deprecated `registerModule(KotlinModule())` was replaced with `registerKotlinModule()`
 
 + 3.13.0
   + Codec handles messages with its protocol or empty during encode/decode
@@ -264,15 +281,14 @@ The filtering can also be applied for pins with  `subscribe` attribute.
   + The kotlin-logging library update from 1.7.+ to 2.0.11
 
 + 3.12.3
-  + Update sailfish dependencies from `3.2.1674` to `3.2.1741`
-  + Change default value for `outgoingEventBatchBuildTime`.
-    The value defines time in seconds the previous default value caused a long delay before event reporting
-  + Replaced custom protobuf message printing with `MessageUtils.toJson()`
-  + Use name from the schema for codec's root event
-  + Add information about codec's parameters into a body for root event
-  + The common library update from 3.25.1 to 3.29.2
-    + Fix filtering by `message_type` for pins
-
+    + Update sailfish dependencies from `3.2.1674` to `3.2.1741`
+    + Change default value for `outgoingEventBatchBuildTime`.
+      The value defines time in seconds the previous default value caused a long delay before event reporting
+    + Replaced custom protobuf message printing with `MessageUtils.toJson()`
+    + Use name from the schema for codec's root event
+    + Add information about codec's parameters into a body for root event
+    + The common library update from 3.25.1 to 3.29.2
+      + Fix filtering by `message_type` for pins
 
 + 3.12.2
     + Fix error when we try to synchronize on `lateinit` property when it is not initialized yet

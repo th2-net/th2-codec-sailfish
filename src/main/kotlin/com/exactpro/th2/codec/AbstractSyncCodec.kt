@@ -21,21 +21,26 @@ import com.exactpro.th2.common.schema.message.MessageListener
 import com.exactpro.th2.common.schema.message.MessageRouter
 import mu.KotlinLogging
 import java.io.IOException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeoutException
 
+
 abstract class AbstractSyncCodec(
-    protected val router: MessageRouter<MessageGroupBatch>,
-    protected val applicationContext: ApplicationContext
+    private val router: MessageRouter<MessageGroupBatch>,
+    private val applicationContext: ApplicationContext,
+    enabledVerticalScaling: Boolean = false
 ) : AutoCloseable, MessageListener<MessageGroupBatch> {
 
     protected val logger = KotlinLogging.logger {}
-    protected var tagretAttributes: String = ""
+    private var targetAttributes: String = ""
     private val enabledExternalRouting: Boolean = applicationContext.enabledExternalRouting
+    private val async = enabledVerticalScaling && Runtime.getRuntime().availableProcessors() > 1
+
 
 
     fun start(sourceAttributes: String, targetAttributes: String) {
         try {
-            this.tagretAttributes = targetAttributes
+            this.targetAttributes = targetAttributes
             router.subscribeAll(this, sourceAttributes)
         } catch (exception: Exception) {
             when (exception) {
@@ -47,14 +52,7 @@ abstract class AbstractSyncCodec(
     }
 
     override fun close() {
-        val exceptions = mutableListOf<Exception>()
-
         router.close()
-        if (exceptions.isNotEmpty()) {
-            throw RuntimeException("could not close decoder").also {
-                exceptions.forEach { exception -> it.addSuppressed(exception) }
-            }
-        }
     }
 
     private fun close(closeable: AutoCloseable, name: String, exceptions: MutableList<Exception>) {
@@ -65,30 +63,28 @@ abstract class AbstractSyncCodec(
         }
     }
 
+    private fun processMessageGroupAsync(index: Int, group: MessageGroup) = CompletableFuture.supplyAsync { runProcessMessageGroup(index, group) }
+
     override fun handle(deliveryMetadata: DeliveryMetadata?, groupBatch: MessageGroupBatch) {
         if (groupBatch.groupsCount < 1) {
             return
         }
 
         val resultBuilder = MessageGroupBatch.newBuilder()
-            .setMetadata(groupBatch.metadata)
-        groupBatch.groupsList.filter { it.messagesCount > 0 }.forEachIndexed { index, group ->
-            try {
-                processMessageGroup(group).apply {
-                    if (this != null && checkResult(this)) {
-                        resultBuilder.addGroups(this)
-                    }
-                }
-            } catch (exception: Exception) {
-                applicationContext.eventBatchCollector.createAndStoreErrorEvent(
-                    "Cannot process not empty group number ${index + 1}",
-                    exception,
-                    getDirection(),
-                    group
-                )
+
+        if (async) {
+            val messageGroupFutures = Array<CompletableFuture<MessageGroup?>> (groupBatch.groupsCount) {
+                processMessageGroupAsync(it, groupBatch.getGroups(it))
+            }
+
+            CompletableFuture.allOf(*messageGroupFutures).whenComplete { _, _ ->
+                messageGroupFutures.forEach { it.get()?.run(resultBuilder::addGroups) }
+            }.get()
+        } else {
+            groupBatch.groupsList.forEachIndexed { index, group ->
+                runProcessMessageGroup(index, group)?.run(resultBuilder::addGroups)
             }
         }
-
         val result = resultBuilder.build()
         if (checkResultBatch(result)) {
             val externalQueue = result.metadata.externalQueue
@@ -96,14 +92,33 @@ abstract class AbstractSyncCodec(
                 router.sendExclusive(externalQueue, result)
                 return
             }
-            router.sendAll(result, this.tagretAttributes)
+            router.sendAll(result, this.targetAttributes)
         }
+    }
+
+    private fun runProcessMessageGroup(
+        index: Int,
+        group: MessageGroup
+    ): MessageGroup? {
+        if (group.messagesCount == 0) return null
+
+        try {
+            return processMessageGroup(group)?.takeIf(::checkResult)
+        } catch (exception: Exception) {
+            applicationContext.eventBatchCollector.createAndStoreErrorEvent(
+                "Cannot process not empty group number ${index + 1}",
+                exception,
+                getDirection(),
+                group
+            )
+        }
+
+        return null
     }
 
     enum class Direction {
         ENCODE, DECODE
     }
-
     protected abstract fun getDirection(): Direction
 
     protected abstract fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2022 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -26,90 +26,42 @@ import com.exactpro.th2.common.grpc.EventID
 import com.exactpro.th2.common.grpc.MessageGroup
 import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.message.isValid
+import com.exactpro.th2.common.message.logId
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.schema.message.MessageRouter
+import com.exactpro.th2.common.utils.event.EventBatcher
+import com.exactpro.th2.common.utils.message.logId
 import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import mu.KotlinLogging
 import java.time.LocalDateTime
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
 
 private val logger = KotlinLogging.logger {}
 
-class CollectorTask {
-    @Volatile
-    lateinit var eventBatchBuilder: EventBatch.Builder
-
-    @Volatile
-    lateinit var scheduledFuture: ScheduledFuture<*>
-
-    @Volatile
-    var isSent: Boolean = false
-
-    fun update(
-        event: Event,
-        scheduleCollectorTask: (collectorTask: CollectorTask) -> ScheduledFuture<*>
-    ) {
-        eventBatchBuilder = EventBatch.newBuilder().setParentEventId(event.parentId)
-        scheduledFuture = scheduleCollectorTask(this)
-        isSent = false
-    }
-}
-
 class EventBatchCollector(
     private val eventBatchRouter: MessageRouter<EventBatch>,
-    private val maxBatchSize: Int,
-    private val timeout: Long,
+    maxBatchSizeInBytes: Long,
+    maxBatchSizeInItems: Int,
+    maxFlushTime: Long,
     numOfEventBatchCollectorWorkers: Int,
     private val boxBookName: String
 ) : AutoCloseable {
-    private val collectorTasks = ConcurrentHashMap<EventID, CollectorTask>()
     private val scheduler = Executors.newScheduledThreadPool(numOfEventBatchCollectorWorkers)
+    private val eventBatcher = EventBatcher(
+        maxBatchSizeInBytes,
+        maxBatchSizeInItems,
+        maxFlushTime,
+        scheduler,
+        eventBatchRouter::sendAll
+    )
 
     private lateinit var rootEventID: EventID
     private lateinit var decodeErrorGroupEventID: EventID
     private lateinit var encodeErrorGroupEventID: EventID
 
-    private fun putEvent(event: Event) {
-        val collectorTask = collectorTasks.computeIfAbsent(event.parentId) {
-            CollectorTask().apply {
-                update(event, this@EventBatchCollector::scheduleCollectorTask)
-            }
-        }
-
-        synchronized(collectorTask) {
-            if (collectorTask.isSent) {
-                collectorTasks[event.parentId] = collectorTask.apply {
-                    update(event, this@EventBatchCollector::scheduleCollectorTask)
-                }
-            }
-            collectorTask.eventBatchBuilder.addEvents(event)
-            if (collectorTask.eventBatchBuilder.eventsList.size == maxBatchSize) {
-                collectorTask.isSent = true
-                collectorTask.scheduledFuture.cancel(true)
-                eventBatchRouter.send(collectorTask.eventBatchBuilder.build())
-                collectorTasks.remove(event.parentId)
-            }
-        }
-    }
-
-    private fun scheduleCollectorTask(collectorTask: CollectorTask): ScheduledFuture<*> =
-        scheduler.schedule(
-            { executeCollectorTask(collectorTask) },
-            timeout, TimeUnit.SECONDS
-        )
-
-    private fun executeCollectorTask(collectorTask: CollectorTask) {
-        synchronized(collectorTask) {
-            if (!collectorTask.isSent) {
-                collectorTask.isSent = true
-                eventBatchRouter.send(collectorTask.eventBatchBuilder.build())
-                collectorTasks.remove(collectorTask.eventBatchBuilder.parentEventId)
-            }
-        }
-    }
+    private fun putEvent(event: Event) = eventBatcher.onEvent(event)
 
     fun createAndStoreDecodeErrorEvent(errorText: String, rawMessage: RawMessage, exception: Exception? = null) {
         try {
@@ -121,8 +73,8 @@ class EventBatchCollector(
             )
             logger.error { "${errorText}. Error event id: ${event.id.toJson()}" }
             putEvent(event)
-        } catch (exception: Exception) {
-            logger.warn(exception) { "could not send codec error event" }
+        } catch (e: Exception) {
+            logger.error(e) { "could not send codec error event. text: $errorText, message id: ${rawMessage.metadata.id.logId}, cause: $exception" }
         }
     }
 
@@ -136,10 +88,10 @@ class EventBatchCollector(
             val parentEventId = getParentEventIdFromGroup(direction, group)
             val messageIDs = getMessageIDsFromGroup(group)
             val event = createErrorEvent("Cannot process message group", errorText, exception, parentEventId, messageIDs)
-            logger.error(exception) { "${errorText}. Error event id: ${event.id.toDebugString()}" }
+            logger.error(exception) { "${errorText}. Error event id: ${event.id.toJson()}" }
             putEvent(event)
-        } catch (exception: Exception) {
-            logger.warn(exception) { "could not send codec error event" }
+        } catch (e: Exception) {
+            logger.error(e) { "could not send codec error event. text: $errorText, group id: ${ if (group.messagesList.isEmpty()) "" else group.getMessages(0).logId }, direction: $direction, cause: $exception" }
         }
     }
 
@@ -153,7 +105,7 @@ class EventBatchCollector(
             logger.error(exception) { "${errorText}. Error event id: ${event.id.toJson()}" }
             putEvent(event)
         } catch (exception: Exception) {
-            logger.warn(exception) { "could not send codec error event" }
+            logger.error(exception) { "could not send codec error event. name: $name, text: $errorText, cause: $exception" }
         }
     }
 
@@ -165,7 +117,7 @@ class EventBatchCollector(
                 .type("CodecRoot")
                 .apply {
                     bodyData(EventUtils.createMessageBean("Protocol: $protocol"))
-                    if (codecParameters == null || codecParameters.isEmpty()) {
+                    if (codecParameters.isNullOrEmpty()) {
                         bodyData(EventUtils.createMessageBean("No parameters specified for codec"))
                     } else {
                         bodyData(EventUtils.createMessageBean("Codec parameters:"))
@@ -191,7 +143,7 @@ class EventBatchCollector(
             initEncodeEventRoot(rootEventID)
 
         } catch (exception: Exception) {
-            logger.warn(exception) { "could not init root event structure" }
+            logger.error(exception) { "could not init root event structure" }
             throw exception
         }
     }
@@ -243,7 +195,7 @@ class EventBatchCollector(
         errorText: String,
         exception: Exception?,
         parentEventId: EventID,
-        messageIDS: List<MessageID> = mutableListOf()
+        messageIds: List<MessageID> = mutableListOf()
     ): Event = com.exactpro.th2.common.event.Event
         .start()
         .name(name)
@@ -254,8 +206,10 @@ class EventBatchCollector(
             if (exception != null) {
                 exception(exception, true)
             }
-            messageIDS.forEach {
-                messageID(it)
+            messageIds.forEach {
+                if (it.isValid) {
+                    messageID(it)
+                }
             }
         }
         .toProto(parentEventId)
@@ -293,16 +247,7 @@ class EventBatchCollector(
     override fun close() {
         logger.info { "Closing EventBatchCollector. Sending unsent batches." }
 
-        collectorTasks.values.forEach {
-            synchronized(it) {
-                if (!it.isSent) {
-                    it.isSent = true
-                    it.scheduledFuture.cancel(true)
-                    eventBatchRouter.send(it.eventBatchBuilder.build())
-                }
-            }
-        }
-        collectorTasks.clear()
+        eventBatcher.close()
         scheduler.shutdown()
         if (scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
             logger.warn("Cannot shutdown scheduler for 5 seconds")
@@ -311,6 +256,7 @@ class EventBatchCollector(
         logger.info { "EventBatchCollector is closed. " }
     }
 
+    @Suppress("unused")
     @JsonPropertyOrder("name", "value")
     private class ParametersRow(val name: String, val value: String) : IRow
 }

@@ -23,10 +23,12 @@ import mu.KotlinLogging
 class SyncEncoder(
     router: MessageRouter<MessageGroupBatch>,
     applicationContext: ApplicationContext,
-    private val processor: AbstractCodecProcessor<Message, RawMessage.Builder>
+    private val processor: AbstractCodecProcessor<Message, RawMessage.Builder>,
+    enabledVerticalScaling: Boolean = false
 ) : AbstractSyncCodec(
     router,
-    applicationContext
+    applicationContext,
+    enabledVerticalScaling
 ) {
     private val protocol = processor.protocol
 
@@ -67,7 +69,7 @@ class SyncEncoder(
     }
 
     private fun checkProtocol(message: Message) = message.metadata.protocol.let {
-        it.isNullOrEmpty() || it == protocol
+        it.isNullOrEmpty() || processor.protocol.equals(it, ignoreCase = true)
     }
 
     private fun MessageGroup.isEncodable(): Boolean {
@@ -76,7 +78,7 @@ class SyncEncoder(
             .map { it.message.metadata.protocol }
             .toList()
 
-        return protocols.all(String::isBlank) || protocols.none(String::isBlank) && protocol in protocols
+        return protocols.all(String::isBlank) || protocols.none(String::isBlank) && protocols.any { protocol.equals(it, ignoreCase = true) }
     }
 
     companion object {

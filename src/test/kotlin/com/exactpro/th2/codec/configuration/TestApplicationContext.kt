@@ -21,6 +21,7 @@ import com.exactpro.sf.configuration.workspace.FolderType
 import com.exactpro.sf.externalapi.codec.*
 import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.schema.box.configuration.BoxConfiguration
+import com.exactpro.th2.common.schema.cradle.CradleConfiguration
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.common.schema.grpc.configuration.GrpcConfiguration
@@ -49,10 +50,16 @@ class TestApplicationContext {
     @Test
     fun testDictionarySetting() {
         val configuration = Configuration().apply { codecClassName = CodecFactory::class.java.name }
-        val commonFactory = Mockito.mock(CommonFactory::class.java)
+        val cradleCfg:CradleConfiguration = mock {
+            on { cradleMaxEventBatchSize }.thenReturn(1_024L * 1_024L)
+        }
+        val commonFactory: CommonFactory = mock {
+            on { cradleConfiguration }.thenReturn(cradleCfg)
+        }
 
         `when`(commonFactory.grpcRouter).thenReturn(object : GrpcRouter {
             override fun close(): Unit = TODO("Not yet implemented")
+            @Deprecated("Deprecated in Java")
             override fun init(p0: GrpcRouterConfiguration?): Unit = TODO("Not yet implemented")
             override fun init(configuration: GrpcConfiguration, routerConfiguration: GrpcRouterConfiguration) {
                 TODO("Not yet implemented")
@@ -105,6 +112,7 @@ class TestApplicationContext {
 
         override fun createCodec(settings: IExternalCodecSettings): IExternalCodec = Codec()
         override fun createSettings(): IExternalCodecSettings = Settings()
+        @Deprecated("Set dictionary on an instance instead", replaceWith = ReplaceWith("createSettings()"))
         override fun createSettings(dictionary: IDictionaryStructure): IExternalCodecSettings = TODO("Not yet implemented")
 
         private class Codec : IExternalCodec {
@@ -118,6 +126,7 @@ class TestApplicationContext {
 
             override val dataFiles: MutableMap<SailfishURI, File> = hashMapOf()
             override val dataResources: Table<PluginAlias, ResourcePath, File> = HashBasedTable.create()
+            @Deprecated("Set dictionaries by type instead")
             override val dictionaryFiles: MutableMap<SailfishURI, File> = hashMapOf()
             override val dictionaryTypes: Set<SailfishDictionaryType> = setOf(SailfishDictionaryType.MAIN, SailfishDictionaryType.LEVEL1)
             override val propertyTypes: Map<String, Class<*>> = mapOf()
