@@ -33,6 +33,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version "${kotlin_version}"
     id 'application'
     id 'com.palantir.docker' version '0.25.0'
+    id "org.owasp.dependencycheck" version "8.1.0"
 }
 
 ext {
@@ -101,9 +102,11 @@ repositories {
 
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.1.0')
-    implementation 'com.exactpro.th2:common:3.44.0'
-    implementation 'com.exactpro.th2:sailfish-utils:3.14.0'
+    api platform('com.exactpro.th2:bom:4.2.0')
+    implementation 'com.exactpro.th2:common:3.44.1'
+    implementation ('com.exactpro.th2:sailfish-utils:3.14.0') {
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-yaml' // because of the vulnerability
+    }
 
     implementation 'io.github.microutils:kotlin-logging:2.0.11'
 
@@ -119,7 +122,9 @@ dependencies {
 
     implementation 'com.google.protobuf:protobuf-java-util'
 
-    implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
+    implementation ("com.exactpro.sf:sailfish-core:${sailfishVersion}") {
+        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-yaml' // because of the vulnerability
+    }
 
     testImplementation 'org.mockito:mockito-inline:3.5.6'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
@@ -168,4 +173,15 @@ compileTestKotlin {
 
 application {
     mainClassName = "com.exactpro.th2.codec.MainKt"
+}
+
+dependencyCheck {
+    formats=['SARIF', 'JSON', 'HTML']
+    failBuildOnCVSS=5
+
+    analyzers {
+        assemblyEnabled = false
+        nugetconfEnabled = false
+        nodeEnabled = false
+    }
 }

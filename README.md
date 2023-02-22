@@ -1,4 +1,4 @@
-# How it works (3.14.0)
+# How it works (3.14.1)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -225,6 +225,11 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 3.14.1
+    + bom version updated to 4.2.0
+    + common updated to 3.44.1
+
 + 3.14.0
     + Sailfish update to 3.3.54
     + bom version updated to 4.1.0
