@@ -33,6 +33,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version "${kotlin_version}"
     id 'application'
     id 'com.palantir.docker' version '0.25.0'
+    id "org.owasp.dependencycheck" version "8.1.0"
 }
 
 ext {
@@ -101,8 +102,8 @@ repositories {
 
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.1.0')
-    implementation 'com.exactpro.th2:common:3.44.0'
+    api platform('com.exactpro.th2:bom:4.2.0')
+    implementation 'com.exactpro.th2:common:3.44.1'
     implementation 'com.exactpro.th2:sailfish-utils:3.14.0'
 
     implementation 'io.github.microutils:kotlin-logging:2.0.11'
@@ -168,4 +169,8 @@ compileTestKotlin {
 
 application {
     mainClassName = "com.exactpro.th2.codec.MainKt"
+}
+
+dependencyCheck {
+    formats=['SARIF']
 }
