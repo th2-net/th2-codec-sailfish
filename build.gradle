@@ -172,5 +172,12 @@ application {
 }
 
 dependencyCheck {
-    formats=['SARIF']
+    formats=['SARIF', 'JSON', 'HTML']
+    failBuildOnCVSS=5
+
+    analyzers {
+        assemblyEnabled = false
+        nugetconfEnabled = false
+        nodeEnabled = false
+    }
 }
