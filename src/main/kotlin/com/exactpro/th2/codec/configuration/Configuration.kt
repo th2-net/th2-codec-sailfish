@@ -14,19 +14,19 @@
 package com.exactpro.th2.codec.configuration
 
 import com.exactpro.th2.common.schema.factory.CommonFactory
+import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES
 import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Files.newInputStream
 import java.nio.file.Paths
 
-internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(YAMLFactory()).apply { registerModule(KotlinModule()) }
+internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(JsonFactory()).apply { registerModule(KotlinModule()) }
     .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
 class Configuration(
