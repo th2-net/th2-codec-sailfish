@@ -100,15 +100,17 @@ repositories {
     }
 }
 
+configurations.implementation {
+    exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-yaml' // because of the vulnerability
+    exclude group: 'junit', module: 'junit' // because of the vulnerability
+}
 
 dependencies {
     api platform('com.exactpro.th2:bom:4.2.0')
     implementation 'com.exactpro.th2:common:3.44.1'
-    implementation ('com.exactpro.th2:sailfish-utils:3.14.0') {
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-yaml' // because of the vulnerability
-        exclude group: 'junit', module: 'junit' // because of the vulnerability
-        exclude group: 'com.exactpro.mina', module: 'apache-mina-core' // because of the vulnerability
-    }
+    implementation 'com.exactpro.th2:sailfish-utils:3.14.0'
+
+    implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
 
     implementation 'io.github.microutils:kotlin-logging:2.0.11'
 
@@ -123,12 +125,6 @@ dependencies {
     implementation("com.github.ajalt:clikt:2.7.0")
 
     implementation 'com.google.protobuf:protobuf-java-util'
-
-    implementation ("com.exactpro.sf:sailfish-core:${sailfishVersion}") {
-        exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-yaml' // because of the vulnerability
-        exclude group: 'junit', module: 'junit' // because of the vulnerability
-        exclude group: 'com.exactpro.mina', module: 'apache-mina-core' // because of the vulnerability
-    }
 
     testImplementation 'org.mockito:mockito-inline:3.5.6'
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.1'
