@@ -1,4 +1,4 @@
-# How it works (3.14.3)
+# How it works (3.14.4)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -225,6 +225,9 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 3.14.4
+  + Included `apache-mina-core` to dependencies list
 
 + 3.14.3
   + Excluded `apache-mina-core` from dependencies list
