@@ -1,4 +1,4 @@
-# How it works (4.0.1)
+# How it works (4.0.2)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -265,23 +265,36 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 + 3.14.1
   + message batch will be processed asynchronously if more than one CPU core is available
 
++ 3.14.4
+  + Included `apache-mina-core` to dependencies list
+
++ 3.14.3
+  + Excluded `apache-mina-core` from dependencies list
+
++ 3.14.2
+  + Excluded `junit` from dependencies list
+
++ 3.14.1
+  + bom version updated to 4.2.0
+  + common updated to 3.44.1
+
 + 3.14.0
-    + Dependencies with vulnerabilities was updated
-    + The common library update from 3.32.0 to 3.42.0
-      + Filter behavior is corrected: only messages that does not match filter are dropped instead of the whole group
-      + Log4j2 is used. Requires logging configuration updates
-    + The sailfish-utils library update from 3.12.3 to 3.13.0
-      + Changed the format for time and date time (always includes milliseconds part)
-    + The sailfish-core library update from 3.2.1776 to 3.3.11
-    + Deprecated `registerModule(KotlinModule())` was replaced with `registerKotlinModule()`
+  + Dependencies with vulnerabilities was updated
+  + The common library update from 3.32.0 to 3.44.0
+    + Filter behavior is corrected: only messages that does not match filter are dropped instead of the whole group
+    + Log4j2 is used. Requires logging configuration updates
+  + The sailfish-utils library update from 3.12.3 to 3.13.0
+    + Changed the format for time and date time (always includes milliseconds part)
+  + The sailfish-core library update to 3.14.0
+  + Deprecated `registerModule(KotlinModule())` was replaced with `registerKotlinModule()`
 
 + 3.13.0
-  + Codec handles messages with its protocol or empty during encode/decode
-  + The common library update from 3.29.2 to 3.32.0
-  + The sailfish-utils library update from 3.8.0 to 3.12.3
-  + The sailfish-core library update from 3.2.1741 to 3.2.1776
-  + The kotlin update from 1.3.71 to 1.5.30
-  + The kotlin-logging library update from 1.7.+ to 2.0.11
+    + Codec handles messages with its protocol or empty during encode/decode
+    + The common library update from 3.29.2 to 3.32.0 
+    + The sailfish-utils library update from 3.8.0 to 3.12.3 
+    + The sailfish-core library update from 3.2.1741 to 3.2.1776 
+    + The kotlin update from 1.3.71 to 1.5.30 
+    + The kotlin-logging library update from 1.7.+ to 2.0.11 
 
 + 3.12.3
     + Update sailfish dependencies from `3.2.1674` to `3.2.1741`

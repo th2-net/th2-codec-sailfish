@@ -33,7 +33,7 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version "${kotlin_version}"
     id 'application'
     id 'com.palantir.docker' version '0.25.0'
-    id "org.owasp.dependencycheck" version "8.1.0"
+    id "org.owasp.dependencycheck" version "8.1.2"
 }
 
 ext {
@@ -104,6 +104,10 @@ repositories {
     }
 }
 
+configurations.implementation {
+    exclude group: 'com.fasterxml.jackson.dataformat', module: 'jackson-dataformat-yaml' // because of the vulnerability
+    exclude group: 'junit', module: 'junit' // because of the vulnerability
+}
 
 dependencies {
     api platform('com.exactpro.th2:bom:4.2.0')
@@ -124,6 +128,7 @@ dependencies {
 
     implementation 'com.github.ajalt.clikt:clikt:3.5.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
 
     implementation 'com.google.protobuf:protobuf-java-util'
 
@@ -176,4 +181,15 @@ compileTestKotlin {
 
 application {
     mainClass.set("com.exactpro.th2.codec.MainKt")
+}
+
+dependencyCheck {
+    formats=['SARIF', 'JSON', 'HTML']
+    failBuildOnCVSS=5
+
+    analyzers {
+        assemblyEnabled = false
+        nugetconfEnabled = false
+        nodeEnabled = false
+    }
 }
