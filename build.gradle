@@ -111,7 +111,7 @@ configurations.implementation {
 
 dependencies {
     api platform('com.exactpro.th2:bom:4.2.0')
-    implementation ('com.exactpro.th2:common:5.1.0-dev-version-5-4085018593-8adee33-SNAPSHOT') {
+    implementation ('com.exactpro.th2:common:5.2.0-dev') {
         because('senging to direct queues')
         exclude group: 'com.exactpro.th2', module: 'cradle-core'
         exclude group: 'com.exactpro.th2', module: 'cradle-cassandra'

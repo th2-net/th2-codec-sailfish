@@ -249,6 +249,7 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 + 4.0.2
   * Fixed: excluded vulnerable dependencies
+  * Migration to common: 5.2.0-dev
 
 + 4.0.1
   * Fixed: codec does not publish error events
