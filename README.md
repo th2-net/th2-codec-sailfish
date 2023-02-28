@@ -247,6 +247,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 4.0.2
+  * Fixed: excluded vulnerable dependencies
+
 + 4.0.1
   * Fixed: codec does not publish error events
 
