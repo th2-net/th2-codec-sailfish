@@ -30,6 +30,7 @@ internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(JsonFactory()).apply { r
     .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
 class Configuration(
+    val implementationSettingsFile: String = "codec_config.yml",
     val outgoingEventBatchBuildTime: Long = 30,
     val maxOutgoingEventBatchSize: Int = 99,
     val numOfEventBatchCollectorWorkers: Int = 1,
@@ -61,10 +62,9 @@ class Configuration(
 
     companion object {
 
-        fun create(commonFactory: CommonFactory, sailfishCodecParamsPath: String?): Configuration {
-
+        fun create(commonFactory: CommonFactory): Configuration {
             val configuration = commonFactory.getCustomConfiguration(Configuration::class.java)
-            val implementationParams = readSailfishParameters(sailfishCodecParamsPath)
+            val implementationParams = readSailfishParameters(configuration.implementationSettingsFile)
             configuration.codecParameters = implementationParams.merge(configuration.codecParameters)
             return configuration
         }

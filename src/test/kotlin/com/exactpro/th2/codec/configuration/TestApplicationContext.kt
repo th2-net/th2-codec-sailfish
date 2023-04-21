@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -13,6 +13,9 @@
 
 package com.exactpro.th2.codec.configuration
 
+import com.exactpro.cradle.CradleEntitiesFactory
+import com.exactpro.cradle.CradleManager
+import com.exactpro.cradle.CradleStorage
 import com.exactpro.sf.common.messages.IMessage
 import com.exactpro.sf.common.messages.structures.IDictionaryStructure
 import com.exactpro.sf.common.messages.structures.loaders.XmlDictionaryStructureLoader
@@ -21,7 +24,6 @@ import com.exactpro.sf.configuration.workspace.FolderType
 import com.exactpro.sf.externalapi.codec.*
 import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.schema.box.configuration.BoxConfiguration
-import com.exactpro.th2.common.schema.cradle.CradleConfiguration
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.common.schema.grpc.configuration.GrpcConfiguration
@@ -50,11 +52,15 @@ class TestApplicationContext {
     @Test
     fun testDictionarySetting() {
         val configuration = Configuration().apply { codecClassName = CodecFactory::class.java.name }
-        val cradleCfg:CradleConfiguration = mock {
-            on { cradleMaxEventBatchSize }.thenReturn(1_024L * 1_024L)
+        val cradleEntitiesFactory = CradleEntitiesFactory(1_024 * 1_024, 1_024 * 1_024)
+        val cradleStorage: CradleStorage = mock {
+            on { entitiesFactory }.thenReturn(cradleEntitiesFactory)
+        }
+        val cradleManager: CradleManager = mock {
+            on { storage }.thenReturn(cradleStorage)
         }
         val commonFactory: CommonFactory = mock {
-            on { cradleConfiguration }.thenReturn(cradleCfg)
+            on { getCradleManager() }.thenReturn(cradleManager)
         }
 
         `when`(commonFactory.grpcRouter).thenReturn(object : GrpcRouter {

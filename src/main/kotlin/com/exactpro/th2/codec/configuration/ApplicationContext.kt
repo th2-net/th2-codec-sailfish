@@ -49,7 +49,11 @@ class ApplicationContext(
     val messageToProtoConverter: IMessageToProtoConverter,
     val eventBatchCollector: EventBatchCollector,
     val enabledExternalRouting: Boolean
-) {
+): AutoCloseable {
+
+    override fun close() {
+        eventBatchCollector.close()
+    }
 
     companion object {
         private const val CODEC_IMPLEMENTATION_PATH = "codec_implementation"
@@ -60,13 +64,13 @@ class ApplicationContext(
             val codecFactory = loadFactory(configuration.codecClassName)
 
             val eventBatchRouter = commonFactory.eventBatchRouter
-            val maxEventBatchSizeInBytes = commonFactory.cradleConfiguration.cradleMaxEventBatchSize
+            val maxEventBatchSizeInBytes = commonFactory.cradleManager.storage.entitiesFactory.maxTestEventBatchSize
             check(configuration.outgoingEventBatchBuildTime > 0) { "The value of outgoingEventBatchBuildTime must be greater than zero" }
             check(configuration.maxOutgoingEventBatchSize > 0) { "The value of maxOutgoingEventBatchSize must be greater than zero" }
             check(configuration.numOfEventBatchCollectorWorkers > 0) { "The value of numOfEventBatchCollectorWorkers must be greater than zero" }
             val eventBatchCollector = EventBatchCollector(
                 eventBatchRouter,
-                maxEventBatchSizeInBytes,
+                maxEventBatchSizeInBytes.toLong(),
                 configuration.maxOutgoingEventBatchSize,
                 configuration.outgoingEventBatchBuildTime,
                 configuration.numOfEventBatchCollectorWorkers,
