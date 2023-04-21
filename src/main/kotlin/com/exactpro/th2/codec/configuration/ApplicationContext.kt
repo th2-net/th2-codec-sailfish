@@ -1,16 +1,18 @@
 /*
- * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.exactpro.th2.codec.configuration
 
 import com.exactpro.sf.common.messages.structures.loaders.XmlDictionaryStructureLoader
@@ -48,7 +50,8 @@ class ApplicationContext(
     val protoToIMessageConverter: ProtoToIMessageConverter,
     val messageToProtoConverter: IMessageToProtoConverter,
     val eventBatchCollector: EventBatchCollector,
-    val enabledExternalRouting: Boolean
+    val enabledExternalRouting: Boolean,
+    val enabledVerticalScaling: Boolean,
 ): AutoCloseable {
 
     override fun close() {
@@ -100,7 +103,8 @@ class ApplicationContext(
                     protoConverter,
                     IMessageToProtoConverter(converterParameters.toDecodeParameters()),
                     eventBatchCollector,
-                    configuration.enabledExternalQueueRouting
+                    configuration.enabledExternalQueueRouting,
+                    configuration.enableVerticalScaling
                 )
             } catch (e: RuntimeException) {
                 eventBatchCollector.createAndStoreErrorEvent(
@@ -191,7 +195,6 @@ class ApplicationContext(
             if (clazz == null) {
                 logger.warn { "unknown codec parameter '$propertyName'" }
             } else {
-                @Suppress("IMPLICIT_CAST_TO_ANY")
                 settings[propertyName] = when (clazz) {
                     Boolean::class.javaPrimitiveType,
                     Boolean::class.javaObjectType -> toBoolean(propertyValue)

@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2022 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -13,10 +13,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package com.exactpro.th2.codec
 
-import com.exactpro.th2.codec.util.toDebugString
+import com.exactpro.th2.codec.AbstractCodec.Direction.DECODE
+import com.exactpro.th2.codec.AbstractCodec.Direction.ENCODE
 import com.exactpro.th2.common.event.EventUtils
 import com.exactpro.th2.common.event.bean.IRow
 import com.exactpro.th2.common.event.bean.builder.TableBuilder
@@ -81,7 +81,7 @@ class EventBatchCollector(
     fun createAndStoreErrorEvent(
         errorText: String,
         exception: Exception,
-        direction: AbstractSyncCodec.Direction,
+        direction: AbstractCodec.Direction,
         group: MessageGroup
     ) {
         try {
@@ -225,7 +225,7 @@ class EventBatchCollector(
         }
     }
 
-    private fun getParentEventIdFromGroup(direction: AbstractSyncCodec.Direction, group: MessageGroup): EventID {
+    private fun getParentEventIdFromGroup(direction: AbstractCodec.Direction, group: MessageGroup): EventID {
         if (group.messagesCount != 0) {
             val firstMessageInList = group.messagesList.first()
             if (firstMessageInList.hasMessage()) {
@@ -239,8 +239,8 @@ class EventBatchCollector(
             }
         }
         return when (direction) {
-            AbstractSyncCodec.Direction.ENCODE -> getEncodeErrorGroupEventID()
-            AbstractSyncCodec.Direction.DECODE -> getDecodeErrorGroupEventID()
+            ENCODE -> getEncodeErrorGroupEventID()
+            DECODE -> getDecodeErrorGroupEventID()
         }
     }
 

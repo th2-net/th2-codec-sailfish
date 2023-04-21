@@ -1,9 +1,12 @@
 /*
- * Copyright 2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2021-2023 Exactpro (Exactpro Systems Limited)
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +20,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.configuration.ApplicationContext
+import com.exactpro.th2.codec.proto.ProtoDecoder
 import com.exactpro.th2.common.grpc.AnyMessage
 import com.exactpro.th2.common.grpc.AnyMessage.KindCase
 import com.exactpro.th2.common.grpc.MessageGroup
@@ -40,7 +44,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
 
-internal class TestSyncDecoder {
+internal class TestSyncProtoDecoder {
     private val settings = mock<IExternalCodecSettings> { }
     private val codec = mock<IExternalCodec> {}
     private val factory = mock<IExternalCodecFactory> {
@@ -52,7 +56,7 @@ internal class TestSyncDecoder {
     private val applicationContext = mock<ApplicationContext> { }
 
     private val processor = DecodeProcessor(factory, settings, IMessageToProtoConverter(), mock {})
-    private val decoder = SyncDecoder(router, applicationContext, processor)
+    private val protoDecoder = ProtoDecoder(router, applicationContext, "sourceAttributes","targetAttributes", processor)
 
     @Test
     internal fun `decode protocol`() {
@@ -70,7 +74,7 @@ internal class TestSyncDecoder {
             }
         }
 
-        decoder.handle(DeliveryMetadata("tag"), MessageGroupBatch.newBuilder().apply {
+        protoDecoder.handle(DeliveryMetadata("tag"), MessageGroupBatch.newBuilder().apply {
             addGroups(createAnyMessage(rawMessageBuilder, 1)) // empty protocol
             addGroups(createAnyMessage(rawMessageBuilder, 2, factory.protocolName)) // codec protocol
             addGroups(createAnyMessage(rawMessageBuilder, 3, "test")) // another protocol

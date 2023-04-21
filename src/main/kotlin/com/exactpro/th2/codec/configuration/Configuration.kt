@@ -15,10 +15,8 @@ package com.exactpro.th2.codec.configuration
 
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.fasterxml.jackson.core.JsonFactory
-import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES
-import com.fasterxml.jackson.databind.JsonMappingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.io.IOException
@@ -85,9 +83,7 @@ class Configuration(
                 )
             } catch (exception: Exception) {
                 when (exception) {
-                    is IOException,
-                    is JsonParseException,
-                    is JsonMappingException -> {
+                    is IOException -> {
                         throw ConfigurationException("could not parse '$sailfishCodecParamsPath' file", exception)
                     }
                     else -> throw exception

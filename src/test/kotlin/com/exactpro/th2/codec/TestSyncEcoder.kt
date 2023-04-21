@@ -1,9 +1,12 @@
 /*
- * Copyright 2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2021-2023 Exactpro (Exactpro Systems Limited)
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,6 +19,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.configuration.ApplicationContext
+import com.exactpro.th2.codec.proto.ProtoEncoder
 import com.exactpro.th2.common.grpc.AnyMessage
 import com.exactpro.th2.common.grpc.AnyMessage.KindCase
 import com.exactpro.th2.common.grpc.Message
@@ -50,8 +54,8 @@ internal class TestSyncEcoder {
     private val applicationContext = mock<ApplicationContext> { }
     private val converter = mock<ProtoToIMessageConverter> { }
 
-    private val processor = EncodeProcessor(factory, settings, converter, mock {})
-    private val encoder = SyncEncoder(router, applicationContext, processor)
+    private val processor = EncodeProcessor(factory, settings, converter)
+    private val protoEncoder = ProtoEncoder(router, applicationContext, "sourceAttributes","targetAttributes", processor)
 
     @Test
     internal fun `encode protocol`() {
@@ -66,7 +70,7 @@ internal class TestSyncEcoder {
             }
         }
 
-        encoder.handle(DeliveryMetadata("tag"), MessageGroupBatch.newBuilder().apply {
+        protoEncoder.handle(DeliveryMetadata("tag"), MessageGroupBatch.newBuilder().apply {
             addGroups(createAnyMessage(messageBuilder, 1)) // empty protocol
             addGroups(createAnyMessage(messageBuilder, 2, factory.protocolName)) // codec protocol
             addGroups(createAnyMessage(messageBuilder, 3, "test")) // another protocol

@@ -13,11 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.codec.configuration.Configuration
+import com.exactpro.th2.codec.proto.ProtoDecoder
+import com.exactpro.th2.codec.proto.ProtoEncoder
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import mu.KotlinLogging
 
@@ -55,37 +56,34 @@ class Application(commonFactory: CommonFactory) : AutoCloseable {
         codecName: String,
         sourceAttributes: String,
         targetAttributes: String,
-    ): SyncEncoder = SyncEncoder(
-        groupRouter, context,
+    ): ProtoEncoder = ProtoEncoder(
+        groupRouter,
+        context,
+        sourceAttributes,
+        targetAttributes,
         EncodeProcessor(
             context.codecFactory,
             context.codecSettings,
-            context.protoToIMessageConverter,
-            context.eventBatchCollector
-        ),
-        configuration.enableVerticalScaling
-    ).also {
-        it.start(sourceAttributes, targetAttributes)
-        K_LOGGER.info { "'$codecName' started" }
-    }
+            context.protoToIMessageConverter
+        )
+    ).also { K_LOGGER.info { "'$codecName' started" } }
 
     private fun createDecoder(
         codecName: String,
         sourceAttributes: String,
         targetAttributes: String,
-    ): SyncDecoder = SyncDecoder(
-        groupRouter, context,
+    ): ProtoDecoder = ProtoDecoder(
+        groupRouter,
+        context,
+        sourceAttributes,
+        targetAttributes,
         DecodeProcessor(
             context.codecFactory,
             context.codecSettings,
             context.messageToProtoConverter,
             context.eventBatchCollector
-        ),
-        configuration.enableVerticalScaling
-    ).also {
-        it.start(sourceAttributes, targetAttributes)
-        K_LOGGER.info { "'$codecName' started" }
-    }
+        )
+    ).also { K_LOGGER.info { "'$codecName' started" } }
 
     companion object {
         private val K_LOGGER = KotlinLogging.logger {}
