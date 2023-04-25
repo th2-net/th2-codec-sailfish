@@ -1,9 +1,12 @@
 /*
- * Copyright 2021-2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2021-2023 Exactpro (Exactpro Systems Limited)
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -11,14 +14,16 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.codec
+package com.exactpro.th2.codec.proto
 
 import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
+import com.exactpro.th2.codec.DecodeException
 import com.exactpro.th2.codec.util.ERROR_CONTENT_FIELD
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
+import com.exactpro.th2.common.grpc.MessageGroupBatch
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.message.getField
 import com.exactpro.th2.common.schema.box.configuration.BoxConfiguration
@@ -46,7 +51,7 @@ internal class TestDecodeProcessor {
         `when`(it.newMessageIDBuilder()).thenCallRealMethod()
         `when`(it.boxConfiguration).thenReturn(BoxConfiguration())
     }
-    private val processor = DecodeProcessor(
+    private val processor = ProtoDecodeProcessor(
         factory,
         settings,
         IMessageToProtoConverter(),
@@ -65,7 +70,11 @@ internal class TestDecodeProcessor {
         val messageID = commonFactory.newMessageIDBuilder()
             .setSequence(1)
             .build()
-        val result = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
+        val result = processor.process(
+            MessageGroupBatch.getDefaultInstance(),
+            RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }
+                .build()
+        )
 
         assertEquals(1, result.size) { "Unexpected result: $result" }
         val id = result[0].metadata.id
@@ -87,7 +96,11 @@ internal class TestDecodeProcessor {
         val messageID = commonFactory.newMessageIDBuilder()
             .setSequence(1)
             .build()
-        val result = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())
+        val result = processor.process(
+            MessageGroupBatch.getDefaultInstance(),
+            RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }
+                .build()
+        )
 
         assertEquals(2, result.size) { "Unexpected result: $result" }
         assertAll(
@@ -113,7 +126,11 @@ internal class TestDecodeProcessor {
             .setSequence(1)
             .build()
 
-        val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
+        val builder = processor.process(
+            MessageGroupBatch.getDefaultInstance(),
+            RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }
+                .build()
+        )[0]
         assertEquals(ERROR_TYPE_MESSAGE, builder.metadata.messageType)
     }
 
@@ -125,7 +142,11 @@ internal class TestDecodeProcessor {
             .setSequence(1)
             .build()
 
-        val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(byteArrayOf(42, 43))).apply { metadataBuilder.id = messageID }.build())[0]
+        val builder = processor.process(
+            MessageGroupBatch.getDefaultInstance(),
+            RawMessage.newBuilder().setBody(ByteString.copyFrom(byteArrayOf(42, 43)))
+                .apply { metadataBuilder.id = messageID }.build()
+        )[0]
         assertEquals(ERROR_TYPE_MESSAGE, builder.metadata.messageType)
         assertEquals("Caused by: Test. ", builder.getField(ERROR_CONTENT_FIELD)?.simpleValue)
     }
@@ -144,7 +165,11 @@ internal class TestDecodeProcessor {
             .setSequence(1)
             .build()
 
-        val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
+        val builder = processor.process(
+            MessageGroupBatch.getDefaultInstance(),
+            RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }
+                .build()
+        )[0]
         assertEquals(ERROR_TYPE_MESSAGE, builder.metadata.messageType)
         assertNotNull(builder.getField(ERROR_CONTENT_FIELD))
     }

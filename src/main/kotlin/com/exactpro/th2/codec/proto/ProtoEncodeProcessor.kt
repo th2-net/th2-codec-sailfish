@@ -1,24 +1,26 @@
 /*
- *  Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-package com.exactpro.th2.codec
+package com.exactpro.th2.codec.proto
 
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
+import com.exactpro.th2.codec.AbstractCodecProcessor
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.common.grpc.Message
+import com.exactpro.th2.common.grpc.MessageGroupBatch
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.grpc.RawMessageMetadata
 import com.exactpro.th2.common.message.toJson
@@ -27,26 +29,26 @@ import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.google.protobuf.ByteString
 import mu.KotlinLogging
 
-class EncodeProcessor(
+class ProtoEncodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
     private val converter: ProtoToIMessageConverter
-) : AbstractCodecProcessor<Message, RawMessage.Builder>(codecFactory, codecSettings) {
+) : AbstractCodecProcessor<MessageGroupBatch, Message, RawMessage.Builder>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
     override val protocol = codecFactory.protocolName
 
-    override fun process(source: Message): RawMessage.Builder {
-        val convertedSourceMessage: MessageWrapper = converter.fromProtoMessage(source, true).also {
+    override fun process(batch: MessageGroupBatch, message: Message): RawMessage.Builder {
+        val convertedSourceMessage: MessageWrapper = converter.fromProtoMessage(message, true).also {
             logger.debug { "converted source message '${it.name}': $it" }
         }
 
-        val encodedMessageData = getCodec().encode(convertedSourceMessage, source.toCodecContext())
+        val encodedMessageData = getCodec().encode(convertedSourceMessage, message.toCodecContext())
         return RawMessage.newBuilder().apply {
-            if (source.hasParentEventId()) {
-                parentEventId = source.parentEventId
+            if (message.hasParentEventId()) {
+                parentEventId = message.parentEventId
             }
             body = ByteString.copyFrom(encodedMessageData)
-            metadata = toRawMessageMetadataBuilder(source).also {
+            metadata = toRawMessageMetadataBuilder(message).also {
                 logger.debug { "message metadata: ${it.toJson()}" }
             }
         }

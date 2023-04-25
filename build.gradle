@@ -31,14 +31,12 @@ buildscript {
 plugins {
     id 'java'
     id 'org.jetbrains.kotlin.jvm' version "${kotlin_version}"
-    id 'application'
-    id 'com.palantir.docker' version '0.25.0'
     id "org.owasp.dependencycheck" version "8.1.2"
 }
 
 ext {
     genDir             = file('src/gen')
-    sailfishVersion    = '3.3.54'
+    sailfishVersion    = '3.3.93'
     excludeSailfish = { rcd ->
         rcd.excludeModule("com.exactpro.sf", "sailfish-core")
         rcd.excludeModule("com.exactpro.sf", "sailfish-common")
@@ -96,7 +94,7 @@ repositories {
     mavenCentral()
     mavenLocal()
 
-    configurations.all {
+    configurations.configureEach {
         resolutionStrategy {
             cacheChangingModulesFor 0, 'seconds'
             cacheDynamicVersionsFor 0, 'seconds'
@@ -117,7 +115,7 @@ dependencies {
         exclude group: 'com.exactpro.th2', module: 'cradle-cassandra'
     }
     implementation 'com.exactpro.th2:common-utils:2.0.0-dev'
-    implementation 'com.exactpro.th2:sailfish-utils:3.14.0'
+    implementation 'com.exactpro.th2:sailfish-utils:4.0.0-TH2-4891-+'
 
     implementation 'io.github.microutils:kotlin-logging:3.0.0' // The greatest version which supports kotlin 1.6.21
 
@@ -140,6 +138,9 @@ dependencies {
 
 test {
     useJUnitPlatform()
+    testLogging {
+        showStandardStreams = true
+    }
 }
 
 jar {
@@ -156,30 +157,12 @@ jar {
     }
 }
 
-applicationName = 'service'
-
-distTar {
-    archiveFileName.set("${applicationName}.tar")
-}
-
-dockerPrepare {
-    dependsOn distTar
-}
-
-docker {
-    copySpec.from(tarTree("$buildDir/distributions/${applicationName}.tar"))
-}
-
 compileKotlin {
     kotlinOptions.jvmTarget = "11"
 }
 
 compileTestKotlin {
     kotlinOptions.jvmTarget = "11"
-}
-
-application {
-    mainClass.set("com.exactpro.th2.codec.MainKt")
 }
 
 dependencyCheck {

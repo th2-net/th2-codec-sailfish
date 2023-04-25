@@ -1,9 +1,8 @@
 /*
- * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- *
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,39 +14,43 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.codec
+package com.exactpro.th2.codec.proto
 
 import com.exactpro.sf.common.messages.IMessage
 import com.exactpro.sf.common.util.EvolutionBatch
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.sf.messages.service.ErrorMessage
+import com.exactpro.th2.codec.AbstractCodecProcessor
+import com.exactpro.th2.codec.DecodeException
+import com.exactpro.th2.codec.EventBatchCollector
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.codec.util.toErrorMessage
 import com.exactpro.th2.codec.util.toMessageMetadataBuilder
 import com.exactpro.th2.common.grpc.Message
+import com.exactpro.th2.common.grpc.MessageGroupBatch
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import mu.KotlinLogging
 
-class DecodeProcessor(
+class ProtoDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
     private val messageToProtoConverter: IMessageToProtoConverter,
     private val eventBatchCollector: EventBatchCollector
-) : AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
+) : AbstractCodecProcessor<MessageGroupBatch, RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
     override val protocol = codecFactory.protocolName
 
-    override fun process(source: RawMessage): List<Message.Builder> {
+    override fun process(batch: MessageGroupBatch, message: RawMessage): List<Message.Builder> {
         try {
-            val data: ByteArray = source.body.toByteArray()
-            logger.debug { "Start decoding message with id: '${source.metadata.id.toJson()}'" }
-            logger.trace { "Decoding message: ${source.toJson()}" }
+            val data: ByteArray = message.body.toByteArray()
+            logger.debug { "Start decoding message with id: '${message.metadata.id.toJson()}'" }
+            logger.trace { "Decoding message: ${message.toJson()}" }
 
-            val decodedMessages = getCodec().decode(data, source.toCodecContext())
+            val decodedMessages = getCodec().decode(data, message.toCodecContext())
                 .flatMap {
                     if (it.name == EvolutionBatch.MESSAGE_NAME) {
                         EvolutionBatch(it).batch
@@ -56,27 +59,28 @@ class DecodeProcessor(
                     }
                 }
 
-            checkErrorMessageContains(decodedMessages, source)
+            checkErrorMessageContains(decodedMessages, message)
             checkRawData(decodedMessages, data)
             logger.trace { "Decoded messages: $decodedMessages" }
-            logger.debug { "Message with id: '${source.metadata.id.toJson()}' successfully decoded" }
+            logger.debug { "Message with id: '${message.metadata.id.toJson()}' successfully decoded" }
 
             return decodedMessages.map { msg ->
                 messageToProtoConverter.toProtoMessage(msg).apply {
-                    if (source.hasParentEventId()) {
-                        parentEventId = source.parentEventId
+                    if (message.hasParentEventId()) {
+                        parentEventId = message.parentEventId
                     }
-                    metadata = source.toMessageMetadataBuilder(protocol).apply {
+                    metadata = message.toMessageMetadataBuilder(protocol).apply {
                         messageType = msg.name
                     }.build()
                 }
             }
         } catch (ex: Exception) {
-            logger.error(ex) { "Cannot decode message from ${source.toJson()}. Creating th2-codec-error message with description." }
+            logger.error(ex) { "Cannot decode message from ${message.toJson()}. Creating th2-codec-error message with description." }
             eventBatchCollector.createAndStoreDecodeErrorEvent(
                 "Cannot decode message: ${ex.message ?: "blank error message"}. $ERROR_TYPE_MESSAGE with cause published instead",
-                source, ex)
-            return listOf(source.toErrorMessage(ex, protocol))
+                message, ex
+            )
+            return listOf(message.toErrorMessage(ex, protocol))
         }
     }
 

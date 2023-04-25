@@ -27,8 +27,12 @@ import com.exactpro.th2.codec.EventBatchCollector
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
+import com.exactpro.th2.sailfish.utils.FromSailfishParameters
+import com.exactpro.th2.sailfish.utils.ToSailfishParameters
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter.createParameters
+import com.exactpro.th2.sailfish.utils.transport.IMessageToTransportConverter
+import com.exactpro.th2.sailfish.utils.transport.TransportToIMessageConverter
 import java.io.File
 import java.net.URLClassLoader
 import java.util.ServiceLoader
@@ -49,6 +53,8 @@ class ApplicationContext(
     val codecSettings: IExternalCodecSettings,
     val protoToIMessageConverter: ProtoToIMessageConverter,
     val messageToProtoConverter: IMessageToProtoConverter,
+    val transportToIMessageConverter: TransportToIMessageConverter,
+    val messageToTransportConverter: IMessageToTransportConverter,
     val eventBatchCollector: EventBatchCollector,
     val enabledExternalRouting: Boolean,
     val enabledVerticalScaling: Boolean,
@@ -91,17 +97,22 @@ class ApplicationContext(
                 val dictionary =
                     checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
                 val converterParameters = configuration.converterParameters
-                val protoConverter = ProtoToIMessageConverter(
-                    DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace),
-                    converterParameters.toEncodeParameters()
-                )
+                val factoryProxy = DefaultMessageFactoryProxy()
+                val sailfishURI = SailfishURI.unsafeParse(dictionary.namespace)
                 return ApplicationContext(
                     commonFactory,
                     codec,
                     codecFactory,
                     codecSettings,
-                    protoConverter,
+                    ProtoToIMessageConverter(
+                        factoryProxy,
+                        dictionary,
+                        sailfishURI,
+                        converterParameters.toEncodeParameters()
+                    ),
                     IMessageToProtoConverter(converterParameters.toDecodeParameters()),
+                    TransportToIMessageConverter(factoryProxy, dictionary, sailfishURI, converterParameters.toTransportEncodeParameters()),
+                    IMessageToTransportConverter(converterParameters.toTransportDecodeParameters()),
                     eventBatchCollector,
                     configuration.enabledExternalQueueRouting,
                     configuration.enableVerticalScaling
@@ -115,6 +126,12 @@ class ApplicationContext(
                 throw e
             }
         }
+
+        private fun ConverterParameters.toTransportEncodeParameters(): ToSailfishParameters =
+            ToSailfishParameters(allowUnknownEnumValues = allowUnknownEnumValues)
+
+        private fun ConverterParameters.toTransportDecodeParameters(): FromSailfishParameters =
+            FromSailfishParameters(stripTrailingZeros = stripTrailingZeros)
 
         private fun ConverterParameters.toEncodeParameters(): ProtoToIMessageConverter.Parameters =
             createParameters().setAllowUnknownEnumValues(allowUnknownEnumValues)

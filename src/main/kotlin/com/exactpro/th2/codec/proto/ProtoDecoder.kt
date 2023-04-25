@@ -29,7 +29,7 @@ class ProtoDecoder(
     applicationContext: ApplicationContext,
     sourceAttributes: String,
     targetAttributes: String,
-    private val processor: AbstractCodecProcessor<RawMessage, List<Message.Builder>>,
+    private val processor: AbstractCodecProcessor<MessageGroupBatch, RawMessage, List<Message.Builder>>,
 ) : AbstractProtoCodec(
     router,
     applicationContext,
@@ -42,13 +42,13 @@ class ProtoDecoder(
 
     override fun getDirection(): Direction = Direction.DECODE
 
-    override fun isTransformationComplete(protoResult: MessageGroupBatch): Boolean = protoResult.groupsList.asSequence()
+    override fun isTransformationComplete(result: MessageGroupBatch): Boolean = result.groupsList.asSequence()
         .flatMap(MessageGroup::getMessagesList)
         .all(AnyMessage::hasMessage)
 
     override fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean = resultBatch.groupsCount > 0
 
-    override fun processMessageGroup(messageGroup: MessageGroup): MessageGroup? {
+    override fun processMessageGroup(batch: MessageGroupBatch, messageGroup: MessageGroup): MessageGroup? {
         if (messageGroup.messagesCount < 1) {
             return null
         }
@@ -65,7 +65,7 @@ class ProtoDecoder(
                 val rawMessage = notTypeMessage.rawMessage
                 if (checkProtocol(rawMessage)) {
                     var startSeq = DEFAULT_SUBSEQUENCE_NUMBER
-                    processor.process(rawMessage).forEach {
+                    processor.process(batch, rawMessage).forEach {
                         groupBuilder += it.apply { metadataBuilder.idBuilder.addSubsequence(startSeq++) }
                     }
                     continue

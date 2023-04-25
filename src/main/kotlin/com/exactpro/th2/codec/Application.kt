@@ -17,8 +17,16 @@ package com.exactpro.th2.codec
 
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.codec.configuration.Configuration
+import com.exactpro.th2.codec.configuration.TransportType.PROTOBUF
+import com.exactpro.th2.codec.configuration.TransportType.TH2_TRANSPORT
+import com.exactpro.th2.codec.proto.ProtoDecodeProcessor
 import com.exactpro.th2.codec.proto.ProtoDecoder
+import com.exactpro.th2.codec.proto.ProtoEncodeProcessor
 import com.exactpro.th2.codec.proto.ProtoEncoder
+import com.exactpro.th2.codec.transport.TransportDecodeProcessor
+import com.exactpro.th2.codec.transport.TransportDecoder
+import com.exactpro.th2.codec.transport.TransportEncodeProcessor
+import com.exactpro.th2.codec.transport.TransportEncoder
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import mu.KotlinLogging
 
@@ -26,25 +34,30 @@ class Application(commonFactory: CommonFactory) : AutoCloseable {
 
     private val configuration = Configuration.create(commonFactory)
     private val context = ApplicationContext.create(configuration, commonFactory)
-    private val groupRouter = context.commonFactory.messageRouterMessageGroupBatch
+    private val protoRouter = context.commonFactory.messageRouterMessageGroupBatch
+    private val transportRouter = context.commonFactory.transportGroupBatchRouter
 
-    private val decoder = createDecoder("decoder", configuration.decoderInputAttribute, configuration.decoderOutputAttribute)
-    private val encoder = createEncoder("encoder", configuration.encoderInputAttribute, configuration.encoderOutputAttribute)
+    private val codecs: List<AutoCloseable> = mutableListOf<AutoCloseable>().apply {
+        configuration.transportLines.forEach { (prefix, type) ->
+            when (type) {
+                PROTOBUF -> {
+                    createProtoDecoder("${prefix}_decoder", "${prefix}_decoder_in", "${prefix}_decoder_out")
+                    createProtoEncoder("${prefix}_encoder", "${prefix}_encoder_in", "${prefix}_encoder_out")
+                }
 
-    private val generalDecoder = createDecoder("general-decoder", configuration.generalDecoderInputAttribute, configuration.generalDecoderOutputAttribute)
-    private val generalEncoder = createEncoder("general-encoder", configuration.generalEncoderInputAttribute, configuration.generalEncoderOutputAttribute)
+                TH2_TRANSPORT -> {
+                    createTransportDecoder("${prefix}_decoder", "${prefix}_decoder_in", "${prefix}_decoder_out")
+                    createTransportEncoder("${prefix}_encoder", "${prefix}_encoder_in", "${prefix}_encoder_out")
+                }
+            }
+        }
+    }
+
     override fun close() {
-        runCatching(generalEncoder::close).onFailure {
-            K_LOGGER.error(it) { "General encoder closing failure" }
-        }
-        runCatching(generalDecoder::close).onFailure {
-            K_LOGGER.error(it) { "General decoder closing failure" }
-        }
-        runCatching(encoder::close).onFailure {
-            K_LOGGER.error(it) { "Encoder closing failure" }
-        }
-        runCatching(decoder::close).onFailure {
-            K_LOGGER.error(it) { "Decoder closing failure" }
+        codecs.forEach { codec ->
+            runCatching(codec::close).onFailure {
+                K_LOGGER.error(it) { "Codec closing failure" }
+            }
         }
 
         runCatching(context::close).onFailure {
@@ -52,32 +65,65 @@ class Application(commonFactory: CommonFactory) : AutoCloseable {
         }
     }
 
-    private fun createEncoder(
+    private fun createTransportEncoder(
         codecName: String,
         sourceAttributes: String,
         targetAttributes: String,
-    ): ProtoEncoder = ProtoEncoder(
-        groupRouter,
+    ): AutoCloseable = TransportEncoder(
+        transportRouter,
         context,
         sourceAttributes,
         targetAttributes,
-        EncodeProcessor(
+        TransportEncodeProcessor(
+            context.codecFactory,
+            context.codecSettings,
+            context.transportToIMessageConverter
+        )
+    ).also { K_LOGGER.info { "'$codecName' started" } }
+
+    private fun createTransportDecoder(
+        codecName: String,
+        sourceAttributes: String,
+        targetAttributes: String,
+    ): AutoCloseable = TransportDecoder(
+        transportRouter,
+        context,
+        sourceAttributes,
+        targetAttributes,
+        TransportDecodeProcessor(
+            context.codecFactory,
+            context.codecSettings,
+            context.messageToTransportConverter,
+            context.eventBatchCollector
+        )
+    ).also { K_LOGGER.info { "'$codecName' started" } }
+
+    private fun createProtoEncoder(
+        codecName: String,
+        sourceAttributes: String,
+        targetAttributes: String,
+    ): AutoCloseable = ProtoEncoder(
+        protoRouter,
+        context,
+        sourceAttributes,
+        targetAttributes,
+        ProtoEncodeProcessor(
             context.codecFactory,
             context.codecSettings,
             context.protoToIMessageConverter
         )
     ).also { K_LOGGER.info { "'$codecName' started" } }
 
-    private fun createDecoder(
+    private fun createProtoDecoder(
         codecName: String,
         sourceAttributes: String,
         targetAttributes: String,
-    ): ProtoDecoder = ProtoDecoder(
-        groupRouter,
+    ): AutoCloseable = ProtoDecoder(
+        protoRouter,
         context,
         sourceAttributes,
         targetAttributes,
-        DecodeProcessor(
+        ProtoDecodeProcessor(
             context.codecFactory,
             context.codecSettings,
             context.messageToProtoConverter,

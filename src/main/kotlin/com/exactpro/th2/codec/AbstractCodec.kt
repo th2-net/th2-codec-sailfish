@@ -60,7 +60,7 @@ abstract class AbstractCodec<B>(
 
     protected abstract val B.externalQueue: String
     protected abstract fun process(batch: B): B?
-    protected abstract fun isTransformationComplete(protoResult: B): Boolean
+    protected abstract fun isTransformationComplete(result: B): Boolean
 
     enum class Direction {
         ENCODE, DECODE

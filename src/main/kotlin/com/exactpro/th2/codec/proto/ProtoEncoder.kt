@@ -28,7 +28,7 @@ class ProtoEncoder(
     applicationContext: ApplicationContext,
     sourceAttributes: String,
     targetAttributes: String,
-    private val processor: AbstractCodecProcessor<Message, RawMessage.Builder>,
+    private val processor: AbstractCodecProcessor<MessageGroupBatch, Message, RawMessage.Builder>,
 ) : AbstractProtoCodec(
     router,
     applicationContext,
@@ -43,11 +43,11 @@ class ProtoEncoder(
 
     override fun checkResult(protoResult: MessageGroup): Boolean = protoResult.messagesCount > 0
 
-    override fun isTransformationComplete(protoResult: MessageGroupBatch): Boolean = protoResult.groupsList.asSequence()
+    override fun isTransformationComplete(result: MessageGroupBatch): Boolean = result.groupsList.asSequence()
         .flatMap(MessageGroup::getMessagesList)
         .all(AnyMessage::hasRawMessage)
 
-    override fun processMessageGroup(messageGroup: MessageGroup): MessageGroup? {
+    override fun processMessageGroup(batch: MessageGroupBatch, messageGroup: MessageGroup): MessageGroup? {
         if (messageGroup.messagesCount < 1) {
             return null
         }
@@ -63,7 +63,7 @@ class ProtoEncoder(
             if (notTypeMessage.hasMessage()) {
                 val message = notTypeMessage.message
                 if (checkProtocol(message)) {
-                    groupBuilder += processor.process(message)
+                    groupBuilder += processor.process(batch, message)
                     continue
                 }
             }

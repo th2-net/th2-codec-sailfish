@@ -46,15 +46,15 @@ abstract class AbstractProtoCodec(
 
         if (async) {
             val messageGroupFutures = Array<CompletableFuture<MessageGroup?>> (batch.groupsCount) { index ->
-                CompletableFuture.supplyAsync { runProcessMessageGroup(index, batch.getGroups(index)) }
+                CompletableFuture.supplyAsync { runProcessMessageGroup(batch, index) }
             }
 
             CompletableFuture.allOf(*messageGroupFutures).whenComplete { _, _ ->
                 messageGroupFutures.forEach { it.get()?.run(resultBuilder::addGroups) }
             }.get()
         } else {
-            batch.groupsList.forEachIndexed { index, group ->
-                runProcessMessageGroup(index, group)?.run(resultBuilder::addGroups)
+            batch.groupsList.indices.forEach { index ->
+                runProcessMessageGroup(batch, index)?.run(resultBuilder::addGroups)
             }
         }
         val result = resultBuilder.build()
@@ -66,18 +66,19 @@ abstract class AbstractProtoCodec(
     protected abstract fun getDirection(): Direction
     protected abstract fun checkResultBatch(resultBatch: MessageGroupBatch): Boolean
 
-    protected abstract fun processMessageGroup(messageGroup: MessageGroup): MessageGroup?
+    protected abstract fun processMessageGroup(batch: MessageGroupBatch, messageGroup: MessageGroup): MessageGroup?
 
     protected abstract fun checkResult(protoResult: MessageGroup): Boolean
 
     private fun runProcessMessageGroup(
-        index: Int,
-        group: MessageGroup
+        batch: MessageGroupBatch,
+        index: Int
     ): MessageGroup? {
+        val group = batch.getGroups(index)
         if (group.messagesCount == 0) return null
 
         try {
-            return processMessageGroup(group)?.takeIf(::checkResult)
+            return processMessageGroup(batch, group)?.takeIf(::checkResult)
         } catch (exception: Exception) {
             eventBatchCollector.createAndStoreErrorEvent(
                 "Cannot process not empty group number ${index + 1}",

@@ -13,13 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.codec
+package com.exactpro.th2.codec.proto
 
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.codec.proto.ProtoEncoder
 import com.exactpro.th2.common.grpc.AnyMessage
 import com.exactpro.th2.common.grpc.AnyMessage.KindCase
 import com.exactpro.th2.common.grpc.Message
@@ -42,7 +41,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
 
-internal class TestSyncEcoder {
+internal class TestSyncEncoder {
     private val settings = mock<IExternalCodecSettings> { }
     private val codec = mock<IExternalCodec> {}
     private val factory = mock<IExternalCodecFactory> {
@@ -54,8 +53,9 @@ internal class TestSyncEcoder {
     private val applicationContext = mock<ApplicationContext> { }
     private val converter = mock<ProtoToIMessageConverter> { }
 
-    private val processor = EncodeProcessor(factory, settings, converter)
-    private val protoEncoder = ProtoEncoder(router, applicationContext, "sourceAttributes","targetAttributes", processor)
+    private val processor = ProtoEncodeProcessor(factory, settings, converter)
+    private val protoEncoder =
+        ProtoEncoder(router, applicationContext, "sourceAttributes", "targetAttributes", processor)
 
     @Test
     internal fun `encode protocol`() {
@@ -87,43 +87,77 @@ internal class TestSyncEcoder {
             Assertions.assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
             val message = group.getMessages(0)
             assertAll(
-                { Assertions.assertEquals(KindCase.RAW_MESSAGE, message.kindCase) { "Type of first: ${shortDebugString(message)}" } },
-                { Assertions.assertEquals(KindCase.RAW_MESSAGE, message.kindCase) { "Type of first: ${shortDebugString(message)}" } },
-                { Assertions.assertEquals(1, message.rawMessage.metadata.id.sequence) { "Seq of first: ${shortDebugString(message)}" } }
+                {
+                    Assertions.assertEquals(KindCase.RAW_MESSAGE, message.kindCase) {
+                        "Type of first: ${
+                            shortDebugString(
+                                message
+                            )
+                        }"
+                    }
+                },
+                {
+                    Assertions.assertEquals(
+                        1,
+                        message.rawMessage.metadata.id.sequence
+                    ) { "Seq of first: ${shortDebugString(message)}" }
+                }
             )
         }
         (result.getGroups(1)).let { group ->
             Assertions.assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
             val message = group.getMessages(0)
             assertAll(
-                { Assertions.assertEquals(KindCase.RAW_MESSAGE, message.kindCase) { "Type of second: ${shortDebugString(message)}" } },
-                { Assertions.assertEquals(2, message.rawMessage.metadata.id.sequence) { "Seq of second: ${shortDebugString(message)}" } }
+                {
+                    Assertions.assertEquals(KindCase.RAW_MESSAGE, message.kindCase) {
+                        "Type of second: ${
+                            shortDebugString(
+                                message
+                            )
+                        }"
+                    }
+                },
+                {
+                    Assertions.assertEquals(
+                        2,
+                        message.rawMessage.metadata.id.sequence
+                    ) { "Seq of second: ${shortDebugString(message)}" }
+                }
             )
         }
         (result.getGroups(2)).let { group ->
             Assertions.assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
             val message = group.getMessages(0)
             assertAll(
-                { Assertions.assertEquals(KindCase.MESSAGE, message.kindCase) { "Type of third: ${shortDebugString(message)}" } },
+                {
+                    Assertions.assertEquals(KindCase.MESSAGE, message.kindCase) {
+                        "Type of third: ${
+                            shortDebugString(
+                                message
+                            )
+                        }"
+                    }
+                },
                 { Assertions.assertEquals(3, message.sequence) { "Seq of third: ${shortDebugString(message)}" } }
             )
         }
     }
 
-    private fun createAnyMessage(messageBuilder: Builder, sequence: Long, protocol: String? = null) = MessageGroup.newBuilder()
-        .addMessages(
-            AnyMessage.newBuilder().apply {
-                message =
-                    messageBuilder.apply {
-                        metadataBuilder.apply {
-                            if (protocol != null) {
-                                this.protocol = protocol
+    private fun createAnyMessage(messageBuilder: Builder, sequence: Long, protocol: String? = null) =
+        MessageGroup.newBuilder()
+            .addMessages(
+                AnyMessage.newBuilder().apply {
+                    message =
+                        messageBuilder.apply {
+                            metadataBuilder.apply {
+                                if (protocol != null) {
+                                    this.protocol = protocol
+                                }
+                                idBuilder.apply {
+                                    this.sequence = sequence
+                                }
                             }
-                            idBuilder.apply {
-                                this.sequence = sequence
-                            }
-                        }
-                    }.build()
-            }.build()
-        ).build()
+                        }.build()
+                }.build()
+            ).build()
 }
