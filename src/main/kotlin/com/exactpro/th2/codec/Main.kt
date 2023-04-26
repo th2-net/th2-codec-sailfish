@@ -17,12 +17,17 @@ import com.exactpro.th2.common.schema.factory.CommonFactory
 import mu.KotlinLogging
 import java.util.*
 import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.locks.Condition
+import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
+import kotlin.concurrent.withLock
 import kotlin.system.exitProcess
 
 private val K_LOGGER = KotlinLogging.logger {}
 fun main(args: Array<String>) {
     try {
+        val lock = ReentrantLock()
+        val condition: Condition = lock.newCondition()
         val resources: Deque<() -> Unit> = ConcurrentLinkedDeque()
         Runtime.getRuntime().addShutdownHook(thread(start = false, name = "shutdown") {
             try {
@@ -31,6 +36,7 @@ fun main(args: Array<String>) {
                     runCatching(action).onFailure { K_LOGGER.error(it.message, it) }
                 }
             } finally {
+                lock.withLock { condition.signalAll() }
                 K_LOGGER.info { "Shutdown end" }
             }
         })
@@ -47,6 +53,11 @@ fun main(args: Array<String>) {
                 K_LOGGER.info { "Closing application" }
                 close()
             }
+        }
+        lock.withLock {
+            K_LOGGER.info { "Wait shutdown" }
+            condition.await()
+            K_LOGGER.info { "App shutdown" }
         }
     } catch (e: InterruptedException) {
         K_LOGGER.error(e) { "Message handling interrupted" }
