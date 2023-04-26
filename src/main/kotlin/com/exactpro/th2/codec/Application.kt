@@ -39,17 +39,18 @@ class Application(commonFactory: CommonFactory) : AutoCloseable {
 
     private val codecs: List<AutoCloseable> = mutableListOf<AutoCloseable>().apply {
         configuration.transportLines.forEach { (prefix, type) ->
-            when (type) {
-                PROTOBUF -> {
-                    add(createProtoDecoder(prefix))
-                    add(createProtoEncoder(prefix))
-                }
-
-                TH2_TRANSPORT -> {
-                    add(createTransportDecoder(prefix))
-                    add(createTransportEncoder(prefix))
-                }
-            }
+            add(
+                when (type) {
+                    PROTOBUF -> ::createProtoDecoder
+                    TH2_TRANSPORT -> ::createTransportDecoder
+                }("${prefix}_decoder", "${prefix}_decoder_in", "${prefix}_decoder_out")
+            )
+            add(
+                when (type) {
+                    PROTOBUF -> ::createProtoEncoder
+                    TH2_TRANSPORT -> ::createTransportEncoder
+                }("${prefix}_encoder", "${prefix}_encoder_in", "${prefix}_encoder_out")
+            )
         }
     }
 
@@ -66,62 +67,71 @@ class Application(commonFactory: CommonFactory) : AutoCloseable {
     }
 
     private fun createTransportEncoder(
-        prefix: String,
+        codecName: String,
+        sourceAttributes: String,
+        targetAttributes: String,
     ): AutoCloseable = TransportEncoder(
         transportRouter,
         context,
-        "${prefix}_encoder_in",
-        "${prefix}_encoder_out",
+        sourceAttributes,
+        targetAttributes,
         TransportEncodeProcessor(
             context.codecFactory,
             context.codecSettings,
             context.transportToIMessageConverter
         )
-    ).also { K_LOGGER.info { "Transport '${prefix}_encoder' started" } }
+    ).also { K_LOGGER.info { "Transport '$codecName' started" } }
 
     private fun createTransportDecoder(
-        prefix: String,
+        codecName: String,
+        sourceAttributes: String,
+        targetAttributes: String,
     ): AutoCloseable = TransportDecoder(
         transportRouter,
         context,
-        "${prefix}_decoder_in",
-        "${prefix}_decoder_out",
+        sourceAttributes,
+        targetAttributes,
         TransportDecodeProcessor(
             context.codecFactory,
             context.codecSettings,
             context.messageToTransportConverter,
             context.eventBatchCollector
         )
-    ).also { K_LOGGER.info { "Transport '${prefix}_decoder' started" } }
+    ).also { K_LOGGER.info { "Transport '$codecName' started" } }
 
     private fun createProtoEncoder(
-        prefix: String,
+        codecName: String,
+        sourceAttributes: String,
+        targetAttributes: String,
     ): AutoCloseable = ProtoEncoder(
         protoRouter,
         context,
-        "${prefix}_encoder_in",
-        "${prefix}_encoder_out",
+        sourceAttributes,
+        targetAttributes,
         ProtoEncodeProcessor(
             context.codecFactory,
             context.codecSettings,
             context.protoToIMessageConverter
         )
-    ).also { K_LOGGER.info { "Proto '${prefix}_encoder' started" } }
+    ).also { K_LOGGER.info { "Proto '$codecName' started" } }
 
     private fun createProtoDecoder(
-        prefix: String,
+        codecName: String,
+        sourceAttributes: String,
+        targetAttributes: String,
     ): AutoCloseable = ProtoDecoder(
+//        "${prefix}_decoder", "${prefix}_decoder_in", "${prefix}_decoder_out"
         protoRouter,
         context,
-        "${prefix}_decoder_in",
-        "${prefix}_decoder_out",
+        sourceAttributes,
+        targetAttributes,
         ProtoDecodeProcessor(
             context.codecFactory,
             context.codecSettings,
             context.messageToProtoConverter,
             context.eventBatchCollector
         )
-    ).also { K_LOGGER.info { "Proto '${prefix}_decoder' started" } }
+    ).also { K_LOGGER.info { "Proto '$codecName' started" } }
 
     companion object {
         private val K_LOGGER = KotlinLogging.logger {}
