@@ -22,7 +22,8 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 
 abstract class AbstractCodecProcessor<B, M, R>(
     private val codecFactory: IExternalCodecFactory,
-    private val codecSettings: IExternalCodecSettings
+    private val codecSettings: IExternalCodecSettings,
+    private val messageFactory: Th2MessageFactory<*>
 ) : MessageProcessor<B, M, R> {
 
     private val codecThreadInstances = object : ThreadLocal<IExternalCodec>() {

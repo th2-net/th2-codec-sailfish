@@ -15,9 +15,12 @@
  */
 package com.exactpro.th2.codec.proto
 
+import com.exactpro.sf.common.messages.IMessage
+import com.exactpro.sf.common.messages.IMessageFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.AbstractCodecProcessor
+import com.exactpro.th2.codec.Th2MessageFactory
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.MessageGroupBatch
@@ -32,15 +35,13 @@ import mu.KotlinLogging
 class ProtoEncodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    private val converter: ProtoToIMessageConverter
-) : AbstractCodecProcessor<MessageGroupBatch, Message, RawMessage.Builder>(codecFactory, codecSettings) {
+    private val customFactory: Th2MessageFactory<Message.Builder>
+) : AbstractCodecProcessor<MessageGroupBatch, Message, RawMessage.Builder>(codecFactory, codecSettings, customFactory) {
     private val logger = KotlinLogging.logger { }
     override val protocol = codecFactory.protocolName
 
     override fun process(batch: MessageGroupBatch, message: Message): RawMessage.Builder {
-        val convertedSourceMessage: MessageWrapper = converter.fromProtoMessage(message, true).also {
-            logger.debug { "converted source message '${it.name}': $it" }
-        }
+        val convertedSourceMessage = customFactory.createMessage(message.toBuilder())
 
         val encodedMessageData = getCodec().encode(convertedSourceMessage, message.toCodecContext())
         return RawMessage.newBuilder().apply {

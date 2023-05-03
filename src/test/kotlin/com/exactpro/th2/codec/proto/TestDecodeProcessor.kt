@@ -16,7 +16,8 @@
 
 package com.exactpro.th2.codec.proto
 
-import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
+import com.exactpro.sf.common.messages.IMessage
+import com.exactpro.sf.common.messages.MsgMetaData
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
@@ -28,7 +29,6 @@ import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.message.getField
 import com.exactpro.th2.common.schema.box.configuration.BoxConfiguration
 import com.exactpro.th2.common.schema.factory.CommonFactory
-import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.google.protobuf.ByteString
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.mock
@@ -51,17 +51,28 @@ internal class TestDecodeProcessor {
         `when`(it.newMessageIDBuilder()).thenCallRealMethod()
         `when`(it.boxConfiguration).thenReturn(BoxConfiguration())
     }
+
+    private fun createMessage(namespace: String, name: String): IMessage {
+        return ProtoIMessage(
+            metadata = MsgMetaData(namespace, name),
+            toProtoConverter = mock { },
+            fromProtoConverter = mock { },
+            messageFactory = mock {  },
+            msgStructure = mock { }
+        )
+    }
+
     private val processor = ProtoDecodeProcessor(
         factory,
         settings,
-        IMessageToProtoConverter(),
+        mock {},
         mock {},
     )
 
     @Test
     internal fun `decodes one to one`() {
         val rawData = byteArrayOf(42, 43)
-        val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
+        val decodedMessage = createMessage("test", "test").apply {
             metaData.rawMessage = rawData
         }
 
@@ -84,10 +95,10 @@ internal class TestDecodeProcessor {
     @Test
     internal fun `decodes one to many`() {
         val rawData = byteArrayOf(42, 43, 44, 45)
-        val decodedMessage1 = DefaultMessageFactory.getFactory().createMessage("test1", "test").apply {
+        val decodedMessage1 = createMessage("test1", "test").apply {
             metaData.rawMessage = byteArrayOf(42, 43)
         }
-        val decodedMessage2 = DefaultMessageFactory.getFactory().createMessage("test1", "test").apply {
+        val decodedMessage2 = createMessage("test1", "test").apply {
             metaData.rawMessage = byteArrayOf(44, 45)
         }
 
@@ -116,7 +127,7 @@ internal class TestDecodeProcessor {
     @Test
     internal fun `creates an error message if result's content does not match the original`() {
         val rawData = byteArrayOf(42, 43)
-        val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
+        val decodedMessage = createMessage("test", "test").apply {
             metaData.rawMessage = byteArrayOf(42, 44)
         }
 
@@ -155,7 +166,7 @@ internal class TestDecodeProcessor {
     @Test
     internal fun `creates an error message if result's content size does not match the original`() {
         val rawData = byteArrayOf(42, 43)
-        val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
+        val decodedMessage = createMessage("test", "test").apply {
             metaData.rawMessage = rawData + 44
         }
 

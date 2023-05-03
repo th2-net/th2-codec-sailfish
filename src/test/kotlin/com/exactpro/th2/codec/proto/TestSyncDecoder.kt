@@ -16,9 +16,13 @@
 package com.exactpro.th2.codec.proto
 
 import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
+import com.exactpro.sf.common.messages.IMessage
+import com.exactpro.sf.common.messages.MsgMetaData
+import com.exactpro.sf.common.messages.structures.IDictionaryStructure
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
+import com.exactpro.th2.codec.DefaultMessageFactoryProxy
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.common.grpc.AnyMessage
 import com.exactpro.th2.common.grpc.AnyMessage.KindCase
@@ -31,6 +35,7 @@ import com.exactpro.th2.common.message.sequence
 import com.exactpro.th2.common.schema.message.DeliveryMetadata
 import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
+import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.google.protobuf.ByteString
 import com.google.protobuf.TextFormat.shortDebugString
 import com.nhaarman.mockitokotlin2.any
@@ -54,14 +59,23 @@ internal class TestSyncDecoder {
     private val router = mock<MessageRouter<MessageGroupBatch>> { }
     private val applicationContext = mock<ApplicationContext> { }
 
-    private val processor = ProtoDecodeProcessor(factory, settings, IMessageToProtoConverter(), mock {})
+    private fun createMessage(namespace: String, name: String): IMessage {
+        return ProtoIMessage(
+            metadata = MsgMetaData(namespace, name),
+            toProtoConverter = mock { },
+            fromProtoConverter = mock { },
+            messageFactory = mock {  },
+            msgStructure = mock { }
+        )
+    }
+    private val processor = ProtoDecodeProcessor(factory, settings, mock {}, mock {})
     private val protoDecoder =
         ProtoDecoder(router, applicationContext, "sourceAttributes", "targetAttributes", processor)
 
     @Test
     internal fun `decode protocol`() {
         val rawData = byteArrayOf(42, 43)
-        val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
+        val decodedMessage = createMessage("test", "test").apply {
             metaData.rawMessage = rawData
         }
 
