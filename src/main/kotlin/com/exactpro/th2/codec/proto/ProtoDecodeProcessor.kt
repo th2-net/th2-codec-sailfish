@@ -17,13 +17,17 @@
 package com.exactpro.th2.codec.proto
 
 import com.exactpro.sf.common.messages.IMessage
+import com.exactpro.sf.common.messages.IMessageFactory
 import com.exactpro.sf.common.util.EvolutionBatch
+import com.exactpro.sf.extensions.get
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.sf.messages.service.ErrorMessage
 import com.exactpro.th2.codec.AbstractCodecProcessor
 import com.exactpro.th2.codec.DecodeException
 import com.exactpro.th2.codec.EventBatchCollector
+import com.exactpro.th2.codec.Th2IMessage
+import com.exactpro.th2.codec.Th2MessageFactory
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.codec.util.toErrorMessage
@@ -38,9 +42,9 @@ import mu.KotlinLogging
 class ProtoDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    private val messageToProtoConverter: IMessageToProtoConverter,
+    createMessageFactory: Th2MessageFactory<*>,
     private val eventBatchCollector: EventBatchCollector
-) : AbstractCodecProcessor<MessageGroupBatch, RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
+) : AbstractCodecProcessor<MessageGroupBatch, RawMessage, List<Message.Builder>>(codecFactory, codecSettings, createMessageFactory) {
     private val logger = KotlinLogging.logger { }
     override val protocol = codecFactory.protocolName
 
@@ -65,7 +69,10 @@ class ProtoDecodeProcessor(
             logger.debug { "Message with id: '${message.metadata.id.toJson()}' successfully decoded" }
 
             return decodedMessages.map { msg ->
-                messageToProtoConverter.toProtoMessage(msg).apply {
+                check(msg is Th2IMessage<*> && msg.getMessage() is Message.Builder) {
+                    "Error while decoding Proto message. Wrong IMessage wrapper used: ${msg::class.java}"
+                }
+                (msg.getMessage() as Message.Builder).apply {
                     if (message.hasParentEventId()) {
                         parentEventId = message.parentEventId
                     }

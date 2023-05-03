@@ -15,10 +15,12 @@
  */
 package com.exactpro.th2.codec.transport
 
+import com.exactpro.sf.common.messages.MsgMetaData
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.configuration.ApplicationContext
+import com.exactpro.th2.common.message.message
 import com.exactpro.th2.common.schema.message.DeliveryMetadata
 import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
@@ -46,9 +48,21 @@ internal class TestSyncEncoder {
 
     private val router = mock<MessageRouter<GroupBatch>> { }
     private val applicationContext = mock<ApplicationContext> { }
-    private val converter = mock<TransportToIMessageConverter> { }
+    private val messageFactory = mock<TransportIMessageFactory> {
+        on { createMessage(any<ParsedMessage>()) }.thenAnswer {
+            val builder = it.arguments[0] as ParsedMessage
+            TransportIMessage(
+                message = builder,
+                metadata = MsgMetaData("mock", builder.type),
+                toTransportConverter = mock { },
+                fromTransportConverter = mock { },
+                messageFactory = it.mock as TransportIMessageFactory,
+                msgStructure = mock { }
+            )
+        }
+    }
 
-    private val processor = TransportEncodeProcessor(factory, settings, converter)
+    private val processor = TransportEncodeProcessor(factory, settings, messageFactory)
     private val transportEncoder =
         TransportEncoder(router, applicationContext, "sourceAttributes", "targetAttributes", processor)
 
@@ -56,7 +70,7 @@ internal class TestSyncEncoder {
     internal fun `encode protocol`() {
         val rawData = byteArrayOf(42, 43)
 
-        whenever(converter.fromTransport(any(), any(), any(), any())).thenReturn(mock { })
+        whenever(messageFactory.createMessage(any<MsgMetaData>())).thenReturn(mock { })
         whenever(codec.encode(any(), any())).thenReturn(rawData)
 
         transportEncoder.handle(DeliveryMetadata("tag"), GroupBatch.newMutable().apply {

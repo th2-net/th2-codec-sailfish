@@ -24,6 +24,8 @@ import com.exactpro.sf.messages.service.ErrorMessage
 import com.exactpro.th2.codec.AbstractCodecProcessor
 import com.exactpro.th2.codec.DecodeException
 import com.exactpro.th2.codec.EventBatchCollector
+import com.exactpro.th2.codec.Th2IMessage
+import com.exactpro.th2.codec.Th2MessageFactory
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
 import com.exactpro.th2.codec.util.fillMetadata
 import com.exactpro.th2.codec.util.toCodeContext
@@ -38,9 +40,9 @@ import mu.KotlinLogging
 class TransportDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    private val messageToProtoConverter: IMessageToTransportConverter,
+    createMessageFactory: Th2MessageFactory<*>,
     private val eventBatchCollector: EventBatchCollector
-) : AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage>>(codecFactory, codecSettings) {
+) : AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage>>(codecFactory, codecSettings, createMessageFactory) {
     private val logger = KotlinLogging.logger { }
     override val protocol = codecFactory.protocolName
 
@@ -65,7 +67,10 @@ class TransportDecodeProcessor(
             logger.trace { "Decoded messages: $decodedMessages" }
 
             return decodedMessages.map { msg ->
-                messageToProtoConverter.toTransport(msg).apply {
+                check(msg is Th2IMessage<*> && msg.getMessage() is ParsedMessage) {
+                    "Error while decoding Transport message. Wrong IMessage wrapper used."
+                }
+                (msg.getMessage() as ParsedMessage).apply {
                     fillMetadata(message, protocol)
                     type = msg.name
                 }

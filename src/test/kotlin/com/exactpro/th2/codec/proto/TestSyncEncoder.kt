@@ -15,9 +15,16 @@
  */
 package com.exactpro.th2.codec.proto
 
+import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
+import com.exactpro.sf.common.messages.IMessageFactory
+import com.exactpro.sf.common.messages.MsgMetaData
+import com.exactpro.sf.common.messages.structures.IDictionaryStructure
+import com.exactpro.sf.common.messages.structures.IMessageStructure
+import com.exactpro.sf.common.messages.structures.impl.MessageStructure
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
+import com.exactpro.th2.codec.DefaultMessageFactoryProxy
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.common.grpc.AnyMessage
 import com.exactpro.th2.common.grpc.AnyMessage.KindCase
@@ -26,9 +33,13 @@ import com.exactpro.th2.common.grpc.Message.Builder
 import com.exactpro.th2.common.grpc.MessageGroup
 import com.exactpro.th2.common.grpc.MessageGroupBatch
 import com.exactpro.th2.common.grpc.MessageID
+import com.exactpro.th2.common.grpc.MessageMetadata
+import com.exactpro.th2.common.message.messageType
 import com.exactpro.th2.common.message.sequence
 import com.exactpro.th2.common.schema.message.DeliveryMetadata
 import com.exactpro.th2.common.schema.message.MessageRouter
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.ParsedMessage
+import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.google.protobuf.TextFormat.shortDebugString
 import com.nhaarman.mockitokotlin2.any
@@ -51,9 +62,22 @@ internal class TestSyncEncoder {
 
     private val router = mock<MessageRouter<MessageGroupBatch>> { }
     private val applicationContext = mock<ApplicationContext> { }
-    private val converter = mock<ProtoToIMessageConverter> { }
 
-    private val processor = ProtoEncodeProcessor(factory, settings, converter)
+    private val messageFactory = mock<ProtoIMessageFactory> {
+        on { createMessage(any<Builder>()) }.thenAnswer {
+            val builder = it.arguments[0] as Builder
+            ProtoIMessage(
+                builder = builder,
+                metadata = MsgMetaData("mock", builder.messageType),
+                toProtoConverter = mock { },
+                fromProtoConverter = mock { },
+                messageFactory = it.mock as ProtoIMessageFactory,
+                msgStructure = mock { }
+            )
+        }
+    }
+
+    private val processor = ProtoEncodeProcessor(factory, settings, messageFactory)
     private val protoEncoder =
         ProtoEncoder(router, applicationContext, "sourceAttributes", "targetAttributes", processor)
 
@@ -61,7 +85,6 @@ internal class TestSyncEncoder {
     internal fun `encode protocol`() {
         val rawData = byteArrayOf(42, 43)
 
-        whenever(converter.fromProtoMessage(any<Message>(), any())).thenReturn(mock { })
         whenever(codec.encode(any(), any())).thenReturn(rawData)
 
         val messageBuilder = Message.newBuilder().apply {

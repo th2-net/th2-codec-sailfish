@@ -17,14 +17,18 @@
 package com.exactpro.th2.codec.transport
 
 import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
+import com.exactpro.sf.common.messages.IMessage
+import com.exactpro.sf.common.messages.MsgMetaData
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.DecodeException
+import com.exactpro.th2.codec.proto.ProtoIMessage
 import com.exactpro.th2.codec.util.ERROR_CONTENT_FIELD
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.MessageGroup
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.ParsedMessage
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.RawMessage
 import com.exactpro.th2.sailfish.utils.transport.IMessageToTransportConverter
 import com.nhaarman.mockitokotlin2.any
@@ -44,17 +48,29 @@ internal class TestDecodeProcessor {
         on { createCodec(same(settings)) }.thenReturn(codec)
         on { protocolName }.thenReturn("mock")
     }
+
+    private fun createMessage(namespace: String, name: String): IMessage {
+        return TransportIMessage(
+            message = ParsedMessage.newMutable(),
+            metadata = MsgMetaData(namespace, name),
+            toTransportConverter = mock { },
+            fromTransportConverter = mock { },
+            messageFactory = mock {  },
+            msgStructure = mock { }
+        )
+    }
+
     private val processor = TransportDecodeProcessor(
         factory,
         settings,
-        IMessageToTransportConverter(),
+        mock {  },
         mock {},
     )
 
     @Test
     internal fun `decodes one to one`() {
         val rawData = byteArrayOf(42, 43)
-        val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
+        val decodedMessage = createMessage("test", "test").apply {
             metaData.rawMessage = rawData
         }
 
@@ -79,10 +95,10 @@ internal class TestDecodeProcessor {
     @Test
     internal fun `decodes one to many`() {
         val rawData = byteArrayOf(42, 43, 44, 45)
-        val decodedMessage1 = DefaultMessageFactory.getFactory().createMessage("test1", "test").apply {
+        val decodedMessage1 = createMessage("test1", "test").apply {
             metaData.rawMessage = byteArrayOf(42, 43)
         }
-        val decodedMessage2 = DefaultMessageFactory.getFactory().createMessage("test1", "test").apply {
+        val decodedMessage2 = createMessage("test1", "test").apply {
             metaData.rawMessage = byteArrayOf(44, 45)
         }
 
@@ -113,7 +129,7 @@ internal class TestDecodeProcessor {
     @Test
     internal fun `creates an error message if result's content does not match the original`() {
         val rawData = byteArrayOf(42, 43)
-        val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
+        val decodedMessage = createMessage("test", "test").apply {
             metaData.rawMessage = byteArrayOf(42, 44)
         }
 
@@ -155,7 +171,7 @@ internal class TestDecodeProcessor {
     @Test
     internal fun `creates an error message if result's content size does not match the original`() {
         val rawData = byteArrayOf(42, 43)
-        val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
+        val decodedMessage = createMessage("test", "test").apply {
             metaData.rawMessage = rawData + 44
         }
 

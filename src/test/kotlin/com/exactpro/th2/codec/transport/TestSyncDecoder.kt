@@ -16,6 +16,8 @@
 package com.exactpro.th2.codec.transport
 
 import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
+import com.exactpro.sf.common.messages.IMessage
+import com.exactpro.sf.common.messages.MsgMetaData
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
@@ -50,19 +52,34 @@ internal class TestSyncTransportDecoder {
     private val router = mock<MessageRouter<GroupBatch>> { }
     private val applicationContext = mock<ApplicationContext> { }
 
-    private val processor = TransportDecodeProcessor(factory, settings,
-        IMessageToTransportConverter(), mock {})
+    private fun createMessage(namespace: String, name: String): IMessage {
+        return TransportIMessage(
+            message = ParsedMessage.newMutable(),
+            metadata = MsgMetaData(namespace, name),
+            toTransportConverter = mock { },
+            fromTransportConverter = mock { },
+            messageFactory = mock {  },
+            msgStructure = mock { }
+        )
+    }
+
+    private val processor = TransportDecodeProcessor(
+        factory,
+        settings,
+        mock {  },
+        mock {},
+    )
+
     private val protoDecoder =
         TransportDecoder(router, applicationContext, "sourceAttributes", "targetAttributes", processor)
 
     @Test
     internal fun `decode protocol`() {
         val rawData = byteArrayOf(42, 43)
-        val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
-            metaData.rawMessage = rawData
-        }
 
-        whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
+        whenever(codec.decode(any(), any())).thenAnswer { listOf(createMessage("test", "test").apply {
+            metaData.rawMessage = rawData
+        }) }
 
         protoDecoder.handle(DeliveryMetadata("tag"), GroupBatch.newMutable().apply {
             groups.add(createMessageGroup(RawMessage.newMutable(), rawData, 1)) // empty protocol

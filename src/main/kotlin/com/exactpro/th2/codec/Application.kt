@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,10 +23,12 @@ import com.exactpro.th2.codec.proto.ProtoDecodeProcessor
 import com.exactpro.th2.codec.proto.ProtoDecoder
 import com.exactpro.th2.codec.proto.ProtoEncodeProcessor
 import com.exactpro.th2.codec.proto.ProtoEncoder
+import com.exactpro.th2.codec.proto.ProtoIMessageFactory
 import com.exactpro.th2.codec.transport.TransportDecodeProcessor
 import com.exactpro.th2.codec.transport.TransportDecoder
 import com.exactpro.th2.codec.transport.TransportEncodeProcessor
 import com.exactpro.th2.codec.transport.TransportEncoder
+import com.exactpro.th2.codec.transport.TransportIMessageFactory
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import mu.KotlinLogging
 
@@ -70,68 +72,97 @@ class Application(commonFactory: CommonFactory) : AutoCloseable {
         codecName: String,
         sourceAttributes: String,
         targetAttributes: String,
-    ): AutoCloseable = TransportEncoder(
-        transportRouter,
-        context,
-        sourceAttributes,
-        targetAttributes,
-        TransportEncodeProcessor(
-            context.codecFactory,
-            context.codecSettings,
-            context.transportToIMessageConverter
+    ): AutoCloseable {
+        //context.codecFactory.createFactory()
+        val factory = TransportIMessageFactory(
+            context.codecFactory.protocolName,
+            context.messageToTransportConverter,
+            context.transportToIMessageConverter,
         )
-    ).also { K_LOGGER.info { "Transport '$codecName' started" } }
+        return TransportEncoder(
+            transportRouter,
+            context,
+            sourceAttributes,
+            targetAttributes,
+            TransportEncodeProcessor(
+                context.codecFactory,
+                context.codecSettings,
+                factory
+            )
+        ).also { K_LOGGER.info { "Transport '$codecName' started" } }
+    }
 
     private fun createTransportDecoder(
         codecName: String,
         sourceAttributes: String,
         targetAttributes: String,
-    ): AutoCloseable = TransportDecoder(
-        transportRouter,
-        context,
-        sourceAttributes,
-        targetAttributes,
-        TransportDecodeProcessor(
-            context.codecFactory,
-            context.codecSettings,
+    ): AutoCloseable {
+        val factory = TransportIMessageFactory(
+            context.codecFactory.protocolName,
             context.messageToTransportConverter,
-            context.eventBatchCollector
+            context.transportToIMessageConverter,
         )
-    ).also { K_LOGGER.info { "Transport '$codecName' started" } }
+        return TransportDecoder(
+            transportRouter,
+            context,
+            sourceAttributes,
+            targetAttributes,
+            TransportDecodeProcessor(
+                context.codecFactory,
+                context.codecSettings,
+                factory,
+                context.eventBatchCollector
+            )
+        ).also { K_LOGGER.info { "Transport '$codecName' started" } }
+    }
 
     private fun createProtoEncoder(
         codecName: String,
         sourceAttributes: String,
         targetAttributes: String,
-    ): AutoCloseable = ProtoEncoder(
-        protoRouter,
-        context,
-        sourceAttributes,
-        targetAttributes,
-        ProtoEncodeProcessor(
-            context.codecFactory,
-            context.codecSettings,
+    ): AutoCloseable {
+        val factory = ProtoIMessageFactory(
+            context.codecFactory.protocolName,
+            context.messageToProtoConverter,
             context.protoToIMessageConverter
         )
-    ).also { K_LOGGER.info { "Proto '$codecName' started" } }
+        return ProtoEncoder(
+            protoRouter,
+            context,
+            sourceAttributes,
+            targetAttributes,
+            ProtoEncodeProcessor(
+                context.codecFactory,
+                context.codecSettings,
+                factory
+            )
+        ).also { K_LOGGER.info { "Proto '$codecName' started" } }
+    }
 
     private fun createProtoDecoder(
         codecName: String,
         sourceAttributes: String,
         targetAttributes: String,
-    ): AutoCloseable = ProtoDecoder(
-//        "${prefix}_decoder", "${prefix}_decoder_in", "${prefix}_decoder_out"
-        protoRouter,
-        context,
-        sourceAttributes,
-        targetAttributes,
-        ProtoDecodeProcessor(
-            context.codecFactory,
-            context.codecSettings,
+    ): AutoCloseable {
+        val factory = ProtoIMessageFactory(
+            context.codecFactory.protocolName,
             context.messageToProtoConverter,
-            context.eventBatchCollector
+            context.protoToIMessageConverter
         )
-    ).also { K_LOGGER.info { "Proto '$codecName' started" } }
+        return ProtoDecoder(
+//        "${prefix}_decoder", "${prefix}_decoder_in", "${prefix}_decoder_out"
+            protoRouter,
+            context,
+            sourceAttributes,
+            targetAttributes,
+            ProtoDecodeProcessor(
+                context.codecFactory,
+                context.codecSettings,
+                factory,
+                context.eventBatchCollector
+            )
+        ).also { K_LOGGER.info { "Proto '$codecName' started" } }
+    }
 
     companion object {
         private val K_LOGGER = KotlinLogging.logger {}
