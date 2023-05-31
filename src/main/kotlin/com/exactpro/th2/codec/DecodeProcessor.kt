@@ -22,13 +22,17 @@ import com.exactpro.sf.common.util.EvolutionBatch
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.sf.messages.service.ErrorMessage
+import com.exactpro.th2.codec.util.ERROR_CONTENT_FIELD
+import com.exactpro.th2.codec.util.ERROR_ORIGINAL_MESSAGE_TYPE
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
 import com.exactpro.th2.codec.util.toCodecContext
 import com.exactpro.th2.codec.util.toErrorMessage
 import com.exactpro.th2.codec.util.toMessageMetadataBuilder
 import com.exactpro.th2.common.grpc.Message
 import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.message.addField
 import com.exactpro.th2.common.message.toJson
+import com.exactpro.th2.common.value.toValue
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import mu.KotlinLogging
 
@@ -66,9 +70,16 @@ class DecodeProcessor(
                     if (source.hasParentEventId()) {
                         parentEventId = source.parentEventId
                     }
-                    metadata = source.toMessageMetadataBuilder(protocol).apply {
-                        messageType = msg.name
-                    }.build()
+                    val metadataBuilder = source.toMessageMetadataBuilder(protocol)
+                    if(msg.metaData.isRejected) {
+                        metadata = metadataBuilder.apply { messageType = ERROR_TYPE_MESSAGE }.build()
+                        addField(ERROR_ORIGINAL_MESSAGE_TYPE, msg.name.toValue())
+                        msg.metaData.rejectReason?.let {
+                            addField(ERROR_CONTENT_FIELD, it.toValue())
+                        }
+                    } else {
+                        metadata = metadataBuilder.apply { messageType = msg.name }.build()
+                    }
                 }
             }
         } catch (ex: Exception) {
@@ -85,6 +96,11 @@ class DecodeProcessor(
             if (msg.name == ErrorMessage.MESSAGE_NAME) {
                 eventBatchCollector.createAndStoreDecodeErrorEvent(
                     "Error during decode msg: ${msg.getField<String>("Cause")}", rawMessage
+                )
+            }
+            if (msg.metaData.isRejected) {
+                eventBatchCollector.createAndStoreDecodeErrorEvent(
+                    "Reject during decode reason: ${msg.metaData.rejectReason}", rawMessage
                 )
             }
         }

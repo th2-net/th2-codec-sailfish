@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import com.exactpro.th2.common.grpc.Value
 
 const val ERROR_TYPE_MESSAGE = "th2-codec-error"
 const val ERROR_CONTENT_FIELD = "content"
+const val ERROR_ORIGINAL_MESSAGE_TYPE = "original-message-type"
 
 private fun Direction.toRole(): Role = when (this) {
     Direction.FIRST -> Role.RECEIVER

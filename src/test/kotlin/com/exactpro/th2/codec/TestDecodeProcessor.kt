@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2021-2023 Exactpro (Exactpro Systems Limited)
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -18,6 +18,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.util.ERROR_CONTENT_FIELD
+import com.exactpro.th2.codec.util.ERROR_ORIGINAL_MESSAGE_TYPE
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
 import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
@@ -25,23 +26,28 @@ import com.exactpro.th2.common.message.getField
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.google.protobuf.ByteString
 import com.nhaarman.mockitokotlin2.any
+import com.nhaarman.mockitokotlin2.eq
+import com.nhaarman.mockitokotlin2.isNull
 import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.same
+import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.whenever
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
 
 internal class TestDecodeProcessor {
-    private val settings = mock<IExternalCodecSettings> { }
+    private val settings = mock<IExternalCodecSettings> {}
     private val codec = mock<IExternalCodec> {}
     private val factory = mock<IExternalCodecFactory> {
         on { createCodec(same(settings)) }.thenReturn(codec)
         on { protocolName }.thenReturn("mock")
     }
+    private val eventBatchCollector = mock<EventBatchCollector> {}
 
-    private val processor = DecodeProcessor(factory, settings, IMessageToProtoConverter(), mock {})
+    private val processor = DecodeProcessor(factory, settings, IMessageToProtoConverter(), eventBatchCollector)
 
     @Test
     internal fun `decodes one to one`() {
@@ -137,5 +143,53 @@ internal class TestDecodeProcessor {
         val builder = processor.process(RawMessage.newBuilder().setBody(ByteString.copyFrom(rawData)).apply { metadataBuilder.id = messageID }.build())[0]
         assertEquals(ERROR_TYPE_MESSAGE, builder.metadata.messageType)
         assertNotNull(builder.getField(ERROR_CONTENT_FIELD))
+    }
+
+    @Test
+    internal fun `handle message rejected without reason by internal codec`() {
+        val rawData = byteArrayOf(42, 43)
+        @Suppress("DEPRECATION") val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test-message-type", "test").apply {
+            metaData.rawMessage = rawData
+            metaData.isRejected = true
+        }
+
+        whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
+
+        val messageID = MessageID.newBuilder().setSequence(1).build()
+
+        val rawMessage = RawMessage.newBuilder().apply {
+                metadataBuilder.id = messageID
+                body = ByteString.copyFrom(rawData)
+            }.build()
+        val parsedMessage = processor.process(rawMessage)[0]
+        assertEquals(ERROR_TYPE_MESSAGE, parsedMessage.metadata.messageType)
+        assertNull(parsedMessage.getField(ERROR_CONTENT_FIELD))
+        assertEquals(decodedMessage.name, parsedMessage.getField(ERROR_ORIGINAL_MESSAGE_TYPE)?.simpleValue)
+        verify(eventBatchCollector)
+            .createAndStoreDecodeErrorEvent(eq("Reject during decode reason: ${decodedMessage.metaData.rejectReason}"), same(rawMessage), isNull())
+    }
+
+    @Test
+    internal fun `handle message rejected by a reason by internal codec`() {
+        val rawData = byteArrayOf(42, 43)
+        val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test-message-type", "test").apply {
+            metaData.rawMessage = rawData
+            metaData.rejectReason = "test-reject-reason"
+        }
+
+        whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
+
+        val messageID = MessageID.newBuilder().setSequence(1).build()
+
+        val rawMessage = RawMessage.newBuilder().apply {
+            metadataBuilder.id = messageID
+            body = ByteString.copyFrom(rawData)
+        }.build()
+        val parsedMessage = processor.process(rawMessage)[0]
+        assertEquals(ERROR_TYPE_MESSAGE, parsedMessage.metadata.messageType)
+        assertEquals(decodedMessage.metaData.rejectReason, parsedMessage.getField(ERROR_CONTENT_FIELD)?.simpleValue)
+        assertEquals(decodedMessage.name, parsedMessage.getField(ERROR_ORIGINAL_MESSAGE_TYPE)?.simpleValue)
+        verify(eventBatchCollector)
+            .createAndStoreDecodeErrorEvent(eq("Reject during decode reason: ${decodedMessage.metaData.rejectReason}"), same(rawMessage), isNull())
     }
 }
