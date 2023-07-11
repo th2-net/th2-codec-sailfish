@@ -115,8 +115,8 @@ dependencies {
     api platform('com.exactpro.th2:bom:4.4.0-update-libs-+')
     implementation('com.exactpro.th2:common:5.3.0-separate-executor+') {
         because('senging to direct queues')
-        exclude group: 'com.exactpro.th2', module: 'cradle-core'
-        exclude group: 'com.exactpro.th2', module: 'cradle-cassandra'
+        /*exclude group: 'com.exactpro.th2', module: 'cradle-core'
+        exclude group: 'com.exactpro.th2', module: 'cradle-cassandra'*/
     }
     implementation 'com.exactpro.th2:common-utils:2.1.0-transport-protocol+'
     implementation 'com.exactpro.th2:sailfish-utils:4.0.0-TH2-4891+'

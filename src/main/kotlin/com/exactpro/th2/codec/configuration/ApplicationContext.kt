@@ -74,9 +74,7 @@ class ApplicationContext(
 
             val eventBatchRouter = commonFactory.eventBatchRouter
 
-            // TODO: Uncomment when cradle dependency will be vulnerability clean
-            //val maxEventBatchSizeInBytes = commonFactory.cradleManager.storage.entitiesFactory.maxTestEventBatchSize
-            val maxEventBatchSizeInBytes = 1024 * 1024
+            val maxEventBatchSizeInBytes = commonFactory.cradleManager.storage.entitiesFactory.maxTestEventBatchSize
             check(configuration.outgoingEventBatchBuildTime > 0) { "The value of outgoingEventBatchBuildTime must be greater than zero" }
             check(configuration.maxOutgoingEventBatchSize > 0) { "The value of maxOutgoingEventBatchSize must be greater than zero" }
             check(configuration.numOfEventBatchCollectorWorkers > 0) { "The value of numOfEventBatchCollectorWorkers must be greater than zero" }
