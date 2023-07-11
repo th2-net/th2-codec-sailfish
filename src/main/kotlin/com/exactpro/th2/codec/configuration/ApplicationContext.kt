@@ -73,7 +73,10 @@ class ApplicationContext(
             val codecFactory = loadFactory(configuration.codecClassName)
 
             val eventBatchRouter = commonFactory.eventBatchRouter
-            val maxEventBatchSizeInBytes = commonFactory.cradleManager.storage.entitiesFactory.maxTestEventBatchSize
+
+            // TODO: Uncomment when cradle dependency will be vulnerability clean
+            //val maxEventBatchSizeInBytes = commonFactory.cradleManager.storage.entitiesFactory.maxTestEventBatchSize
+            val maxEventBatchSizeInBytes = 1024 * 1024
             check(configuration.outgoingEventBatchBuildTime > 0) { "The value of outgoingEventBatchBuildTime must be greater than zero" }
             check(configuration.maxOutgoingEventBatchSize > 0) { "The value of maxOutgoingEventBatchSize must be greater than zero" }
             check(configuration.numOfEventBatchCollectorWorkers > 0) { "The value of numOfEventBatchCollectorWorkers must be greater than zero" }
