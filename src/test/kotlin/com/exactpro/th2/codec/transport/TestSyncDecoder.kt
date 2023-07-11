@@ -22,10 +22,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.common.schema.message.DeliveryMetadata
 import com.exactpro.th2.common.schema.message.MessageRouter
-import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
-import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.MessageGroup
-import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.ParsedMessage
-import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.RawMessage
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.*
 import com.exactpro.th2.sailfish.utils.transport.IMessageToTransportConverter
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argumentCaptor
@@ -34,6 +31,7 @@ import com.nhaarman.mockitokotlin2.same
 import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.whenever
 import io.netty.buffer.Unpooled
+import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -64,11 +62,13 @@ internal class TestSyncTransportDecoder {
 
         whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
 
-        protoDecoder.handle(DeliveryMetadata("tag"), GroupBatch.newMutable().apply {
-            groups.add(createMessageGroup(RawMessage.newMutable(), rawData, 1)) // empty protocol
-            groups.add(createMessageGroup(RawMessage.newMutable(), rawData, 2, factory.protocolName)) // codec protocol
-            groups.add(createMessageGroup(RawMessage.newMutable(), rawData, 3, "test")) // another protocol
-        })
+        protoDecoder.handle(DeliveryMetadata("tag"), GroupBatch.builder().apply {
+            addGroup(createMessageGroup(RawMessage.builder(), rawData, 1)) // empty protocol
+            addGroup(createMessageGroup(RawMessage.builder(), rawData, 2, factory.protocolName)) // codec protocol
+            addGroup(createMessageGroup(RawMessage.builder(), rawData, 3, "test")) // another protocol
+            setSessionGroup("sessionGroup")
+            setBook("book")
+        }.build())
 
         val captor = argumentCaptor<GroupBatch>()
         verify(router).sendAll(captor.capture(), any())
@@ -104,17 +104,22 @@ internal class TestSyncTransportDecoder {
     }
 
     private fun createMessageGroup(
-        rawMessageBuilder: RawMessage,
+        rawMessageBuilder: RawMessage.Builder,
         body: ByteArray,
         sequence: Long,
         protocol: String? = null
-    ) = MessageGroup.newMutable().apply {
-        messages.add(rawMessageBuilder.apply {
+    ) = MessageGroup.builder().apply {
+        addMessage(rawMessageBuilder.apply {
             if (protocol != null) {
-                this.protocol = protocol
+                setProtocol(protocol)
             }
-            id.sequence = sequence
-            this.body = Unpooled.wrappedBuffer(body)
-        })
-    }
+            idBuilder().apply {
+                setSequence(sequence)
+                setDirection(Direction.OUTGOING)
+                setSessionAlias("sa")
+                setTimestamp(Instant.now())
+            }
+            setBody(Unpooled.wrappedBuffer(body))
+        }.build())
+    }.build()
 }

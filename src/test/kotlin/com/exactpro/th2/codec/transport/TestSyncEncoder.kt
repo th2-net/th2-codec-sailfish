@@ -59,11 +59,13 @@ internal class TestSyncEncoder {
         whenever(converter.fromTransport(any(), any(), any(), any())).thenReturn(mock { })
         whenever(codec.encode(any(), any())).thenReturn(rawData)
 
-        transportEncoder.handle(DeliveryMetadata("tag"), GroupBatch.newMutable().apply {
-            groups.add(createMessageGroup(ParsedMessage.newMutable(), 1)) // empty protocol
-            groups.add(createMessageGroup(ParsedMessage.newMutable(), 2, factory.protocolName)) // codec protocol
-            groups.add(createMessageGroup(ParsedMessage.newMutable(), 3, "test")) // another protocol
-        })
+        transportEncoder.handle(DeliveryMetadata("tag"), GroupBatch.builder().apply {
+            addGroup(createMessageGroup(ParsedMessage.builder(), 1)) // empty protocol
+            addGroup(createMessageGroup(ParsedMessage.builder(), 2, factory.protocolName)) // codec protocol
+            addGroup(createMessageGroup(ParsedMessage.builder(), 3, "test")) // another protocol
+            setSessionGroup("group")
+            setBook("book")
+        }.build())
 
         val captor = argumentCaptor<GroupBatch>()
         verify(router).sendAll(captor.capture(), any())
@@ -98,15 +100,17 @@ internal class TestSyncEncoder {
         }
     }
 
-    private fun createMessageGroup(messageBuilder: ParsedMessage, sequence: Long, protocol: String? = null) =
-        MessageGroup.newMutable().apply {
-            messages.add(
+    private fun createMessageGroup(messageBuilder: ParsedMessage.FromMapBuilder, sequence: Long, protocol: String? = null) =
+        MessageGroup.builder().apply {
+            addMessage(
                 messageBuilder.apply {
                     if (protocol != null) {
-                        this.protocol = protocol
+                        setProtocol(protocol)
                     }
-                    id.sequence = sequence
-                }
+                    idBuilder().setSequence(sequence)
+                    setType("type")
+                    setBody(emptyMap())
+                }.build()
             )
-        }
+        }.build()
 }

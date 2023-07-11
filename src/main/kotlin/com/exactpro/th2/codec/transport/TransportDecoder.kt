@@ -61,19 +61,26 @@ class TransportDecoder(
             return group
         }
 
-        return MessageGroup.newMutable().apply {
+        return MessageGroup.builder().apply {
             group.messages.forEach { message ->
                 if (message is RawMessage && checkProtocol(message, protocol)) {
                     var startSeq = DEFAULT_SUBSEQUENCE_NUMBER
-                    processor.process(batch, message).forEach {
-                        it.id.subsequence.add(startSeq++)
-                        messages.add(it)
+                    processor.process(batch, message).forEach { msg ->
+                        val filled = ParsedMessage.builder().apply {
+                            setType(msg.type)
+                            setProtocol(msg.protocol)
+                            setMetadata(msg.metadata)
+                            msg.eventId?.let { setEventId(it) }
+                            setId(msg.id.toBuilder().addSubsequence(startSeq++).build())
+                            setBody(msg.body)
+                        }.build()
+                        addMessage(filled)
                     }
                 } else {
-                    messages.add(message)
+                    addMessage(message)
                 }
             }
-        }
+        }.build()
     }
 
     private fun MessageGroup.isDecodable(): Boolean = messages.asSequence()

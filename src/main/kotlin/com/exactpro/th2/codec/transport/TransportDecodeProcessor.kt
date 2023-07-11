@@ -25,7 +25,6 @@ import com.exactpro.th2.codec.AbstractCodecProcessor
 import com.exactpro.th2.codec.DecodeException
 import com.exactpro.th2.codec.EventBatchCollector
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
-import com.exactpro.th2.codec.util.fillMetadata
 import com.exactpro.th2.codec.util.toCodeContext
 import com.exactpro.th2.codec.util.toErrorMessage
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
@@ -65,9 +64,16 @@ class TransportDecodeProcessor(
             logger.trace { "Decoded messages: $decodedMessages" }
 
             return decodedMessages.map { msg ->
-                messageToProtoConverter.toTransport(msg).apply {
-                    fillMetadata(message, protocol)
-                    type = msg.name
+                messageToProtoConverter.toTransport(msg).run {
+                    val original = this
+                    return@run ParsedMessage.builder().apply {
+                        setId(message.id)
+                        original.eventId?.let { setEventId(it) }
+                        setMetadata(original.metadata)
+                        setProtocol(original.protocol)
+                        setType(original.type)
+                        setBody(original.body)
+                    }.build()
                 }
             }
         } catch (ex: Exception) {

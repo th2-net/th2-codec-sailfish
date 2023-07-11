@@ -52,7 +52,7 @@ class TestApplicationContext {
     @Test
     fun testDictionarySetting() {
         val configuration = Configuration().apply { codecClassName = CodecFactory::class.java.name }
-        val cradleEntitiesFactory = CradleEntitiesFactory(1_024 * 1_024, 1_024 * 1_024)
+        val cradleEntitiesFactory = CradleEntitiesFactory(1_024 * 1_024, 1_024 * 1_024, 1024)
         val cradleStorage: CradleStorage = mock {
             on { entitiesFactory }.thenReturn(cradleEntitiesFactory)
         }

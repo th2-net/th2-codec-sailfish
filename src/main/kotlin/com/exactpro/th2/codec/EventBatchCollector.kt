@@ -31,9 +31,10 @@ import com.exactpro.th2.common.message.logId
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.Message
-import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.toProto
 import com.exactpro.th2.common.utils.event.EventBatcher
+import com.exactpro.th2.common.utils.event.transport.toProto
 import com.exactpro.th2.common.utils.message.logId
+import com.exactpro.th2.common.utils.message.transport.toProto
 import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import mu.KotlinLogging
 import java.time.LocalDateTime
@@ -86,7 +87,7 @@ class EventBatchCollector(
             val parentEventId = message.eventId?.toProto() ?: getDecodeErrorGroupEventID()
             val event = createErrorEvent(
                 "Cannot decode message for ${message.id}", errorText, exception, parentEventId,
-                listOf<MessageID>(message.id.toProto(book, sessionGroup))
+                listOf(message.id.toProto(book, sessionGroup))
             )
             logger.error { "${errorText}. Error event id: ${event.id.toJson()}" }
             putEvent(event)

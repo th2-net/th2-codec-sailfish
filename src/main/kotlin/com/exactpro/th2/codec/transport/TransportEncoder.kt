@@ -60,15 +60,15 @@ class TransportEncoder(
             return group
         }
 
-        return MessageGroup.newMutable().apply {
+        return MessageGroup.builder().apply {
             group.messages.forEach { message ->
                 if (message is ParsedMessage && checkProtocol(message, protocol)) {
-                    messages.add(processor.process(batch, message))
+                    addMessage(processor.process(batch, message))
                 } else {
-                    messages.add(message)
+                    addMessage(message)
                 }
             }
-        }
+        }.build()
     }
 
     private fun MessageGroup.isEncodable() = messages.asSequence()

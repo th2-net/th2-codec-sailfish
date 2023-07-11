@@ -23,6 +23,7 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.DecodeException
 import com.exactpro.th2.codec.util.ERROR_CONTENT_FIELD
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.Direction
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.MessageGroup
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.RawMessage
@@ -32,6 +33,7 @@ import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.same
 import com.nhaarman.mockitokotlin2.whenever
 import io.netty.buffer.Unpooled
+import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
@@ -60,15 +62,16 @@ internal class TestDecodeProcessor {
 
         whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
 
-        val rawMessage = RawMessage.newMutable().apply {
-            id.sequence = 1
-            body = Unpooled.wrappedBuffer(rawData)
-        }
-        val batch = GroupBatch.newMutable().apply {
-            groups.add(MessageGroup.newMutable().apply {
-                messages.add(rawMessage)
-            })
-        }
+        val rawMessage = RawMessage.builder().apply {
+            setProperties()
+            setBody(Unpooled.wrappedBuffer(rawData))
+        }.build()
+        val batch = GroupBatch.builder().apply {
+            addGroup(MessageGroup.builder().apply {
+                addMessage(rawMessage)
+                setProperties()
+            }.build())
+        }.build()
         val result = processor.process(batch, rawMessage)
 
         assertEquals(1, result.size) { "Unexpected result: $result" }
@@ -88,15 +91,16 @@ internal class TestDecodeProcessor {
 
         whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage1, decodedMessage2))
 
-        val rawMessage = RawMessage.newMutable().apply {
-            id.sequence = 1
-            body = Unpooled.wrappedBuffer(rawData)
-        }
-        val batch = GroupBatch.newMutable().apply {
-            groups.add(MessageGroup.newMutable().apply {
-                messages.add(rawMessage)
-            })
-        }
+        val rawMessage = RawMessage.builder().apply {
+            setProperties()
+            setBody(Unpooled.wrappedBuffer(rawData))
+        }.build()
+        val batch = GroupBatch.builder().apply {
+            addGroup(MessageGroup.builder().apply {
+                addMessage(rawMessage)
+                setProperties()
+            }.build())
+        }.build()
         val result = processor.process(batch, rawMessage)
 
         assertEquals(2, result.size) { "Unexpected result: $result" }
@@ -104,6 +108,7 @@ internal class TestDecodeProcessor {
             result.map {
                 {
                     val id = it.id
+                    println(id)
                     assertEquals(rawMessage.id, id) { "Unexpected message id: $id" }
                 }
             }
@@ -119,15 +124,16 @@ internal class TestDecodeProcessor {
 
         whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
 
-        val rawMessage = RawMessage.newMutable().apply {
-            id.sequence = 1
-            body = Unpooled.wrappedBuffer(rawData)
-        }
-        val batch = GroupBatch.newMutable().apply {
-            groups.add(MessageGroup.newMutable().apply {
-                messages.add(rawMessage)
-            })
-        }
+        val rawMessage = RawMessage.builder().apply {
+            setProperties()
+            setBody(Unpooled.wrappedBuffer(rawData))
+        }.build()
+        val batch = GroupBatch.builder().apply {
+            addGroup(MessageGroup.builder().apply {
+                addMessage(rawMessage)
+                setProperties()
+            }.build())
+        }.build()
         val result = processor.process(batch, rawMessage)[0]
         assertEquals(ERROR_TYPE_MESSAGE, result.type)
     }
@@ -137,15 +143,18 @@ internal class TestDecodeProcessor {
         val rawData = byteArrayOf(42, 43)
         whenever(codec.decode(any(), any())).thenThrow(DecodeException("Test"))
 
-        val rawMessage = RawMessage.newMutable().apply {
-            id.sequence = 1
-            body = Unpooled.wrappedBuffer(rawData)
-        }
-        val batch = GroupBatch.newMutable().apply {
-            groups.add(MessageGroup.newMutable().apply {
-                messages.add(rawMessage)
-            })
-        }
+        val rawMessage = RawMessage.builder().apply {
+            setProperties()
+            setBody(Unpooled.wrappedBuffer(rawData))
+        }.build()
+        val batch = GroupBatch.builder().apply {
+            addGroup(MessageGroup.builder().apply {
+                setProperties()
+                addMessage(rawMessage)
+            }.build())
+            setBook("book")
+            setSessionGroup("sessionGroup")
+        }.build()
         val firstMsg = processor.process(batch, rawMessage)[0]
         assertEquals(ERROR_TYPE_MESSAGE, firstMsg.type)
         assertEquals("Caused by: Test. ", firstMsg.body[ERROR_CONTENT_FIELD])
@@ -161,17 +170,45 @@ internal class TestDecodeProcessor {
 
         whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
 
-        val rawMessage = RawMessage.newMutable().apply {
-            id.sequence = 1
-            body = Unpooled.wrappedBuffer(rawData)
-        }
-        val batch = GroupBatch.newMutable().apply {
-            groups.add(MessageGroup.newMutable().apply {
-                messages.add(rawMessage)
-            })
-        }
+        val rawMessage = RawMessage.builder().apply {
+            setProperties()
+            setBody(Unpooled.wrappedBuffer(rawData))
+        }.build()
+        val batch = GroupBatch.builder().apply {
+            addGroup(MessageGroup.builder().apply {
+                addMessage(rawMessage)
+                setProperties()
+            }.build())
+        }.build()
         val result = processor.process(batch, rawMessage)[0]
         assertEquals(ERROR_TYPE_MESSAGE, result.type)
         assertNotNull(result.body[ERROR_CONTENT_FIELD])
+    }
+
+    fun GroupBatch.Builder.setProperties() {
+        apply {
+            setBook(BOOK)
+            setSessionGroup(SESSION_GROUP)
+        }
+    }
+
+    fun RawMessage.Builder.setProperties() {
+        apply {
+            idBuilder().apply {
+                addSubsequence(1)
+                setSequence(1)
+                setDirection(Direction.OUTGOING)
+                setTimestamp(Instant.now())
+                setSessionAlias(SESSIONS_ALIAS)
+            }
+            setProtocol(PROTOCOL)
+        }
+    }
+
+    companion object {
+        private const val BOOK = "book"
+        private const val SESSION_GROUP = "sessionGroup"
+        private const val SESSIONS_ALIAS = "sessionAlias"
+        private const val PROTOCOL = "protocol"
     }
 }

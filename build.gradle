@@ -112,13 +112,13 @@ configurations.implementation {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.2.0')
-    implementation('com.exactpro.th2:common:5.2.0-separate-executor-+') {
+    api platform('com.exactpro.th2:bom:4.4.0-update-libs-5345334944-c71fdc9-SNAPSHOT')
+    implementation('com.exactpro.th2:common:5.3.0-separate-executor-5347518176-63bc4ea-SNAPSHOT') {
         because('senging to direct queues')
-        exclude group: 'com.exactpro.th2', module: 'cradle-core'
-        exclude group: 'com.exactpro.th2', module: 'cradle-cassandra'
+        //exclude group: 'com.exactpro.th2', module: 'cradle-core'
+        //exclude group: 'com.exactpro.th2', module: 'cradle-cassandra'
     }
-    implementation 'com.exactpro.th2:common-utils:2.0.0-dev'
+    implementation 'com.exactpro.th2:common-utils:2.1.0-transport-protocol-5347774882-e4aa8e6-SNAPSHOT'
     implementation 'com.exactpro.th2:sailfish-utils:4.0.0-TH2-4891-+'
 
     implementation 'io.github.microutils:kotlin-logging:3.0.0' // The greatest version which supports kotlin 1.6.21
