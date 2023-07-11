@@ -39,11 +39,11 @@ class TransportDecodeProcessor(
     codecSettings: IExternalCodecSettings,
     private val messageToProtoConverter: IMessageToTransportConverter,
     private val eventBatchCollector: EventBatchCollector
-) : AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage>>(codecFactory, codecSettings) {
+) : AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage.FromMapBuilder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
     override val protocol = codecFactory.protocolName
 
-    override fun process(batch: GroupBatch, message: RawMessage): List<ParsedMessage> {
+    override fun process(batch: GroupBatch, message: RawMessage): List<ParsedMessage.FromMapBuilder> {
         try {
             val data: ByteArray = message.body.toByteArray()
             logger.debug { "Start decoding message with id: '${message.id}'" }
@@ -64,16 +64,11 @@ class TransportDecodeProcessor(
             logger.trace { "Decoded messages: $decodedMessages" }
 
             return decodedMessages.map { msg ->
-                messageToProtoConverter.toTransport(msg).run {
-                    val original = this
-                    return@run ParsedMessage.builder().apply {
-                        setId(message.id)
-                        original.eventId?.let { setEventId(it) }
-                        setMetadata(original.metadata)
-                        setProtocol(original.protocol)
-                        setType(original.type)
-                        setBody(original.body)
-                    }.build()
+                messageToProtoConverter.toTransport(msg).apply {
+                    setId(message.id)
+                    message.eventId?.let { setEventId(it) }
+                    setProtocol(message.protocol)
+                    setMetadata(message.metadata)
                 }
             }
         } catch (ex: Exception) {

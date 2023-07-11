@@ -75,7 +75,7 @@ internal class TestDecodeProcessor {
         val result = processor.process(batch, rawMessage)
 
         assertEquals(1, result.size) { "Unexpected result: $result" }
-        val id = result[0].id
+        val id = result[0].build().id
         assertEquals(rawMessage.id, id) { "Unexpected message id: $id" }
     }
 
@@ -105,7 +105,7 @@ internal class TestDecodeProcessor {
 
         assertEquals(2, result.size) { "Unexpected result: $result" }
         assertAll(
-            result.map {
+            result.map { it.build() }.map {
                 {
                     val id = it.id
                     println(id)
@@ -155,7 +155,7 @@ internal class TestDecodeProcessor {
             setBook("book")
             setSessionGroup("sessionGroup")
         }.build()
-        val firstMsg = processor.process(batch, rawMessage)[0]
+        val firstMsg = processor.process(batch, rawMessage)[0].build()
         assertEquals(ERROR_TYPE_MESSAGE, firstMsg.type)
         assertEquals("Caused by: Test. ", firstMsg.body[ERROR_CONTENT_FIELD])
     }
@@ -180,7 +180,7 @@ internal class TestDecodeProcessor {
                 setProperties()
             }.build())
         }.build()
-        val result = processor.process(batch, rawMessage)[0]
+        val result = processor.process(batch, rawMessage)[0].build()
         assertEquals(ERROR_TYPE_MESSAGE, result.type)
         assertNotNull(result.body[ERROR_CONTENT_FIELD])
     }

@@ -92,7 +92,7 @@ fun ProtoRawMessage.toErrorMessage(exception: Exception, protocol: String): Prot
         putFields(ERROR_CONTENT_FIELD, Value.newBuilder().setSimpleValue(content).build())
     }
 
-fun Message<*>.toErrorMessage(exception: Exception, protocol: String): ParsedMessage =
+fun Message<*>.toErrorMessage(exception: Exception, protocol: String): ParsedMessage.FromMapBuilder =
     ParsedMessage.builder().apply {
         setType(ERROR_TYPE_MESSAGE)
         setId(this@toErrorMessage.id)
@@ -109,7 +109,7 @@ fun Message<*>.toErrorMessage(exception: Exception, protocol: String): ParsedMes
             }
         }
         setBody(mapOf(ERROR_CONTENT_FIELD to content))
-    }.build()
+    }
 
 val MessageGroup.extractMessageIds: List<MessageId>
     get() = messages.map(Message<*>::id)

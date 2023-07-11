@@ -59,10 +59,12 @@ abstract class AbstractTransportCodec(
                 runProcessMessageGroup(batch, index)?.run(resultBuilder::addGroup)
             }
         }
+
         resultBuilder.apply {
             setSessionGroup(batch.sessionGroup)
             setBook(batch.book)
         }
+
         val result = resultBuilder.build()
         return if (checkResultBatch(result)) result else null
     }

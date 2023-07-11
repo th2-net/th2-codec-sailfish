@@ -30,7 +30,7 @@ class TransportDecoder(
     applicationContext: ApplicationContext,
     sourceAttributes: String,
     targetAttributes: String,
-    private val processor: AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage>>,
+    private val processor: AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage.FromMapBuilder>>,
 ) : AbstractTransportCodec(
     router,
     applicationContext,
@@ -65,16 +65,12 @@ class TransportDecoder(
             group.messages.forEach { message ->
                 if (message is RawMessage && checkProtocol(message, protocol)) {
                     var startSeq = DEFAULT_SUBSEQUENCE_NUMBER
-                    processor.process(batch, message).forEach { msg ->
-                        val filled = ParsedMessage.builder().apply {
-                            setType(msg.type)
-                            setProtocol(msg.protocol)
-                            setMetadata(msg.metadata)
-                            msg.eventId?.let { setEventId(it) }
-                            setId(msg.id.toBuilder().addSubsequence(startSeq++).build())
-                            setBody(msg.body)
-                        }.build()
-                        addMessage(filled)
+                    processor.process(batch, message).forEach { parsed ->
+                        addMessage(
+                            parsed.apply {
+                                idBuilder().addSubsequence(startSeq++)
+                            }.build()
+                        )
                     }
                 } else {
                     addMessage(message)
