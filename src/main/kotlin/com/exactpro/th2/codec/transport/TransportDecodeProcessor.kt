@@ -64,7 +64,7 @@ class TransportDecodeProcessor(
             logger.trace { "Decoded messages: $decodedMessages" }
 
             return decodedMessages.map { msg ->
-                messageToProtoConverter.toTransport(msg).apply {
+                messageToProtoConverter.toTransportBuilder(msg).apply {
                     setId(message.id)
                     message.eventId?.let { setEventId(it) }
                     setProtocol(message.protocol)
