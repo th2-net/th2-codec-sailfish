@@ -183,7 +183,7 @@ docker {
 }
 
 application {
-    mainClassName = "com.exactpro.th2.codec.ApplicationKt"
+    mainClassName = "com.exactpro.th2.codec.MainKt"
 }
 
 dependencyCheck {
