@@ -100,21 +100,17 @@ class ApplicationContext(
                 val dictionary =
                     checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
                 val converterParameters = configuration.converterParameters
-                val factoryProxy = DefaultMessageFactoryProxy()
-                val sailfishURI = SailfishURI.unsafeParse(dictionary.namespace)
                 return ApplicationContext(
                     commonFactory,
                     codec,
                     codecFactory,
                     codecSettings,
                     ProtoToIMessageConverter(
-                        factoryProxy,
                         dictionary,
-                        sailfishURI,
                         converterParameters.toEncodeParameters()
                     ),
                     IMessageToProtoConverter(converterParameters.toDecodeParameters()),
-                    TransportToIMessageConverter(factoryProxy, dictionary, sailfishURI, converterParameters.toTransportEncodeParameters()),
+                    TransportToIMessageConverter(dictionary = dictionary, parameters = converterParameters.toTransportEncodeParameters()),
                     IMessageToTransportConverter(converterParameters.toTransportDecodeParameters()),
                     eventBatchCollector,
                     configuration.enabledExternalQueueRouting,
