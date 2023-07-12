@@ -129,6 +129,28 @@ spec:
       param2: value2
 ```
 
+## Codec transport lines parameter
+This parameter gives user ability to define how many in/out pin will be there and their types ( PROTOBUF/TRANSPORT )
+Transport pins are used to decode/encode messages to/from Transport messages.
+Protobuf pins are used to decode/encode messages to/from Protobuf messages.
+
+This parameter is a map. Key is prefix to pin name. Value is the type of pin.
+
+Example:
+```yaml
+apiVersion: th2.exactpro.com/v1
+kind: Th2Box
+metadata:
+  name: codec
+spec:
+  custom-config:
+    transportLines:
+      - simple: PROTOBUF
+      - general: PROTOBUF
+```
+
+This configuration tells codec to create two pairs of encoder&decoder and use `simple_decoder_in`, `simple_decoder_out`, `general_decoder_in`, `general_decoder_out` pins for these codecs from mq configuration section.  
+
 ## Required pins
 
 Every type of connection has two `subscribe` and `publish` pins.
