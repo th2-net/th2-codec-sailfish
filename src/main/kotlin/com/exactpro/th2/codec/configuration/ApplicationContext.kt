@@ -65,12 +65,14 @@ class ApplicationContext(
     }
 
     companion object {
-        private const val CODEC_IMPLEMENTATION_PATH = "codec_implementation"
-
         private val logger = KotlinLogging.logger { }
 
         fun create(configuration: Configuration, commonFactory: CommonFactory): ApplicationContext {
-            val codecFactory = loadFactory(configuration.codecClassName)
+            val codecFactory = runCatching {
+                load<IExternalCodecFactory>()
+            }.getOrElse {
+                throw IllegalStateException("Failed to load codec factory", it)
+            }
 
             val eventBatchRouter = commonFactory.eventBatchRouter
 
@@ -237,19 +239,14 @@ class ApplicationContext(
             }
         }
 
-        private fun loadFactory(className: String?): IExternalCodecFactory {
-            val jarList = FileUtils.listFiles(
-                File(CODEC_IMPLEMENTATION_PATH),
-                arrayOf("jar"),
-                true
-            ).map { it.toURI().toURL() }.toTypedArray()
-            val codecClassLoader = URLClassLoader(jarList, ApplicationContext::class.java.classLoader)
-            val serviceLoader = ServiceLoader.load(IExternalCodecFactory::class.java, codecClassLoader)
-            return serviceLoader.firstOrNull { className == it.javaClass.name }
-                ?: throw IllegalArgumentException(
-                    "no implementations of $className " +
-                            "found by '$CODEC_IMPLEMENTATION_PATH' path"
-                )
+        inline fun <reified T> load(): T {
+            val instances = ServiceLoader.load(T::class.java).toList()
+
+            return when (instances.size) {
+                0 -> error("No instances of ${T::class.simpleName}")
+                1 -> instances.first()
+                else -> error("More than 1 instance of ${T::class.simpleName} has been found: $instances")
+            }
         }
 
     }

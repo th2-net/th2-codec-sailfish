@@ -100,7 +100,7 @@ class TestApplicationContext {
 
             mockStatic(ServiceLoader::class.java).use { loaderMock ->
                 loaderMock.apply {
-                    `when`<Any> { ServiceLoader.load(any(Class::class.java), any(ClassLoader::class.java)) }.thenReturn(codecLoader)
+                    `when`<Any> { ServiceLoader.load(any(Class::class.java)) }.thenReturn(codecLoader)
                     `when`<Any> { ServiceLoader.load(eq(SchemaFactory::class.java)) }.thenReturn(emptyLoader)
                     `when`<Any> { ServiceLoader.load(eq(SAXParserFactory::class.java)) }.thenReturn(emptyLoader)
                 }
