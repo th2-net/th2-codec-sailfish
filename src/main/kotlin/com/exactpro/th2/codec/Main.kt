@@ -14,8 +14,8 @@
 package com.exactpro.th2.codec
 
 import com.exactpro.th2.common.schema.factory.CommonFactory
+import java.util.Deque
 import mu.KotlinLogging
-import java.util.*
 import java.util.concurrent.ConcurrentLinkedDeque
 import java.util.concurrent.locks.Condition
 import java.util.concurrent.locks.ReentrantLock

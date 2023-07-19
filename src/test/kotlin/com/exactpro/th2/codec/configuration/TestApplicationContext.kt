@@ -43,7 +43,8 @@ import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mockStatic
 import java.io.File
-import java.util.*
+import java.util.EnumMap
+import java.util.ServiceLoader
 import javax.xml.parsers.SAXParserFactory
 import javax.xml.validation.SchemaFactory
 import com.exactpro.sf.externalapi.DictionaryType as SailfishDictionaryType
