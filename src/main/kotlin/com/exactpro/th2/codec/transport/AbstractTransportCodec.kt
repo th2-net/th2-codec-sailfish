@@ -10,7 +10,7 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
+* See the License for the specific language governing permissions and
  * limitations under the License.
  */
 package com.exactpro.th2.codec.transport
@@ -40,11 +40,11 @@ abstract class AbstractTransportCodec(
 
     private val async = applicationContext.enabledVerticalScaling && Runtime.getRuntime().availableProcessors() > 1
     override fun process(batch: GroupBatch): GroupBatch? {
-        if (batch.groups.size < 1) {
+        if (batch.groups.isEmpty()) {
             return null
         }
 
-        val resultBuilder = GroupBatch.newMutable()
+        val resultBuilder = GroupBatch.builder()
 
         if (async) {
             val messageGroupFutures = Array<CompletableFuture<MessageGroup?>>(batch.groups.size) { index ->
@@ -52,14 +52,21 @@ abstract class AbstractTransportCodec(
             }
 
             CompletableFuture.allOf(*messageGroupFutures).whenComplete { _, _ ->
-                messageGroupFutures.forEach { it.get()?.run(resultBuilder.groups::add) }
+                messageGroupFutures.forEach { it.get()?.run(resultBuilder::addGroup) }
             }.get()
         } else {
             batch.groups.indices.forEach { index ->
-                runProcessMessageGroup(batch, index)?.run(resultBuilder.groups::add)
+                runProcessMessageGroup(batch, index)?.run(resultBuilder::addGroup)
             }
         }
-        return if (checkResultBatch(resultBuilder)) resultBuilder else null
+
+        resultBuilder.apply {
+            setSessionGroup(batch.sessionGroup)
+            setBook(batch.book)
+        }
+
+        val result = resultBuilder.build()
+        return if (checkResultBatch(result)) result else null
     }
 
     override val GroupBatch.externalQueue: String

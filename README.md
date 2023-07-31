@@ -1,4 +1,4 @@
-# How it works (4.0.2)
+# How it works (4.1.0)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -129,6 +129,28 @@ spec:
       param2: value2
 ```
 
+## Codec transport lines parameter
+This parameter gives user ability to define how many in/out pin will be there and their types ( PROTOBUF/TRANSPORT )
+Transport pins are used to decode/encode messages to/from Transport messages.
+Protobuf pins are used to decode/encode messages to/from Protobuf messages.
+
+This parameter is a map. Key is prefix to pin name. Value is the type of pin.
+
+Example:
+```yaml
+apiVersion: th2.exactpro.com/v1
+kind: Th2Box
+metadata:
+  name: codec
+spec:
+  custom-config:
+    transportLines:
+      - simple: PROTOBUF
+      - general: PROTOBUF
+```
+
+This configuration tells codec to create two pairs of encoder&decoder and use `simple_decoder_in`, `simple_decoder_out`, `general_decoder_in`, `general_decoder_out` pins for these codecs from mq configuration section.  
+
 ## Required pins
 
 Every type of connection has two `subscribe` and `publish` pins.
@@ -247,6 +269,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 4.1.0
+   * Transport protocol support
+  
 + 4.0.2
   * Fixed: excluded vulnerable dependencies
   * Migration to common: 5.2.0-dev

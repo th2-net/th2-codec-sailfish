@@ -30,7 +30,7 @@ class TransportDecoder(
     applicationContext: ApplicationContext,
     sourceAttributes: String,
     targetAttributes: String,
-    private val processor: AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage>>,
+    private val processor: AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage.FromMapBuilder>>,
 ) : AbstractTransportCodec(
     router,
     applicationContext,
@@ -61,19 +61,22 @@ class TransportDecoder(
             return group
         }
 
-        return MessageGroup.newMutable().apply {
+        return MessageGroup.builder().apply {
             group.messages.forEach { message ->
                 if (message is RawMessage && checkProtocol(message, protocol)) {
                     var startSeq = DEFAULT_SUBSEQUENCE_NUMBER
-                    processor.process(batch, message).forEach {
-                        it.id.subsequence.add(startSeq++)
-                        messages.add(it)
+                    processor.process(batch, message).forEach { parsed ->
+                        addMessage(
+                            parsed.apply {
+                                idBuilder().addSubsequence(startSeq++)
+                            }.build()
+                        )
                     }
                 } else {
-                    messages.add(message)
+                    addMessage(message)
                 }
             }
-        }
+        }.build()
     }
 
     private fun MessageGroup.isDecodable(): Boolean = messages.asSequence()

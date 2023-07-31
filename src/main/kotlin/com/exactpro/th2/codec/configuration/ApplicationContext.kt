@@ -22,22 +22,18 @@ import com.exactpro.sf.externalapi.DictionaryType.OUTGOING
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
-import com.exactpro.th2.codec.DefaultMessageFactoryProxy
 import com.exactpro.th2.codec.EventBatchCollector
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
-import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.FromSailfishParameters
-import com.exactpro.th2.sailfish.utils.ToSailfishParameters
+import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter.createParameters
+import com.exactpro.th2.sailfish.utils.ToSailfishParameters
 import com.exactpro.th2.sailfish.utils.transport.IMessageToTransportConverter
 import com.exactpro.th2.sailfish.utils.transport.TransportToIMessageConverter
-import java.io.File
-import java.net.URLClassLoader
 import java.util.ServiceLoader
 import mu.KotlinLogging
-import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
 import org.apache.commons.lang3.math.NumberUtils.toByte
 import org.apache.commons.lang3.math.NumberUtils.toDouble
@@ -65,14 +61,17 @@ class ApplicationContext(
     }
 
     companion object {
-        private const val CODEC_IMPLEMENTATION_PATH = "codec_implementation"
-
         private val logger = KotlinLogging.logger { }
 
         fun create(configuration: Configuration, commonFactory: CommonFactory): ApplicationContext {
-            val codecFactory = loadFactory(configuration.codecClassName)
+            val codecFactory = runCatching {
+                load<IExternalCodecFactory>()
+            }.getOrElse {
+                throw IllegalStateException("Failed to load codec factory", it)
+            }
 
             val eventBatchRouter = commonFactory.eventBatchRouter
+
             val maxEventBatchSizeInBytes = commonFactory.cradleManager.storage.entitiesFactory.maxTestEventBatchSize
             check(configuration.outgoingEventBatchBuildTime > 0) { "The value of outgoingEventBatchBuildTime must be greater than zero" }
             check(configuration.maxOutgoingEventBatchSize > 0) { "The value of maxOutgoingEventBatchSize must be greater than zero" }
@@ -97,21 +96,17 @@ class ApplicationContext(
                 val dictionary =
                     checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
                 val converterParameters = configuration.converterParameters
-                val factoryProxy = DefaultMessageFactoryProxy()
-                val sailfishURI = SailfishURI.unsafeParse(dictionary.namespace)
                 return ApplicationContext(
                     commonFactory,
                     codec,
                     codecFactory,
                     codecSettings,
                     ProtoToIMessageConverter(
-                        factoryProxy,
                         dictionary,
-                        sailfishURI,
                         converterParameters.toEncodeParameters()
                     ),
                     IMessageToProtoConverter(converterParameters.toDecodeParameters()),
-                    TransportToIMessageConverter(factoryProxy, dictionary, sailfishURI, converterParameters.toTransportEncodeParameters()),
+                    TransportToIMessageConverter(dictionary = dictionary, parameters = converterParameters.toTransportEncodeParameters()),
                     IMessageToTransportConverter(converterParameters.toTransportDecodeParameters()),
                     eventBatchCollector,
                     configuration.enabledExternalQueueRouting,
@@ -236,19 +231,14 @@ class ApplicationContext(
             }
         }
 
-        private fun loadFactory(className: String?): IExternalCodecFactory {
-            val jarList = FileUtils.listFiles(
-                File(CODEC_IMPLEMENTATION_PATH),
-                arrayOf("jar"),
-                true
-            ).map { it.toURI().toURL() }.toTypedArray()
-            val codecClassLoader = URLClassLoader(jarList, ApplicationContext::class.java.classLoader)
-            val serviceLoader = ServiceLoader.load(IExternalCodecFactory::class.java, codecClassLoader)
-            return serviceLoader.firstOrNull { className == it.javaClass.name }
-                ?: throw IllegalArgumentException(
-                    "no implementations of $className " +
-                            "found by '$CODEC_IMPLEMENTATION_PATH' path"
-                )
+        inline fun <reified T> load(): T {
+            val instances = ServiceLoader.load(T::class.java).toList()
+
+            return when (instances.size) {
+                0 -> error("No instances of ${T::class.simpleName}")
+                1 -> instances.first()
+                else -> error("More than 1 instance of ${T::class.simpleName} has been found: $instances")
+            }
         }
 
     }

@@ -74,13 +74,6 @@ fun ProtoRawMessage.toMessageMetadataBuilder(protocol: String): MessageMetadata.
         .putAllProperties(metadata.propertiesMap)
 }
 
-fun Message<*>.fillMetadata(donar: Message<*>, protocol: String) = apply {
-    id = donar.id
-    eventId = donar.eventId
-    metadata.putAll(donar.metadata)
-    this.protocol = protocol
-}
-
 fun ProtoRawMessage.toErrorMessage(exception: Exception, protocol: String): ProtoMessage.Builder =
     ProtoMessage.newBuilder().apply {
         if (hasParentEventId()) {
@@ -99,10 +92,13 @@ fun ProtoRawMessage.toErrorMessage(exception: Exception, protocol: String): Prot
         putFields(ERROR_CONTENT_FIELD, Value.newBuilder().setSimpleValue(content).build())
     }
 
-fun Message<*>.toErrorMessage(exception: Exception, protocol: String): ParsedMessage =
-    ParsedMessage.newSoftMutable().apply {
-        fillMetadata(this@toErrorMessage, protocol)
-        type = ERROR_TYPE_MESSAGE
+fun Message<*>.toErrorMessage(exception: Exception, protocol: String): ParsedMessage.FromMapBuilder =
+    ParsedMessage.builder().apply {
+        setType(ERROR_TYPE_MESSAGE)
+        setId(this@toErrorMessage.id)
+        this@toErrorMessage.eventId?.let { setEventId(it) }
+        setMetadata(this@toErrorMessage.metadata)
+        setProtocol(protocol)
 
         val content = buildString {
             var throwable: Throwable? = exception
@@ -112,7 +108,7 @@ fun Message<*>.toErrorMessage(exception: Exception, protocol: String): ParsedMes
                 throwable = throwable.cause
             }
         }
-        body[ERROR_CONTENT_FIELD] = content
+        addField(ERROR_CONTENT_FIELD, content)
     }
 
 val MessageGroup.extractMessageIds: List<MessageId>

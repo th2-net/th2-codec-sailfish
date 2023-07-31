@@ -43,7 +43,8 @@ import org.mockito.Mockito
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mockStatic
 import java.io.File
-import java.util.*
+import java.util.EnumMap
+import java.util.ServiceLoader
 import javax.xml.parsers.SAXParserFactory
 import javax.xml.validation.SchemaFactory
 import com.exactpro.sf.externalapi.DictionaryType as SailfishDictionaryType
@@ -52,7 +53,7 @@ class TestApplicationContext {
     @Test
     fun testDictionarySetting() {
         val configuration = Configuration().apply { codecClassName = CodecFactory::class.java.name }
-        val cradleEntitiesFactory = CradleEntitiesFactory(1_024 * 1_024, 1_024 * 1_024)
+        val cradleEntitiesFactory = CradleEntitiesFactory(1_024 * 1_024, 1_024 * 1_024, 1024)
         val cradleStorage: CradleStorage = mock {
             on { entitiesFactory }.thenReturn(cradleEntitiesFactory)
         }
@@ -100,7 +101,7 @@ class TestApplicationContext {
 
             mockStatic(ServiceLoader::class.java).use { loaderMock ->
                 loaderMock.apply {
-                    `when`<Any> { ServiceLoader.load(any(Class::class.java), any(ClassLoader::class.java)) }.thenReturn(codecLoader)
+                    `when`<Any> { ServiceLoader.load(any(Class::class.java)) }.thenReturn(codecLoader)
                     `when`<Any> { ServiceLoader.load(eq(SchemaFactory::class.java)) }.thenReturn(emptyLoader)
                     `when`<Any> { ServiceLoader.load(eq(SAXParserFactory::class.java)) }.thenReturn(emptyLoader)
                 }

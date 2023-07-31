@@ -39,7 +39,7 @@ plugins {
 
 ext {
     genDir = file('src/gen')
-    sailfishVersion = '3.3.93'
+    sailfishVersion = '3.3.111'
     excludeSailfish = { rcd ->
         rcd.excludeModule("com.exactpro.sf", "sailfish-core")
         rcd.excludeModule("com.exactpro.sf", "sailfish-common")
@@ -112,14 +112,13 @@ configurations.implementation {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.2.0')
-    implementation('com.exactpro.th2:common:5.2.0-separate-executor-+') {
+    api platform('com.exactpro.th2:bom:4.4.0')
+    implementation('com.exactpro.th2:common:5.3.0-separate-executor+') {
         because('senging to direct queues')
-        exclude group: 'com.exactpro.th2', module: 'cradle-core'
-        exclude group: 'com.exactpro.th2', module: 'cradle-cassandra'
+        exclude group: 'com.exactpro.th2', module: 'task-utils'
     }
-    implementation 'com.exactpro.th2:common-utils:2.0.0-dev'
-    implementation 'com.exactpro.th2:sailfish-utils:4.0.0-TH2-4891-+'
+    implementation 'com.exactpro.th2:common-utils:2.1.0-transport-protocol+'
+    implementation 'com.exactpro.th2:sailfish-utils:4.0.0-TH2-4891+'
 
     implementation 'io.github.microutils:kotlin-logging:3.0.0' // The greatest version which supports kotlin 1.6.21
 
@@ -249,10 +248,6 @@ signing {
 }
 
 compileKotlin {
-    kotlinOptions.jvmTarget = "11"
-}
-
-compileTestKotlin {
     kotlinOptions.jvmTarget = "11"
 }
 

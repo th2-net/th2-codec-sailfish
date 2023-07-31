@@ -18,14 +18,12 @@ package com.exactpro.th2.codec.transport
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.th2.codec.AbstractCodecProcessor
-import com.exactpro.th2.codec.util.fillMetadata
 import com.exactpro.th2.codec.util.toCodeContext
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.ParsedMessage
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.RawMessage
 import com.exactpro.th2.sailfish.utils.MessageWrapper
 import com.exactpro.th2.sailfish.utils.transport.TransportToIMessageConverter
-import io.netty.buffer.Unpooled
 import mu.KotlinLogging
 
 class TransportEncodeProcessor(
@@ -43,9 +41,12 @@ class TransportEncodeProcessor(
             }
 
         val encodedMessageData = getCodec().encode(convertedSourceMessage, message.toCodeContext())
-        return RawMessage.newSoftMutable().apply {
-            fillMetadata(message, protocol)
-            body = Unpooled.wrappedBuffer(encodedMessageData)
-        }
+        return RawMessage.builder().apply {
+            setId(message.id)
+            message.eventId?.let { setEventId(it) }
+            setMetadata(message.metadata)
+            setProtocol(message.protocol)
+            setBody(encodedMessageData)
+        }.build()
     }
 }

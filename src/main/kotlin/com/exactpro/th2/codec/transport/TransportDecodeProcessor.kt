@@ -25,7 +25,6 @@ import com.exactpro.th2.codec.AbstractCodecProcessor
 import com.exactpro.th2.codec.DecodeException
 import com.exactpro.th2.codec.EventBatchCollector
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
-import com.exactpro.th2.codec.util.fillMetadata
 import com.exactpro.th2.codec.util.toCodeContext
 import com.exactpro.th2.codec.util.toErrorMessage
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
@@ -40,11 +39,11 @@ class TransportDecodeProcessor(
     codecSettings: IExternalCodecSettings,
     private val messageToProtoConverter: IMessageToTransportConverter,
     private val eventBatchCollector: EventBatchCollector
-) : AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage>>(codecFactory, codecSettings) {
+) : AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage.FromMapBuilder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
     override val protocol = codecFactory.protocolName
 
-    override fun process(batch: GroupBatch, message: RawMessage): List<ParsedMessage> {
+    override fun process(batch: GroupBatch, message: RawMessage): List<ParsedMessage.FromMapBuilder> {
         try {
             val data: ByteArray = message.body.toByteArray()
             logger.debug { "Start decoding message with id: '${message.id}'" }
@@ -65,9 +64,11 @@ class TransportDecodeProcessor(
             logger.trace { "Decoded messages: $decodedMessages" }
 
             return decodedMessages.map { msg ->
-                messageToProtoConverter.toTransport(msg).apply {
-                    fillMetadata(message, protocol)
-                    type = msg.name
+                messageToProtoConverter.toTransportBuilder(msg).apply {
+                    setId(message.id)
+                    message.eventId?.let { setEventId(it) }
+                    setProtocol(message.protocol)
+                    setMetadata(message.metadata)
                 }
             }
         } catch (ex: Exception) {
