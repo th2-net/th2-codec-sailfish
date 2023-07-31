@@ -18,7 +18,11 @@ package com.exactpro.th2.codec.proto
 import com.exactpro.th2.codec.AbstractCodecProcessor
 import com.exactpro.th2.codec.configuration.ApplicationContext
 import com.exactpro.th2.codec.util.messageIds
-import com.exactpro.th2.common.grpc.*
+import com.exactpro.th2.common.grpc.AnyMessage
+import com.exactpro.th2.common.grpc.Message
+import com.exactpro.th2.common.grpc.MessageGroup
+import com.exactpro.th2.common.grpc.MessageGroupBatch
+import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.message.plusAssign
 import com.exactpro.th2.common.schema.message.MessageRouter
 import com.google.protobuf.TextFormat.shortDebugString

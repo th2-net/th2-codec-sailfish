@@ -30,7 +30,7 @@ plugins {
 
 ext {
     genDir = file('src/gen')
-    sailfishVersion = '3.3.106'
+    sailfishVersion = '3.3.111'
     excludeSailfish = { rcd ->
         rcd.excludeModule("com.exactpro.sf", "sailfish-core")
         rcd.excludeModule("com.exactpro.sf", "sailfish-common")
@@ -109,7 +109,10 @@ configurations {
 
 dependencies {
     api platform('com.exactpro.th2:bom:4.4.0')
-    implementation 'com.exactpro.th2:common:5.3.2-dev'
+    implementation('com.exactpro.th2:common:5.3.2-dev') {
+        because('senging to direct queues')
+        exclude group: 'com.exactpro.th2', module: 'task-utils'
+    }
     implementation 'com.exactpro.th2:common-utils:2.1.1-dev'
     implementation 'com.exactpro.th2:sailfish-utils:4.0.1-dev'
 
@@ -249,10 +252,6 @@ signing {
 }
 
 compileKotlin {
-    kotlinOptions.jvmTarget = "11"
-}
-
-compileTestKotlin {
     kotlinOptions.jvmTarget = "11"
 }
 
