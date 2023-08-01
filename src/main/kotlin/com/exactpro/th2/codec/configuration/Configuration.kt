@@ -25,15 +25,12 @@ import com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PRO
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.Files.newInputStream
-import java.nio.file.Paths
 
 internal val OBJECT_MAPPER: ObjectMapper = ObjectMapper(JsonFactory()).apply { registerKotlinModule() }
     .configure(FAIL_ON_UNKNOWN_PROPERTIES, false)
 
 class Configuration(
-    val implementationSettingsFile: String = "codec_config.yml",
+    val defaultSettingResourceName: String = "codec_config.yml",
     val outgoingEventBatchBuildTime: Long = 30,
     val maxOutgoingEventBatchSize: Int = 99,
     val numOfEventBatchCollectorWorkers: Int = 1,
@@ -65,34 +62,27 @@ class Configuration(
 
         fun create(commonFactory: CommonFactory): Configuration {
             val configuration = commonFactory.getCustomConfiguration(Configuration::class.java)
-            val implementationParams = readSailfishParameters(configuration.implementationSettingsFile)
+            val implementationParams = readSailfishParameters(configuration.defaultSettingResourceName)
             configuration.codecParameters = implementationParams.merge(configuration.codecParameters)
             return configuration
         }
 
 
-        private fun readSailfishParameters(sailfishCodecParamsPath: String?): Map<String, String> {
-            if (sailfishCodecParamsPath.isNullOrBlank()) {
+        private fun readSailfishParameters(defaultSettingResourceName: String?): Map<String, String> {
+            if (defaultSettingResourceName.isNullOrBlank()) {
                 return mapOf()
             }
-            val codecParameterFile = Paths.get(sailfishCodecParamsPath)
-            if (!Files.exists(codecParameterFile)) {
-                return mapOf()
-            }
-            try {
-                return OBJECT_MAPPER.readValue(
-                    newInputStream(codecParameterFile),
-                    object : TypeReference<LinkedHashMap<String, String>>() {}
-                )
-            } catch (exception: Exception) {
-                when (exception) {
-                    is IOException -> {
-                        throw ConfigurationException("could not parse '$sailfishCodecParamsPath' file", exception)
+            return Thread.currentThread().contextClassLoader.getResourceAsStream(defaultSettingResourceName)?.use {
+                runCatching {
+                    OBJECT_MAPPER.readValue(it, object : TypeReference<LinkedHashMap<String, String>>() {})
+                }.getOrElse { e -> when (e) {
+                        is IOException -> {
+                            throw ConfigurationException("Could not parse '$defaultSettingResourceName' resource file", e)
+                        }
+                        else -> throw e
                     }
-
-                    else -> throw exception
                 }
-            }
+            } ?: mapOf()
         }
 
         private fun <K, V> Map<K, V>.merge(userParameters: Map<K, V>?): Map<K, V> {
