@@ -181,7 +181,7 @@ tasks.withType(Sign).configureEach {
 }
 // disable running task 'initializeSonatypeStagingRepository' on a gitlab
 tasks.configureEach { task ->
-    if (task.name.equals('initializeSonatypeStagingRepository') &&
+    if (task.name == 'initializeSonatypeStagingRepository' &&
             !(project.hasProperty('sonatypeUsername') && project.hasProperty('sonatypePassword'))
     ) {
         task.enabled = false
