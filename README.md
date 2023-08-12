@@ -248,7 +248,10 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 ## Release notes
 
 + 4.1.0
-   * Transport protocol support
+  * Transport protocol support
+  * Updated common: `5.3.2-dev`
+  * Updated common-utils: `2.1.1-dev`
+  * Updated sailfish-utils: `4.0.1-dev`
   
 + 4.0.2
   * Fixed: excluded vulnerable dependencies
