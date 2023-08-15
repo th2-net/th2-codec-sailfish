@@ -247,6 +247,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
 
++ 4.2.1
+  * added task-utils: `0.1.2`
+
 + 4.2.0
   * bom: `4.5.0-dev`
   * common: `5.4.0-dev`

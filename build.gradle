@@ -109,13 +109,9 @@ configurations {
 
 dependencies {
     api platform('com.exactpro.th2:bom:4.5.0')
-    implementation('com.exactpro.th2:common:5.4.0-dev') {
-        exclude group: 'com.exactpro.th2', module: 'task-utils'
-    }
+    implementation'com.exactpro.th2:common:5.4.0-dev'
     implementation 'com.exactpro.th2:common-utils:2.2.0-dev'
-    implementation('com.exactpro.th2:sailfish-utils:4.1.0-dev') {
-        exclude group: 'com.exactpro.th2', module: 'task-utils'
-    }
+    implementation 'com.exactpro.th2:sailfish-utils:4.1.0-dev'
 
     implementation 'io.github.microutils:kotlin-logging:3.0.0' // The greatest version which supports kotlin 1.6.21
 
@@ -263,7 +259,7 @@ compileTestKotlin {
 dependencyCheck {
     formats = ['SARIF', 'JSON', 'HTML']
     failBuildOnCVSS = 5
-
+    suppressionFile = file('suppressions.xml')
     analyzers {
         assemblyEnabled = false
         nugetconfEnabled = false
