@@ -35,11 +35,11 @@ import com.nhaarman.mockitokotlin2.same
 import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.whenever
 import io.netty.buffer.Unpooled
-import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll
+import java.time.Instant
 
 internal class TestSyncTransportDecoder {
     private val settings = mock<IExternalCodecSettings> { }

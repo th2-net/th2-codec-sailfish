@@ -1,7 +1,6 @@
 name: Build and release Java distributions to sonatype.
 
 on:
-  workflow_dispatch:
   push:
     branches:
     - master
