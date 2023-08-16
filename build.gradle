@@ -7,7 +7,7 @@ buildscript {
     }
 
     ext {
-        kotlin_version = "1.6.21"
+        kotlin_version = "1.8.22"
     }
 
     dependencies {
@@ -108,13 +108,13 @@ configurations {
 }
 
 dependencies {
-    api platform('com.exactpro.th2:bom:4.4.0')
-    implementation('com.exactpro.th2:common:5.3.2-dev') {
+    api platform('com.exactpro.th2:bom:4.5.0')
+    implementation('com.exactpro.th2:common:5.4.0-dev') {
         because('senging to direct queues')
         exclude group: 'com.exactpro.th2', module: 'task-utils'
     }
-    implementation 'com.exactpro.th2:common-utils:2.1.1-dev'
-    implementation 'com.exactpro.th2:sailfish-utils:4.0.1-dev'
+    implementation 'com.exactpro.th2:common-utils:2.2.0-dev'
+    implementation 'com.exactpro.th2:sailfish-utils:4.1.0-dev'
 
     implementation 'io.github.microutils:kotlin-logging:3.0.0' // The greatest version which supports kotlin 1.6.21
 
@@ -258,7 +258,7 @@ compileKotlin {
 dependencyCheck {
     formats = ['SARIF', 'JSON', 'HTML']
     failBuildOnCVSS = 5
-
+    suppressionFile = file('suppressions.xml')
     analyzers {
         assemblyEnabled = false
         nugetconfEnabled = false
