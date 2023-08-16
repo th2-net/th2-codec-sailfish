@@ -108,7 +108,7 @@ fun Message<*>.toErrorMessage(exception: Exception, protocol: String): ParsedMes
                 throwable = throwable.cause
             }
         }
-        setBody(mapOf(ERROR_CONTENT_FIELD to content))
+        addField(ERROR_CONTENT_FIELD, content)
     }
 
 val MessageGroup.extractMessageIds: List<MessageId>
