@@ -404,6 +404,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
   * Updated common-utils: `2.1.1-dev`
   * Updated sailfish-utils: `4.0.1-dev`
   
++ 4.1.0
+   * Transport protocol support
+  
 + 4.0.2
   * Fixed: excluded vulnerable dependencies
   * Migration to common: 5.2.0-dev
