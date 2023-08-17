@@ -236,7 +236,7 @@ class ApplicationContext(
 
             return when (instances.size) {
                 0 -> error("No instances of ${T::class.simpleName}")
-                1 -> instances.first()
+                1 -> instances.single()
                 else -> error("More than 1 instance of ${T::class.simpleName} has been found: $instances")
             }
         }
