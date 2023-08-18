@@ -38,7 +38,7 @@ plugins {
 
 ext {
     genDir             = file('src/gen')
-    sailfishVersion    = '3.3.93'
+    sailfishVersion    = '3.3.132'
 }
 
 group 'com.exactpro.th2'
