@@ -236,7 +236,7 @@ class ApplicationContext(
 
             return when (instances.size) {
                 0 -> error("No instances of ${T::class.simpleName}")
-                1 -> instances.first()
+                1 -> instances.single()
                 else -> codecClassName?.let { className ->
                     instances.find {
                         it::class.java.canonicalName == className
