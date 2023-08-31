@@ -22,22 +22,17 @@ import com.exactpro.sf.externalapi.DictionaryType.OUTGOING
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
-import com.exactpro.th2.codec.DefaultMessageFactoryProxy
 import com.exactpro.th2.codec.EventBatchCollector
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
-import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.FromSailfishParameters
-import com.exactpro.th2.sailfish.utils.ToSailfishParameters
+import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter.createParameters
+import com.exactpro.th2.sailfish.utils.ToSailfishParameters
 import com.exactpro.th2.sailfish.utils.transport.IMessageToTransportConverter
 import com.exactpro.th2.sailfish.utils.transport.TransportToIMessageConverter
-import java.io.File
-import java.net.URLClassLoader
-import java.util.ServiceLoader
 import mu.KotlinLogging
-import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
 import org.apache.commons.lang3.math.NumberUtils.toByte
 import org.apache.commons.lang3.math.NumberUtils.toDouble
@@ -45,6 +40,7 @@ import org.apache.commons.lang3.math.NumberUtils.toFloat
 import org.apache.commons.lang3.math.NumberUtils.toInt
 import org.apache.commons.lang3.math.NumberUtils.toLong
 import org.apache.commons.lang3.math.NumberUtils.toShort
+import java.util.ServiceLoader
 
 class ApplicationContext(
     val commonFactory: CommonFactory,
@@ -69,7 +65,7 @@ class ApplicationContext(
 
         fun create(configuration: Configuration, commonFactory: CommonFactory): ApplicationContext {
             val codecFactory = runCatching {
-                load<IExternalCodecFactory>()
+                load<IExternalCodecFactory>(configuration.codecClassName)
             }.getOrElse {
                 throw IllegalStateException("Failed to load codec factory", it)
             }
@@ -235,13 +231,18 @@ class ApplicationContext(
             }
         }
 
-        inline fun <reified T> load(): T {
-            val instances = ServiceLoader.load(T::class.java).toList()
+        private inline fun <reified T : Any> load(codecClassName: String?): T {
+            val instances: List<T> = ServiceLoader.load(T::class.java).toList()
 
             return when (instances.size) {
                 0 -> error("No instances of ${T::class.simpleName}")
                 1 -> instances.first()
-                else -> error("More than 1 instance of ${T::class.simpleName} has been found: $instances")
+                else -> codecClassName?.let { className ->
+                    instances.find {
+                        it::class.java.canonicalName == className
+                    } ?: error("found ${instances.size} codec implementation(s) but none matches $className. " +
+                            "Implementations: ${instances.joinToString { it::class.java.canonicalName }}")
+                } ?: error("found ${instances.size} codec implementation(s) but no 'codecClassName' parameter was provided")
             }
         }
 
