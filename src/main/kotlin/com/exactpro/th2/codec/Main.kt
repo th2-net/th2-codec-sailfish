@@ -13,153 +13,57 @@
 
 package com.exactpro.th2.codec
 
-import com.exactpro.th2.codec.configuration.ApplicationContext
-import com.exactpro.th2.codec.configuration.Configuration
 import com.exactpro.th2.common.schema.factory.CommonFactory
-import com.github.ajalt.clikt.core.CliktCommand
-import com.github.ajalt.clikt.parameters.options.option
-import mu.KotlinLogging
 import java.util.Deque
+import mu.KotlinLogging
 import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.locks.Condition
+import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.thread
+import kotlin.concurrent.withLock
 import kotlin.system.exitProcess
 
-private val logger = KotlinLogging.logger {}
-
+private val K_LOGGER = KotlinLogging.logger {}
 fun main(args: Array<String>) {
-    CodecCommand().main(args)
-}
-
-class CodecCommand : CliktCommand() {
-    private val configs: String? by option(help = "Directory containing schema files")
-    private val sailfishCodecConfig: String? by option(help = "Path to sailfish codec configuration file")
-
-    private val resources: Deque<() -> Unit> = ConcurrentLinkedDeque()
-
-    init {
+    try {
+        val lock = ReentrantLock()
+        val condition: Condition = lock.newCondition()
+        val resources: Deque<() -> Unit> = ConcurrentLinkedDeque()
         Runtime.getRuntime().addShutdownHook(thread(start = false, name = "shutdown") {
             try {
-                logger.info { "Shutdown start" }
+                K_LOGGER.info { "Shutdown start" }
                 resources.descendingIterator().forEach { action ->
-                    runCatching(action).onFailure { logger.error(it.message, it) }
+                    runCatching(action).onFailure { K_LOGGER.error(it.message, it) }
                 }
             } finally {
-                logger.info { "Shutdown end" }
+                lock.withLock { condition.signalAll() }
+                K_LOGGER.info { "Shutdown end" }
             }
         })
-    }
 
-    override fun run() {
-        try {
-            val commonFactory = (if (configs == null)
-                CommonFactory()
-            else
-                CommonFactory.createFromArguments("--configs=$configs"))
-                .also {
-                    resources.add {
-                        logger.info("Closing common factory")
-                        it.close()
-                    }
-                }
-
-            val configuration = Configuration.create(commonFactory, sailfishCodecConfig)
-            val applicationContext = ApplicationContext.create(configuration, commonFactory)
-            resources.add { applicationContext.eventBatchCollector.close() }
-
-            val groupRouter = applicationContext.commonFactory.messageRouterMessageGroupBatch
-
-            createAndStartCodec("decoder", applicationContext)
-            { _: ApplicationContext ->
-                SyncDecoder(
-                    groupRouter, applicationContext,
-                    DecodeProcessor(
-                        applicationContext.codecFactory,
-                        applicationContext.codecSettings,
-                        applicationContext.messageToProtoConverter,
-                        applicationContext.eventBatchCollector
-                    ),
-                    configuration.enableVerticalScaling
-                ).also { it.start(configuration.decoderInputAttribute, configuration.decoderOutputAttribute) }
-            }
-
-            createAndStartCodec("encoder", applicationContext)
-            { _: ApplicationContext ->
-                SyncEncoder(
-                    groupRouter, applicationContext,
-                    EncodeProcessor(
-                        applicationContext.codecFactory,
-                        applicationContext.codecSettings,
-                        applicationContext.protoToIMessageConverter,
-                        applicationContext.eventBatchCollector
-                    ),
-                    configuration.enableVerticalScaling
-                ).also { it.start(configuration.encoderInputAttribute, configuration.encoderOutputAttribute) }
-            }
-
-            createGeneralDecoder(applicationContext, configuration)
-            createGeneralEncoder(applicationContext, configuration)
-            logger.info { "codec started" }
-        } catch (exception: Exception) {
-            logger.error(exception) { "fatal error. Exit the program" }
-            exitProcess(1)
-        }
-    }
-
-    private fun createGeneralEncoder(
-        context: ApplicationContext,
-        configuration: Configuration
-    ) {
-        createAndStartCodec("general-encoder", context)
-        { _: ApplicationContext ->
-            val router = context.commonFactory.messageRouterMessageGroupBatch
-            SyncEncoder(
-                router, context,
-                EncodeProcessor(
-                    context.codecFactory,
-                    context.codecSettings,
-                    context.protoToIMessageConverter,
-                    context.eventBatchCollector
-                ),
-                configuration.enableVerticalScaling
-            ).also { it.start(configuration.generalEncoderInputAttribute, configuration.generalEncoderOutputAttribute) }
-        }
-    }
-
-    private fun createGeneralDecoder(
-        context: ApplicationContext,
-        configuration: Configuration
-    ) {
-        createAndStartCodec("general-decoder", context)
-        { _: ApplicationContext ->
-            val router = context.commonFactory.messageRouterMessageGroupBatch
-            SyncDecoder(
-                router, context,
-                DecodeProcessor(
-                    context.codecFactory,
-                    context.codecSettings,
-                    context.messageToProtoConverter,
-                    context.eventBatchCollector
-                ),
-                configuration.enableVerticalScaling
-            ).also { it.start(configuration.generalDecoderInputAttribute, configuration.generalDecoderOutputAttribute) }
-        }
-    }
-
-    private fun createAndStartCodec(
-        codecName: String,
-        applicationContext: ApplicationContext,
-        creationFunction: (ApplicationContext) -> AutoCloseable
-    ) {
-        creationFunction.invoke(applicationContext).also {
+        val commonFactory = CommonFactory.createFromArguments(*args).apply {
             resources.add {
-                logger.info { "Closing '$codecName' codec" }
-                it.close()
+                K_LOGGER.info { "Closing common factory" }
+                close()
             }
         }
-        logger.info { "'$codecName' started" }
+
+        Application(commonFactory).apply {
+            resources.add {
+                K_LOGGER.info { "Closing application" }
+                close()
+            }
+        }
+        lock.withLock {
+            K_LOGGER.info { "Wait shutdown" }
+            condition.await()
+            K_LOGGER.info { "App shutdown" }
+        }
+    } catch (e: InterruptedException) {
+        K_LOGGER.error(e) { "Message handling interrupted" }
+    } catch (e: Throwable) {
+        K_LOGGER.error(e) { "fatal error. Exit the program" }
+        e.printStackTrace()
+        exitProcess(1)
     }
-
 }
-
-
-

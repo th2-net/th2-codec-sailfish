@@ -1,16 +1,18 @@
 /*
- * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.exactpro.th2.codec.configuration
 
 import com.exactpro.sf.common.messages.structures.loaders.XmlDictionaryStructureLoader
@@ -20,18 +22,17 @@ import com.exactpro.sf.externalapi.DictionaryType.OUTGOING
 import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
-import com.exactpro.th2.codec.DefaultMessageFactoryProxy
 import com.exactpro.th2.codec.EventBatchCollector
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
 import com.exactpro.th2.common.schema.factory.CommonFactory
+import com.exactpro.th2.sailfish.utils.FromSailfishParameters
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter
 import com.exactpro.th2.sailfish.utils.ProtoToIMessageConverter.createParameters
-import java.io.File
-import java.net.URLClassLoader
-import java.util.ServiceLoader
+import com.exactpro.th2.sailfish.utils.ToSailfishParameters
+import com.exactpro.th2.sailfish.utils.transport.IMessageToTransportConverter
+import com.exactpro.th2.sailfish.utils.transport.TransportToIMessageConverter
 import mu.KotlinLogging
-import org.apache.commons.io.FileUtils
 import org.apache.commons.lang3.BooleanUtils.toBoolean
 import org.apache.commons.lang3.math.NumberUtils.toByte
 import org.apache.commons.lang3.math.NumberUtils.toDouble
@@ -39,6 +40,7 @@ import org.apache.commons.lang3.math.NumberUtils.toFloat
 import org.apache.commons.lang3.math.NumberUtils.toInt
 import org.apache.commons.lang3.math.NumberUtils.toLong
 import org.apache.commons.lang3.math.NumberUtils.toShort
+import java.util.ServiceLoader
 
 class ApplicationContext(
     val commonFactory: CommonFactory,
@@ -47,26 +49,36 @@ class ApplicationContext(
     val codecSettings: IExternalCodecSettings,
     val protoToIMessageConverter: ProtoToIMessageConverter,
     val messageToProtoConverter: IMessageToProtoConverter,
+    val transportToIMessageConverter: TransportToIMessageConverter,
+    val messageToTransportConverter: IMessageToTransportConverter,
     val eventBatchCollector: EventBatchCollector,
-    val enabledExternalRouting: Boolean
-) {
+    val enabledExternalRouting: Boolean,
+    val enabledVerticalScaling: Boolean,
+): AutoCloseable {
+
+    override fun close() {
+        eventBatchCollector.close()
+    }
 
     companion object {
-        private const val CODEC_IMPLEMENTATION_PATH = "codec_implementation"
-
         private val logger = KotlinLogging.logger { }
 
         fun create(configuration: Configuration, commonFactory: CommonFactory): ApplicationContext {
-            val codecFactory = loadFactory(configuration.codecClassName)
+            val codecFactory = runCatching {
+                load<IExternalCodecFactory>(configuration.codecClassName)
+            }.getOrElse {
+                throw IllegalStateException("Failed to load codec factory", it)
+            }
 
             val eventBatchRouter = commonFactory.eventBatchRouter
-            val maxEventBatchSizeInBytes = commonFactory.cradleConfiguration.cradleMaxEventBatchSize
+
+            val maxEventBatchSizeInBytes = commonFactory.cradleManager.storage.entitiesFactory.maxTestEventBatchSize
             check(configuration.outgoingEventBatchBuildTime > 0) { "The value of outgoingEventBatchBuildTime must be greater than zero" }
             check(configuration.maxOutgoingEventBatchSize > 0) { "The value of maxOutgoingEventBatchSize must be greater than zero" }
             check(configuration.numOfEventBatchCollectorWorkers > 0) { "The value of numOfEventBatchCollectorWorkers must be greater than zero" }
             val eventBatchCollector = EventBatchCollector(
                 eventBatchRouter,
-                maxEventBatchSizeInBytes,
+                maxEventBatchSizeInBytes.toLong(),
                 configuration.maxOutgoingEventBatchSize,
                 configuration.outgoingEventBatchBuildTime,
                 configuration.numOfEventBatchCollectorWorkers,
@@ -84,19 +96,21 @@ class ApplicationContext(
                 val dictionary =
                     checkNotNull(codecSettings[dictionaryType]) { "Dictionary is not set: $dictionaryType" }
                 val converterParameters = configuration.converterParameters
-                val protoConverter = ProtoToIMessageConverter(
-                    DefaultMessageFactoryProxy(), dictionary, SailfishURI.unsafeParse(dictionary.namespace),
-                    converterParameters.toEncodeParameters()
-                )
                 return ApplicationContext(
                     commonFactory,
                     codec,
                     codecFactory,
                     codecSettings,
-                    protoConverter,
+                    ProtoToIMessageConverter(
+                        dictionary,
+                        converterParameters.toEncodeParameters()
+                    ),
                     IMessageToProtoConverter(converterParameters.toDecodeParameters()),
+                    TransportToIMessageConverter(dictionary = dictionary, parameters = converterParameters.toTransportEncodeParameters()),
+                    IMessageToTransportConverter(converterParameters.toTransportDecodeParameters()),
                     eventBatchCollector,
-                    configuration.enabledExternalQueueRouting
+                    configuration.enabledExternalQueueRouting,
+                    configuration.enableVerticalScaling
                 )
             } catch (e: RuntimeException) {
                 eventBatchCollector.createAndStoreErrorEvent(
@@ -107,6 +121,12 @@ class ApplicationContext(
                 throw e
             }
         }
+
+        private fun ConverterParameters.toTransportEncodeParameters(): ToSailfishParameters =
+            ToSailfishParameters(allowUnknownEnumValues = allowUnknownEnumValues)
+
+        private fun ConverterParameters.toTransportDecodeParameters(): FromSailfishParameters =
+            FromSailfishParameters(stripTrailingZeros = stripTrailingZeros)
 
         private fun ConverterParameters.toEncodeParameters(): ProtoToIMessageConverter.Parameters =
             createParameters().setAllowUnknownEnumValues(allowUnknownEnumValues)
@@ -187,7 +207,6 @@ class ApplicationContext(
             if (clazz == null) {
                 logger.warn { "unknown codec parameter '$propertyName'" }
             } else {
-                @Suppress("IMPLICIT_CAST_TO_ANY")
                 settings[propertyName] = when (clazz) {
                     Boolean::class.javaPrimitiveType,
                     Boolean::class.javaObjectType -> toBoolean(propertyValue)
@@ -212,19 +231,19 @@ class ApplicationContext(
             }
         }
 
-        private fun loadFactory(className: String?): IExternalCodecFactory {
-            val jarList = FileUtils.listFiles(
-                File(CODEC_IMPLEMENTATION_PATH),
-                arrayOf("jar"),
-                true
-            ).map { it.toURI().toURL() }.toTypedArray()
-            val codecClassLoader = URLClassLoader(jarList, ApplicationContext::class.java.classLoader)
-            val serviceLoader = ServiceLoader.load(IExternalCodecFactory::class.java, codecClassLoader)
-            return serviceLoader.firstOrNull { className == it.javaClass.name }
-                ?: throw IllegalArgumentException(
-                    "no implementations of $className " +
-                            "found by '$CODEC_IMPLEMENTATION_PATH' path"
-                )
+        private inline fun <reified T : Any> load(codecClassName: String?): T {
+            val instances: List<T> = ServiceLoader.load(T::class.java).toList()
+
+            return when (instances.size) {
+                0 -> error("No instances of ${T::class.simpleName}")
+                1 -> instances.single()
+                else -> codecClassName?.let { className ->
+                    instances.find {
+                        it::class.java.canonicalName == className
+                    } ?: error("found ${instances.size} codec implementation(s) but none matches $className. " +
+                            "Implementations: ${instances.joinToString { it::class.java.canonicalName }}")
+                } ?: error("found ${instances.size} codec implementation(s) but no 'codecClassName' parameter was provided")
+            }
         }
 
     }

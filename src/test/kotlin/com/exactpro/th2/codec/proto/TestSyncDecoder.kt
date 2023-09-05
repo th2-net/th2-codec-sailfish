@@ -1,16 +1,19 @@
 /*
- * Copyright 2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2021-2023 Exactpro (Exactpro Systems Limited)
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.exactpro.th2.codec
+package com.exactpro.th2.codec.proto
 
 import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodec
@@ -51,8 +54,9 @@ internal class TestSyncDecoder {
     private val router = mock<MessageRouter<MessageGroupBatch>> { }
     private val applicationContext = mock<ApplicationContext> { }
 
-    private val processor = DecodeProcessor(factory, settings, IMessageToProtoConverter(), mock {})
-    private val decoder = SyncDecoder(router, applicationContext, processor)
+    private val processor = ProtoDecodeProcessor(factory, settings, IMessageToProtoConverter(), mock {})
+    private val protoDecoder =
+        ProtoDecoder(router, applicationContext, "sourceAttributes", "targetAttributes", processor)
 
     @Test
     internal fun `decode protocol`() {
@@ -70,7 +74,7 @@ internal class TestSyncDecoder {
             }
         }
 
-        decoder.handle(DeliveryMetadata("tag"), MessageGroupBatch.newBuilder().apply {
+        protoDecoder.handle(DeliveryMetadata("tag"), MessageGroupBatch.newBuilder().apply {
             addGroups(createAnyMessage(rawMessageBuilder, 1)) // empty protocol
             addGroups(createAnyMessage(rawMessageBuilder, 2, factory.protocolName)) // codec protocol
             addGroups(createAnyMessage(rawMessageBuilder, 3, "test")) // another protocol
@@ -87,42 +91,82 @@ internal class TestSyncDecoder {
             Assertions.assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
             val message = group.getMessages(0)
             assertAll(
-                { Assertions.assertEquals(KindCase.MESSAGE, message.kindCase) { "Type of first: ${shortDebugString(message)}" } },
-                { Assertions.assertEquals(1, message.message.sequence) { "Seq of first: ${shortDebugString(message)}" } }
+                {
+                    Assertions.assertEquals(KindCase.MESSAGE, message.kindCase) {
+                        "Type of first: ${
+                            shortDebugString(
+                                message
+                            )
+                        }"
+                    }
+                },
+                {
+                    Assertions.assertEquals(
+                        1,
+                        message.message.sequence
+                    ) { "Seq of first: ${shortDebugString(message)}" }
+                }
             )
         }
         (result.getGroups(1)).let { group ->
             Assertions.assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
             val message = group.getMessages(0)
             assertAll(
-                { Assertions.assertEquals(KindCase.MESSAGE, message.kindCase) { "Type of second: ${shortDebugString(message)}" } },
-                { Assertions.assertEquals(2, message.message.sequence) { "Seq of second: ${shortDebugString(message)}" } }
+                {
+                    Assertions.assertEquals(KindCase.MESSAGE, message.kindCase) {
+                        "Type of second: ${
+                            shortDebugString(
+                                message
+                            )
+                        }"
+                    }
+                },
+                {
+                    Assertions.assertEquals(
+                        2,
+                        message.message.sequence
+                    ) { "Seq of second: ${shortDebugString(message)}" }
+                }
             )
         }
         (result.getGroups(2)).let { group ->
             Assertions.assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
             val message = group.getMessages(0)
             assertAll(
-                { Assertions.assertEquals(KindCase.RAW_MESSAGE, message.kindCase) { "Type of third: ${shortDebugString(message)}" } },
-                { Assertions.assertEquals(3, message.rawMessage.metadata.id.sequence) { "Seq of third: ${shortDebugString(message)}" } }
+                {
+                    Assertions.assertEquals(KindCase.RAW_MESSAGE, message.kindCase) {
+                        "Type of third: ${
+                            shortDebugString(
+                                message
+                            )
+                        }"
+                    }
+                },
+                {
+                    Assertions.assertEquals(
+                        3,
+                        message.rawMessage.metadata.id.sequence
+                    ) { "Seq of third: ${shortDebugString(message)}" }
+                }
             )
         }
     }
 
-    private fun createAnyMessage(rawMessageBuilder: Builder, sequence: Long, protocol: String? = null) = MessageGroup.newBuilder()
-        .addMessages(
-            AnyMessage.newBuilder().apply {
-                rawMessage =
-                    rawMessageBuilder.apply {
-                        metadataBuilder.apply {
-                            if (protocol != null) {
-                                this.protocol = protocol
+    private fun createAnyMessage(rawMessageBuilder: Builder, sequence: Long, protocol: String? = null) =
+        MessageGroup.newBuilder()
+            .addMessages(
+                AnyMessage.newBuilder().apply {
+                    rawMessage =
+                        rawMessageBuilder.apply {
+                            metadataBuilder.apply {
+                                if (protocol != null) {
+                                    this.protocol = protocol
+                                }
+                                idBuilder.apply {
+                                    this.sequence = sequence
+                                }
                             }
-                            idBuilder.apply {
-                                this.sequence = sequence
-                            }
-                        }
-                    }.build()
-            }.build()
-        ).build()
+                        }.build()
+                }.build()
+            ).build()
 }

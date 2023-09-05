@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,10 +20,10 @@ import com.exactpro.sf.externalapi.codec.IExternalCodec
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 
-abstract class AbstractCodecProcessor<T, R>(
+abstract class AbstractCodecProcessor<B, M, R>(
     private val codecFactory: IExternalCodecFactory,
     private val codecSettings: IExternalCodecSettings
-) : MessageProcessor<T, R> {
+) : MessageProcessor<B, M, R> {
 
     private val codecThreadInstances = object : ThreadLocal<IExternalCodec>() {
         override fun initialValue(): IExternalCodec {

@@ -1,9 +1,8 @@
 /*
- * Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ * Copyright 2023 Exactpro (Exactpro Systems Limited)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
- *
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
@@ -15,39 +14,42 @@
  * limitations under the License.
  */
 
-package com.exactpro.th2.codec
+package com.exactpro.th2.codec.transport
 
 import com.exactpro.sf.common.messages.IMessage
 import com.exactpro.sf.common.util.EvolutionBatch
 import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.sf.messages.service.ErrorMessage
+import com.exactpro.th2.codec.AbstractCodecProcessor
+import com.exactpro.th2.codec.DecodeException
+import com.exactpro.th2.codec.EventBatchCollector
 import com.exactpro.th2.codec.util.ERROR_TYPE_MESSAGE
-import com.exactpro.th2.codec.util.toCodecContext
+import com.exactpro.th2.codec.util.toCodeContext
 import com.exactpro.th2.codec.util.toErrorMessage
-import com.exactpro.th2.codec.util.toMessageMetadataBuilder
-import com.exactpro.th2.common.grpc.Message
-import com.exactpro.th2.common.grpc.RawMessage
-import com.exactpro.th2.common.message.toJson
-import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.GroupBatch
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.ParsedMessage
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.RawMessage
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.toByteArray
+import com.exactpro.th2.sailfish.utils.transport.IMessageToTransportConverter
 import mu.KotlinLogging
 
-class DecodeProcessor(
+class TransportDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    private val messageToProtoConverter: IMessageToProtoConverter,
+    private val messageToProtoConverter: IMessageToTransportConverter,
     private val eventBatchCollector: EventBatchCollector
-) : AbstractCodecProcessor<RawMessage, List<Message.Builder>>(codecFactory, codecSettings) {
+) : AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage.FromMapBuilder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
     override val protocol = codecFactory.protocolName
 
-    override fun process(source: RawMessage): List<Message.Builder> {
+    override fun process(batch: GroupBatch, message: RawMessage): List<ParsedMessage.FromMapBuilder> {
         try {
-            val data: ByteArray = source.body.toByteArray()
-            logger.debug { "Start decoding message with id: '${source.metadata.id.toJson()}'" }
-            logger.trace { "Decoding message: ${source.toJson()}" }
+            val data: ByteArray = message.body.toByteArray()
+            logger.debug { "Start decoding message with id: '${message.id}'" }
+            logger.trace { "Decoding message: $message" }
 
-            val decodedMessages = getCodec().decode(data, source.toCodecContext())
+            val decodedMessages: List<IMessage> = getCodec().decode(data, message.toCodeContext())
                 .flatMap {
                     if (it.name == EvolutionBatch.MESSAGE_NAME) {
                         EvolutionBatch(it).batch
@@ -56,34 +58,35 @@ class DecodeProcessor(
                     }
                 }
 
-            checkErrorMessageContains(decodedMessages, source)
+            checkErrorMessageContains(batch, decodedMessages, message)
             checkRawData(decodedMessages, data)
+            logger.debug { "Message with id: '${message.id}' successfully decoded" }
             logger.trace { "Decoded messages: $decodedMessages" }
-            logger.debug { "Message with id: '${source.metadata.id.toJson()}' successfully decoded" }
 
             return decodedMessages.map { msg ->
-                messageToProtoConverter.toProtoMessage(msg).apply {
-                    if (source.hasParentEventId()) {
-                        parentEventId = source.parentEventId
-                    }
-                    metadata = source.toMessageMetadataBuilder(protocol).apply {
-                        messageType = msg.name
-                    }.build()
+                messageToProtoConverter.toTransportBuilder(msg).apply {
+                    setId(message.id)
+                    message.eventId?.let { setEventId(it) }
+                    setProtocol(message.protocol)
+                    setMetadata(message.metadata)
                 }
             }
         } catch (ex: Exception) {
-            logger.error(ex) { "Cannot decode message from ${source.toJson()}. Creating th2-codec-error message with description." }
+            logger.error(ex) { "Cannot decode message from $message. Creating th2-codec-error message with description." }
             eventBatchCollector.createAndStoreDecodeErrorEvent(
+                batch.book, batch.sessionGroup,
                 "Cannot decode message: ${ex.message ?: "blank error message"}. $ERROR_TYPE_MESSAGE with cause published instead",
-                source, ex)
-            return listOf(source.toErrorMessage(ex, protocol))
+                message, ex
+            )
+            return listOf(message.toErrorMessage(ex, protocol))
         }
     }
 
-    private fun checkErrorMessageContains(decodedMessages: List<IMessage>, rawMessage: RawMessage) {
+    private fun checkErrorMessageContains(batch: GroupBatch, decodedMessages: List<IMessage>, rawMessage: RawMessage) {
         for (msg in decodedMessages) {
             if (msg.name == ErrorMessage.MESSAGE_NAME) {
                 eventBatchCollector.createAndStoreDecodeErrorEvent(
+                    batch.book, batch.sessionGroup,
                     "Error during decode msg: ${msg.getField<String>("Cause")}", rawMessage
                 )
             }

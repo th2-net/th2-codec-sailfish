@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2022 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -13,30 +13,34 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package com.exactpro.th2.codec
 
-import com.exactpro.th2.codec.util.toDebugString
+import com.exactpro.th2.codec.AbstractCodec.Direction.DECODE
+import com.exactpro.th2.codec.AbstractCodec.Direction.ENCODE
 import com.exactpro.th2.common.event.EventUtils
 import com.exactpro.th2.common.event.bean.IRow
 import com.exactpro.th2.common.event.bean.builder.TableBuilder
 import com.exactpro.th2.common.grpc.Event
 import com.exactpro.th2.common.grpc.EventBatch
 import com.exactpro.th2.common.grpc.EventID
-import com.exactpro.th2.common.grpc.MessageGroup
+import com.exactpro.th2.common.grpc.MessageGroup as ProtoMessageGroup
 import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.grpc.RawMessage
 import com.exactpro.th2.common.message.isValid
 import com.exactpro.th2.common.message.logId
 import com.exactpro.th2.common.message.toJson
 import com.exactpro.th2.common.schema.message.MessageRouter
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.Message
 import com.exactpro.th2.common.utils.event.EventBatcher
+import com.exactpro.th2.common.utils.event.transport.toProto
 import com.exactpro.th2.common.utils.message.logId
+import com.exactpro.th2.common.utils.message.transport.toProto
 import com.fasterxml.jackson.annotation.JsonPropertyOrder
 import mu.KotlinLogging
 import java.time.LocalDateTime
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.MessageGroup as TransportMessageGroup
 
 private val logger = KotlinLogging.logger {}
 
@@ -78,20 +82,53 @@ class EventBatchCollector(
         }
     }
 
+    fun createAndStoreDecodeErrorEvent(book: String, sessionGroup:String, errorText: String, message: Message<*>, exception: Exception? = null) {
+        try {
+            val parentEventId = message.eventId?.toProto() ?: getDecodeErrorGroupEventID()
+            val event = createErrorEvent(
+                "Cannot decode message for ${message.id}", errorText, exception, parentEventId,
+                listOf(message.id.toProto(book, sessionGroup))
+            )
+            logger.error { "${errorText}. Error event id: ${event.id.toJson()}" }
+            putEvent(event)
+        } catch (e: Exception) {
+            logger.error(e) { "could not send codec error event. text: $errorText, message id: ${message.id}, cause: $exception" }
+        }
+    }
+
     fun createAndStoreErrorEvent(
         errorText: String,
         exception: Exception,
-        direction: AbstractSyncCodec.Direction,
-        group: MessageGroup
+        direction: AbstractCodec.Direction,
+        group: ProtoMessageGroup
     ) {
         try {
             val parentEventId = getParentEventIdFromGroup(direction, group)
-            val messageIDs = getMessageIDsFromGroup(group)
+            val messageIDs = getMessageIdsFromGroup(group)
             val event = createErrorEvent("Cannot process message group", errorText, exception, parentEventId, messageIDs)
             logger.error(exception) { "${errorText}. Error event id: ${event.id.toJson()}" }
             putEvent(event)
         } catch (e: Exception) {
             logger.error(e) { "could not send codec error event. text: $errorText, group id: ${ if (group.messagesList.isEmpty()) "" else group.getMessages(0).logId }, direction: $direction, cause: $exception" }
+        }
+    }
+
+    fun createAndStoreErrorEvent(
+        errorText: String,
+        exception: Exception,
+        direction: AbstractCodec.Direction,
+        book: String,
+        sessionGroup: String,
+        group: TransportMessageGroup
+    ) {
+        try {
+            val parentEventId = getParentEventIdFromGroup(direction, group)
+            val messageIDs = getMessageIdsFromGroup(book, sessionGroup, group)
+            val event = createErrorEvent("Cannot process message group", errorText, exception, parentEventId, messageIDs)
+            logger.error(exception) { "${errorText}. Error event id: ${event.id.toJson()}" }
+            putEvent(event)
+        } catch (e: Exception) {
+            logger.error(e) { "could not send codec error event. text: $errorText, group id: ${ if (group.messages.isEmpty()) "" else group.messages.first().id.toString() }, direction: $direction, cause: $exception" }
         }
     }
 
@@ -215,7 +252,7 @@ class EventBatchCollector(
         .toProto(parentEventId)
 
 
-    private fun getMessageIDsFromGroup(group: MessageGroup) = mutableListOf<MessageID>().apply {
+    private fun getMessageIdsFromGroup(group: ProtoMessageGroup) = mutableListOf<MessageID>().apply {
         group.messagesList.forEach {
             if (it.hasMessage()) {
                 add(it.message.metadata.id)
@@ -225,7 +262,11 @@ class EventBatchCollector(
         }
     }
 
-    private fun getParentEventIdFromGroup(direction: AbstractSyncCodec.Direction, group: MessageGroup): EventID {
+    private fun getMessageIdsFromGroup(book: String, sessionGroup: String, group: TransportMessageGroup) = group.messages.asSequence()
+            .map { it.id.toProto(book, sessionGroup) }
+            .toMutableList()
+
+    private fun getParentEventIdFromGroup(direction: AbstractCodec.Direction, group: ProtoMessageGroup): EventID {
         if (group.messagesCount != 0) {
             val firstMessageInList = group.messagesList.first()
             if (firstMessageInList.hasMessage()) {
@@ -239,8 +280,20 @@ class EventBatchCollector(
             }
         }
         return when (direction) {
-            AbstractSyncCodec.Direction.ENCODE -> getEncodeErrorGroupEventID()
-            AbstractSyncCodec.Direction.DECODE -> getDecodeErrorGroupEventID()
+            ENCODE -> getEncodeErrorGroupEventID()
+            DECODE -> getDecodeErrorGroupEventID()
+        }
+    }
+
+    private fun getParentEventIdFromGroup(direction: AbstractCodec.Direction, group: TransportMessageGroup): EventID {
+        if (group.messages.isNotEmpty()) {
+            group.messages.first().eventId?.let { transportEventId ->
+                return transportEventId.toProto()
+            }
+        }
+        return when (direction) {
+            ENCODE -> getEncodeErrorGroupEventID()
+            DECODE -> getDecodeErrorGroupEventID()
         }
     }
 

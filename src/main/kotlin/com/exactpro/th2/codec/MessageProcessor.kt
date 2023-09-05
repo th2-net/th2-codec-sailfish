@@ -1,5 +1,5 @@
 /*
- *  Copyright 2020-2021 Exactpro (Exactpro Systems Limited)
+ *  Copyright 2020-2023 Exactpro (Exactpro Systems Limited)
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.exactpro.th2.codec
 
-interface MessageProcessor<T, R> {
+interface MessageProcessor<B, M, R> {
     val protocol: String
 
-    fun process(source: T): R
+    fun process(batch: B, message: M): R
 }

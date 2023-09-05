@@ -1,9 +1,10 @@
 FROM gradle:7.6-jdk11 AS build
-ARG release_version=0.0.0
-COPY ./ .
-RUN gradle clean build dockerPrepare -Prelease_version=${release_version}
+ARG release_version
+ARG bintray_user
+ARG bintray_key
 
-FROM adoptopenjdk/openjdk11:alpine
-WORKDIR /home
-COPY --from=build /home/gradle/build/docker .
-ENTRYPOINT ["/home/service/bin/service", "--sailfish-codec-config=codec_config.yml"]
+COPY ./ .
+RUN gradle --no-daemon clean build publish \
+    -Prelease_version=${release_version} \
+    -Pbintray_user=${bintray_user} \
+    -Pbintray_key=${bintray_key}
