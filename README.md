@@ -1,4 +1,4 @@
-# How it works (4.2.1)
+# How it works (4.2.3)
 
 The th2 Codec component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -384,6 +384,12 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 4.2.3
+  + Fix empty prefix in the pin attributes
+
++ 4.2.2
+  + use 'codecClassName' parameter to identify the codec implementation in case more than one is found in classpath
 
 + 4.2.1
   * added task-utils: `0.1.2`
