@@ -38,6 +38,11 @@ class Application(commonFactory: CommonFactory) : AutoCloseable {
     private val transportRouter = context.commonFactory.transportGroupBatchRouter
 
     private val codecs: List<AutoCloseable> = mutableListOf<AutoCloseable>().apply {
+        val trimmedPrefixes = configuration.transportLines.keys.mapTo(hashSetOf()) { it.trim() }
+        require(trimmedPrefixes.size == configuration.transportLines.size) {
+            val duplicates = configuration.transportLines.keys - trimmedPrefixes
+            "transport line contains several keys that are identical: $duplicates"
+        }
         fun String.withSuffix(suffix: String): String {
             return if (isBlank()) {
                 suffix
