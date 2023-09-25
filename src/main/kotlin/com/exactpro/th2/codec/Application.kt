@@ -41,7 +41,7 @@ class Application(commonFactory: CommonFactory) : AutoCloseable {
         val trimmedPrefixes = configuration.transportLines.keys.mapTo(hashSetOf()) { it.trim() }
         require(trimmedPrefixes.size == configuration.transportLines.size) {
             val duplicates = configuration.transportLines.keys - trimmedPrefixes
-            "transport line contains several keys that are identical: $duplicates"
+            "transportLines block contains keys that have duplicates after trimming: $duplicates"
         }
         fun String.withSuffix(suffix: String): String {
             return if (isBlank()) {
