@@ -38,18 +38,38 @@ class Application(commonFactory: CommonFactory) : AutoCloseable {
     private val transportRouter = context.commonFactory.transportGroupBatchRouter
 
     private val codecs: List<AutoCloseable> = mutableListOf<AutoCloseable>().apply {
+        val trimmedPrefixes = configuration.transportLines.keys.mapTo(hashSetOf()) { it.trim() }
+        require(trimmedPrefixes.size == configuration.transportLines.size) {
+            val duplicates = configuration.transportLines.keys - trimmedPrefixes
+            "transportLines block contains keys that have duplicates after trimming: $duplicates"
+        }
+        fun String.withSuffix(suffix: String): String {
+            return if (isBlank()) {
+                suffix
+            } else {
+                "${this}_$suffix"
+            }
+        }
         configuration.transportLines.forEach { (prefix, type) ->
             add(
                 when (type) {
                     PROTOBUF -> ::createProtoDecoder
                     TH2_TRANSPORT -> ::createTransportDecoder
-                }("${prefix}_decoder", "${prefix}_decoder_in", "${prefix}_decoder_out")
+                }(
+                    prefix.withSuffix("decoder"),
+                    prefix.withSuffix("decoder_in"),
+                    prefix.withSuffix("decoder_out"),
+                )
             )
             add(
                 when (type) {
                     PROTOBUF -> ::createProtoEncoder
                     TH2_TRANSPORT -> ::createTransportEncoder
-                }("${prefix}_encoder", "${prefix}_encoder_in", "${prefix}_encoder_out")
+                }(
+                    prefix.withSuffix("encoder"),
+                    prefix.withSuffix("encoder_in"),
+                    prefix.withSuffix("encoder_out"),
+                )
             )
         }
     }
