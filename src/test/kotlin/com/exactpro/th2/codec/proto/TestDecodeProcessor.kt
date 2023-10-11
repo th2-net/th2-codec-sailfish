@@ -30,10 +30,10 @@ import com.exactpro.th2.common.schema.box.configuration.BoxConfiguration
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.google.protobuf.ByteString
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.same
-import com.nhaarman.mockitokotlin2.whenever
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.same
+import org.mockito.kotlin.whenever
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test

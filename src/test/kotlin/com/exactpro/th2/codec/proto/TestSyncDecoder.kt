@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package com.exactpro.th2.codec.proto
 
 import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
@@ -33,12 +34,12 @@ import com.exactpro.th2.common.schema.message.MessageRouter
 import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
 import com.google.protobuf.ByteString
 import com.google.protobuf.TextFormat.shortDebugString
-import com.nhaarman.mockitokotlin2.any
-import com.nhaarman.mockitokotlin2.argumentCaptor
-import com.nhaarman.mockitokotlin2.mock
-import com.nhaarman.mockitokotlin2.same
-import com.nhaarman.mockitokotlin2.verify
-import com.nhaarman.mockitokotlin2.whenever
+import org.mockito.kotlin.any
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.same
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertAll

@@ -22,15 +22,15 @@ plugins {
     id "io.github.gradle-nexus.publish-plugin" version "1.3.0"
     id 'signing'
     id 'org.jetbrains.kotlin.jvm' version "${kotlin_version}"
-    id "org.owasp.dependencycheck" version "8.3.1"
+    id "org.owasp.dependencycheck" version "8.4.0"
     id "com.gorylenko.gradle-git-properties" version "2.4.1"
-    id 'com.github.jk1.dependency-license-report' version '2.5'
-    id "de.undercouch.download" version "5.4.0"
+    id "com.github.jk1.dependency-license-report" version "2.5"
+    id "de.undercouch.download" version "5.5.0"
 }
 
 ext {
     genDir = file('src/gen')
-    sailfishVersion = '3.3.111'
+    sailfishVersion = '3.3.144'
     excludeSailfish = { rcd ->
         rcd.excludeModule("com.exactpro.sf", "sailfish-core")
         rcd.excludeModule("com.exactpro.sf", "sailfish-common")
@@ -109,30 +109,18 @@ configurations {
 
 dependencies {
     api platform('com.exactpro.th2:bom:4.5.0')
-    implementation('com.exactpro.th2:common:5.4.0-dev') {
+    implementation('com.exactpro.th2:common:5.5.0-dev') {
         because('sending to direct queues')
         exclude group: 'com.exactpro.th2', module: 'task-utils'
     }
-    implementation 'com.exactpro.th2:common-utils:2.2.0-dev'
-    implementation 'com.exactpro.th2:sailfish-utils:4.1.0-dev'
 
-    implementation 'io.github.microutils:kotlin-logging:3.0.0' // The greatest version which supports kotlin 1.6.21
-
-    implementation 'org.slf4j:slf4j-api'
-
-    implementation 'com.fasterxml.jackson.core:jackson-core'
-    implementation 'com.fasterxml.jackson.module:jackson-module-kotlin'
-
-    implementation 'com.github.ajalt.clikt:clikt:3.5.0'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4'
-
-    implementation 'com.google.protobuf:protobuf-java-util'
-
+    implementation "com.exactpro.th2:common-utils:2.2.2-dev"
+    implementation "com.exactpro.th2:sailfish-utils:4.1.1-dev"
     implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
 
-    testImplementation 'org.mockito:mockito-inline:4.10.0'
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
-    testImplementation "com.nhaarman.mockitokotlin2:mockito-kotlin:2.2.0"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.10.0"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:5.1.0"
+    testImplementation "org.mockito:mockito-inline:5.2.0"
 }
 
 test {
@@ -254,6 +242,8 @@ signing {
 compileKotlin {
     kotlinOptions.jvmTarget = "11"
 }
+
+compileTestKotlin.kotlinOptions.jvmTarget = "11"
 
 dependencyCheck {
     formats = ['SARIF', 'JSON', 'HTML']

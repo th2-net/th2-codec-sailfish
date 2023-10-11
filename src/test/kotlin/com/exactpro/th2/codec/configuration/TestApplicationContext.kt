@@ -3,7 +3,9 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -32,7 +34,7 @@ import com.exactpro.th2.common.schema.grpc.router.GrpcRouter
 import com.exactpro.th2.common.schema.message.MessageRouter
 import com.google.common.collect.HashBasedTable
 import com.google.common.collect.Table
-import com.nhaarman.mockitokotlin2.mock
+import org.mockito.kotlin.mock
 import io.grpc.BindableService
 import io.grpc.Server
 import org.apache.commons.io.FileUtils
@@ -66,8 +68,6 @@ class TestApplicationContext {
 
         `when`(commonFactory.grpcRouter).thenReturn(object : GrpcRouter {
             override fun close(): Unit = TODO("Not yet implemented")
-            @Deprecated("Deprecated in Java")
-            override fun init(p0: GrpcRouterConfiguration?): Unit = TODO("Not yet implemented")
             override fun init(configuration: GrpcConfiguration, routerConfiguration: GrpcRouterConfiguration) {
                 TODO("Not yet implemented")
             }
