@@ -75,8 +75,10 @@ internal class TestDecodeProcessor {
         val result = processor.process(batch, rawMessage)
 
         assertEquals(1, result.size) { "Unexpected result: $result" }
-        val id = result[0].build().id
+        val parsedMessage = result[0].build()
+        val id = parsedMessage.id
         assertEquals(rawMessage.id, id) { "Unexpected message id: $id" }
+        assertEquals("mock", parsedMessage.protocol, "unexpected protocol in message")
     }
 
     @Test
@@ -108,8 +110,8 @@ internal class TestDecodeProcessor {
             result.map { it.build() }.map {
                 {
                     val id = it.id
-                    println(id)
                     assertEquals(rawMessage.id, id) { "Unexpected message id: $id" }
+                    assertEquals("mock", it.protocol, "unexpected protocol in message")
                 }
             }
         )

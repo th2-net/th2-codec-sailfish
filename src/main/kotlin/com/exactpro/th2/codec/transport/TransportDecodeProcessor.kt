@@ -67,7 +67,7 @@ class TransportDecodeProcessor(
                 messageToProtoConverter.toTransportBuilder(msg).apply {
                     setId(message.id)
                     message.eventId?.let { setEventId(it) }
-                    setProtocol(message.protocol)
+                    setProtocol(this@TransportDecodeProcessor.protocol)
                     setMetadata(message.metadata)
                 }
             }
