@@ -37,7 +37,7 @@ import mu.KotlinLogging
 class TransportDecodeProcessor(
     codecFactory: IExternalCodecFactory,
     codecSettings: IExternalCodecSettings,
-    private val messageToProtoConverter: IMessageToTransportConverter,
+    private val messageConverter: IMessageToTransportConverter,
     private val eventBatchCollector: EventBatchCollector
 ) : AbstractCodecProcessor<GroupBatch, RawMessage, List<ParsedMessage.FromMapBuilder>>(codecFactory, codecSettings) {
     private val logger = KotlinLogging.logger { }
@@ -64,10 +64,10 @@ class TransportDecodeProcessor(
             logger.trace { "Decoded messages: $decodedMessages" }
 
             return decodedMessages.map { msg ->
-                messageToProtoConverter.toTransportBuilder(msg).apply {
+                messageConverter.toTransportBuilder(msg).apply {
                     setId(message.id)
                     message.eventId?.let { setEventId(it) }
-                    setProtocol(message.protocol)
+                    setProtocol(this@TransportDecodeProcessor.protocol)
                     setMetadata(message.metadata)
                 }
             }
