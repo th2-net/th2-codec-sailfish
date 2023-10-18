@@ -387,6 +387,9 @@ The filtering can also be applied for pins with  `subscribe` attribute.
 
 + 4.2.3
   + Fix empty prefix in the pin attributes
+  * common: `5.5.0-dev`
+  * common-utils: `2.2.2-dev` (fixed batching bug when max batch size == 1)
+  * sailfish-utils: `4.1.1-dev`
 
 + 4.2.2
   + use 'codecClassName' parameter to identify the codec implementation in case more than one is found in classpath
