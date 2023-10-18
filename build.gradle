@@ -107,7 +107,7 @@ configurations.implementation {
 
 dependencies {
     api platform('com.exactpro.th2:bom:4.2.0')
-    implementation 'com.exactpro.th2:common:3.44.1'
+    implementation 'com.exactpro.th2:common:5.2.0'
     implementation 'com.exactpro.th2:sailfish-utils:3.14.0'
 
     implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
