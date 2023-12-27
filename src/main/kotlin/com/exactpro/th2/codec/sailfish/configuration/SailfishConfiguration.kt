@@ -19,7 +19,6 @@ package com.exactpro.th2.codec.sailfish.configuration
 import com.exactpro.th2.codec.api.IPipelineCodecSettings
 
 class SailfishConfiguration(
-    val defaultSettingResourceName: String = "codec_config.yml",
     val converterParameters: ConverterParameters = ConverterParameters(),
     var dictionaries: Map<String, String> = emptyMap(),
 ): IPipelineCodecSettings {

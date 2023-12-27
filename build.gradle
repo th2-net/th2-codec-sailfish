@@ -116,17 +116,20 @@ dependencies {
         exclude group: 'com.exactpro.th2', module: 'task-utils'
     }
 
-    implementation "com.exactpro.th2:codec:5.4.1-TH2-5143-+"
-    implementation "com.exactpro.th2:common-utils:2.2.2-dev"
-    implementation "com.exactpro.th2:sailfish-utils:4.1.1-dev"
+    implementation 'com.exactpro.th2:codec:5.4.1-TH2-5143-+'
+    implementation 'com.exactpro.th2:common-utils:2.2.2-dev'
+    implementation 'com.exactpro.th2:sailfish-utils:4.1.1-dev'
     implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
 
-    compileOnly "com.google.auto.service:auto-service-annotations:1.1.1"
-    kapt "com.google.auto.service:auto-service:1.1.1"
+    compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
+    kapt 'com.google.auto.service:auto-service:1.1.1'
 
-    testImplementation "org.junit.jupiter:junit-jupiter:5.10.0"
-    testImplementation "org.mockito.kotlin:mockito-kotlin:5.1.0"
-    testImplementation "org.mockito:mockito-inline:5.2.0"
+    testCompileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
+    kaptTest 'com.google.auto.service:auto-service:1.1.1'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
+    testImplementation 'org.mockito.kotlin:mockito-kotlin:5.1.0'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
     testImplementation 'org.jetbrains.kotlin:kotlin-test-junit5'
 }
 
