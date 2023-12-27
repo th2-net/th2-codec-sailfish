@@ -1,7 +1,9 @@
-# How it works (4.2.3)
+# How it works (5.0.0)
 
-The th2 Codec component is responsible for encoding and decoding the messages.
+The th2 codec sailfish component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
+It is based on [th2-codec](https://github.com/th2-net/th2-codec).
+You can find additional information [here](https://github.com/th2-net/th2-codec/blob/master/README.md)
 
 Encoding and decoding are performed according to the scheme "one or more input pins and one or more output pins".
 Both types of pins may have filters. The input / output of the encoder and decoder can be partially or entirely filtered out depending on which filters the pin has.
@@ -19,8 +21,8 @@ During decoding codec must replace each raw message of supported or unknown prot
 
 ## Appointment
 
-This project includes only one adapter logic between Sailfish and the th2 packed into the Docker Image.
-This [th2-codec-generic](https://github.com/th2-net/th2-codec-generic) project uses this image as a base.
+This project includes only one adapter logic between Sailfish and the th2 packed java library.
+This [th2-codec-generic](https://github.com/th2-net/th2-codec-generic) project uses this library as a base.
 
 # Running
 
@@ -29,7 +31,7 @@ The JAR file with that implementation and all its dependencies need to be placed
 
 The codec loads all JAR files from that directory and looks for all the implementations of
 [com.exactpro.sf.externalapi.codec.IExternalCodecFactory](https://github.com/exactpro/sailfish-core/blob/master/BackEnd/Core/sailfish-core/src/main/kotlin/com/exactpro/sf/externalapi/codec/IExternalCodecFactory.kt) interface.
-After that, it loads the factory defined in the configuration and it creates the codec using that factory.
+After that, it loads the factory defined in the configuration, and it creates the codec using that factory.
 
 # Creating your own codec
 
@@ -45,157 +47,17 @@ with the content that is equal to the fully-qualified class name of your factory
 
 _If you have several implementations regarding that interface, each one of their fully-qualified names should be written in a new line, inside that file._
 
-
-# Configuration
-
-Codec has four types of connections: stream and general for encode and decode functions.
-
-* stream encode / decode connections works 24 / 7
-* general encode / decode connections works on demand
-
-Codec never mixes messages from the _stream_ and the _general_ connections. 
-
-Decoding can work in two different modes:
-+ **CUMULATIVE** (default) - all raw messages in the batch will be joined together and decoded. After decoding them, the content and the count of the decoded messages will be compared to the original messages in the batch.
-+ **SEQUENTIAL** - each message in the batch will be decoded as a separate message.
-
-This setting can be overridden in a custom config for the application using the parameter `decodeProcessorType`.
-
-## Transport lines
-
-transportLines responsable for number of independnet ecoding / decoding lines. Each transport lines has type option
-* type is enum [`PROTOBUF`, `TH2_TRANSPORT`] value. Codec creates suitable type of message processor accoding this option.
-  NOTE: Support of each transport depends on childe codec implementation.
-
-```yaml
-apiVersion: th2.exactpro.com/v2
-kind: Th2Box
-metadata:
-   name: codec
-spec:
-   customConfig:
-      transportLines:
-        "": PROTOBUF
-        general: PROTOBUF
-        transport: TH2_TRANSPORT
-        general_transport: TH2_TRANSPORT
-   pins:
-     mq:
-        subscribers:
-#          prefix "" 
-           - name: in_codec_decode
-             attributes:
-                - decoder_in
-                - subscribe
-           - name: in_codec_encode
-             attributes:
-                - encoder_in
-                - subscribe
-#          prefix "general" 
-           - name: in_codec_general_decode
-             attributes:
-                - general_decoder_in
-                - subscribe
-           - name: in_codec_general_encode
-             attributes:
-                - general_encoder_in
-                - subscribe
-#          prefix "transport" 
-           - name: in_codec_transport_decode
-             attributes:
-                - transport_decoder_in
-                - transport-group
-                - subscribe
-           - name: in_codec_transport_encode
-             attributes:
-                - transport_encoder_in
-                - transport-group
-                - subscribe
-#          prefix "general_transport" 
-           - name: in_codec_general_transport_decode
-             attributes:
-                - general_transport_decoder_in
-                - transport-group
-                - subscribe
-           - name: in_codec_general_transport_encode
-             attributes:
-                - general_transport_encoder_in
-                - transport-group
-                - subscribe
-        publishers:
-#          prefix ""
-           - name: out_codec_decode
-             attributes:
-                - decoder_out
-                - publish
-           - name: out_codec_encode
-             attributes:
-                - encoder_out
-                - publish
-#          prefix "general"
-           - name: out_codec_general_decode
-             attributes:
-                - general_decoder_out
-                - publish
-           - name: out_codec_general_encode
-             attributes:
-                - general_encoder_out
-                - publish
-#          prefix "transport"
-           - name: out_codec_transport_decode
-             attributes:
-                - transport_decoder_out
-                - transport-group
-                - publish
-           - name: out_codec_transport_encode
-             attributes:
-                - transport_encoder_out
-                - transport-group
-                - publish
-#          prefix "general_transport"
-           - name: out_codec_general_transport_decode
-             attributes:
-                - general_transport_decoder_out
-                - transport-group
-                - publish
-           - name: out_codec_general_transport_encode
-             attributes:
-                - general_transport_encoder_out
-                - transport-group
-                - publish
-```
-
 ## Bootstrap parameters
 
 These parameters specify the codec that will be used for the messages decoding/encoding and the mode which should be used.
-They should be defined in the `customConfig` section of the component configuration.
+They should be defined in the `customConfig.codecSettings` section of the component configuration.
 
 ```yaml
-enabledExternalQueueRouting: false #option to enable/disable external queue routing logic. Default value is false.
-enableVerticalScaling: false #option to control vertical scaling mode. Codec splits an incoming batch into message groups and process each of them via the CompletableFuture. The default value is `false`. Please note this is experimental feature.
 codecClassName: fully.qualified.class.name.for.Factory
-decodeProcessorType: CUMULATIVE
 converterParameters:
   allowUnknownEnumValues: false # allows unknown enum values during message encoding
   stripTrailingZeros: false # removes trailing zeroes for `BigDecimal` (_0.100000_ -> _0.1_)
 ```
-
-## Publishing events parameters
-
-These parameters determine the size of the EventBatch, and the time (seconds) during which the EventBatch is built.
-
-```yaml
-outgoingEventBatchBuildTime: 30
-maxOutgoingEventBatchSize: 99
-numOfEventBatchCollectorWorkers: 1
-```
-
-**outgoingEventBatchBuildTime** - time interval in seconds to publish the collected events reported by the codec
-**maxOutgoingEventBatchSize** - the max number of events in a single batch.
-If events count exceeds that amount the batch will be published earlier than the `outgoingEventBatchBuildTime`.
-**numOfEventBatchCollectorWorkers** - the number of threads to process published events.
-Higher number means that there might be more batches published concurrently.
-But increasing that number might affect performance if number of available cores is less than this number.
 
 ## Codec implementation parameters
 
@@ -213,7 +75,7 @@ The set of parameters depends on the codec implementation that is used.
 
 The parameters from that file are static and will be loaded during the codec start up. You can use them to provide the defaults for some implementations' parameters.
 
-You can set those parameters in `customConfig` as well. You can use the `codecParameters` section in that config.
+You can set those parameters in `customConfig.codecSettings` as well. You can use the `codecParameters` section in that config.
 
 Example:
 ```yaml
@@ -223,60 +85,22 @@ metadata:
   name: codec
 spec:
   customConfig:
-    codecClassName: fully.qualified.class.name.for.Factory
-    decodeProcessorType: CUMULATIVE
-    converterParameters:
-      allowUnknownEnumValues: false
-      stripTrailingZeros: false
-    codecParameters:
-      param1: value1
-      param2: value2
+    enableVerticalScaling: false
+    isFirstCodecInPipeline: true
+    disableMessageTypeCheck: false
+    disableProtocolCheck: false
+    eventPublication:
+      flushTimeout: 1000
+      batchSize: 100
+    codecSettings:
+      codecClassName: fully.qualified.class.name.for.Factory
+      converterParameters:
+        allowUnknownEnumValues: false
+        stripTrailingZeros: false
+      codecParameters:
+        param1: value1
+        param2: value2
 ```
-
-## Codec transport lines parameter
-This parameter gives user ability to define how many in/out pin will be there and their types ( PROTOBUF/TRANSPORT )
-Transport pins are used to decode/encode messages to/from Transport messages.
-Protobuf pins are used to decode/encode messages to/from Protobuf messages.
-
-This parameter is a map. Key is prefix to pin name. Value is the type of pin.
-
-Example:
-```yaml
-apiVersion: th2.exactpro.com/v1
-kind: Th2Box
-metadata:
-  name: codec
-spec:
-  custom-config:
-    transportLines:
-      - simple: PROTOBUF
-      - general: PROTOBUF
-```
-
-This configuration tells codec to create two pairs of encoder&decoder and use `simple_decoder_in`, `simple_decoder_out`, `general_decoder_in`, `general_decoder_out` pins for these codecs from mq configuration section.  
-
-## Required pins
-
-Every type of connection has two `subscribe` and `publish` pins.
-The first one is used to receive messages to decode/encode while the second one is used to send decoded/encoded messages further.
-**Configuration should include at least one pin for each of the following sets of attributes:**
-+ Pin for the stream encoding input: `encoder_in` `parsed` `subscribe`
-+ Pin for the stream encoding output: `encoder_out` `raw` `publish`
-+ Pin for the general encoding input: `general_encoder_in` `parsed` `subscribe`
-+ Pin for the general encoding output: `general_encoder_out` `raw` `publish`
-+ Pin for the stream decoding input: `decoder_in` `raw` `subscribe`
-+ Pin for the stream decoding output: `decoder_out` `parsed` `publish`
-+ Pin for the stream decoding input: `general_decoder_in` `raw` `subscribe`
-+ Pin for the stream decoding output: `general_decoder_out` `parsed` `publish`
-
-+ Pin for the stream encoding input: `transport_encoder_in` `transport-group` `subscribe`
-+ Pin for the stream encoding output: `transport_encoder_out` `transport-group` `publish`
-+ Pin for the general encoding output: `transport_general_encoder_out` `transport-group` `publish`
-+ Pin for the general encoding input: `transport_general_encoder_in` `transport-group` `subscribe`
-+ Pin for the stream decoding input: `transport_decoder_in` `transport-group` `subscribe`
-+ Pin for the stream decoding output: `transport_decoder_out` `transport-group` `publish`
-+ Pin for the stream decoding input: `transport_general_decoder_in` `transport-group` `subscribe`
-+ Pin for the stream decoding output: `transport_general_decoder_out` `transport-group` `publish`
 
 ## Dictionaries definition based on aliases
 
@@ -288,8 +112,8 @@ Example:
 
 ```yaml
     dictionaries:
-      MAIN: aliasA
-      LEVEL1: aliasB
+      MAIN: "${dictionary_link:dictionary-cr-name-A}"
+      LEVEL1: "${dictionary_link:dictionary-cr-name-B}"
 ```
 
 ### Configuration example
@@ -300,18 +124,25 @@ metadata:
   name: codec
 spec:
   customConfig:
-    enabledExternalQueueRouting: false
     enableVerticalScaling: false
-    codecClassName: fully.qualified.class.name.for.Factory
-    decodeProcessorType: CUMULATIVE
-    converterParameters:
-      allowUnknownEnumValues: false
-      stripTrailingZeros: false
-    dictionaries:
-      MAIN: aliasA
-      LEVEL1: aliasB
+    isFirstCodecInPipeline: true
+    disableMessageTypeCheck: false
+    disableProtocolCheck: false
+    eventPublication:
+      flushTimeout: 1000
+      batchSize: 100
+    codecSettings:
+      codecClassName: fully.qualified.class.name.for.Factory
+      converterParameters:
+        allowUnknownEnumValues: false
+        stripTrailingZeros: false
+      dictionaries:
+        MAIN: "${dictionary_link:dictionary-cr-name-A}"
+        LEVEL1: "${dictionary_link:dictionary-cr-name-B}"
     transportLines:
-      transport: TH2_TRANSPORT
+      transport:
+        type: TH2_TRANSPORT
+        useParentEventId: true
   pins:
     mq:
       subscribers:
@@ -346,7 +177,7 @@ Let's consider some examples of routing in codec box.
 ### Split on 'publish' pins
 
 For example, you got a big source data stream, and you want to split them into some pins via session alias.
-You can declare multiple pins with the attributes `['decoder_out', 'parsed', 'publish']` and filters, instead of a common pin or in addition to it.
+You can declare multiple pins with the attributes `['<prefix>_decoder_out', 'transport-group', 'publish']` and filters, instead of a common pin or in addition to it.
 Every decoded message will be directed to every declared pins , which will be sent to MQ only if it will pass the filter.
 
 ```yaml
@@ -355,8 +186,24 @@ kind: Th2Box
 metadata:
   name: codec
 spec:
+  customConfig:
+    transportLines:
+      transport:
+        type: TH2_TRANSPORT
+        useParentEventId: true
   pins:
     mq:
+      subscribers:
+      - name: in_codec_transport_decode
+        attributes:
+          - transport_decoder_in
+          - transport-group
+          - subscribe
+      - name: in_codec_transport_encode
+        attributes:
+          - transport_encoder_in
+          - transport-group
+          - subscribe
       publishers:
         # decoder
         - name: out_codec_transport_decode_first_session_alias
@@ -379,11 +226,21 @@ spec:
                 - expectedValue: "second_session_alias_*"
                   fieldName: session_alias
                   operation: WILDCARD
+        - name: out_codec_transport_encode
+          attributes:
+            - transport_encoder_out
+            - transport-group
+            - publish
 ```
 
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
++ 5.0.0
+  + Migrate to th2-codec base
+  + sailfish: `3.3.169`
+  + common: `5.7.2-dev`
 
 + 4.2.3
   + Fix empty prefix in the pin attributes
