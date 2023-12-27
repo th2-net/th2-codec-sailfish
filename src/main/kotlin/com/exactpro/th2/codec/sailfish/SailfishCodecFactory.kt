@@ -57,7 +57,7 @@ import java.util.ServiceLoader
 class SailfishCodecFactory : IPipelineCodecFactory {
     private lateinit var context: IPipelineCodecContext
 
-    lateinit var codecSettings: IExternalCodecSettings
+    internal lateinit var codecSettings: IExternalCodecSettings
 
     override val settingsClass: Class<out SailfishConfiguration>
         get() = SailfishConfiguration::class.java
