@@ -58,7 +58,7 @@ class SailfishCodecFactory : IPipelineCodecFactory {
     private lateinit var context: IPipelineCodecContext
     private lateinit var defaultCodecParameters: Map<String, String>
     private lateinit var codecFactory: IExternalCodecFactory
-    internal lateinit var codecSettings: IExternalCodecSettings
+    private lateinit var codecSettings: IExternalCodecSettings
 
     override val settingsClass: Class<out SailfishConfiguration>
         get() = SailfishConfiguration::class.java
