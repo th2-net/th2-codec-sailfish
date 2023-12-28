@@ -87,10 +87,11 @@ class SailfishCodecFactory : IPipelineCodecFactory {
 
         try {
             if (!this::codecSettings.isInitialized) {
-                codecSettings = codecFactory.createSetting(
+                codecSettings = codecFactory.createSettings().fillSettings(
                     context,
-                    defaultCodecParameters + settings.codecParameters,
-                    settings.dictionaries
+                    defaultCodecParameters,
+                    settings.codecParameters,
+                    settings.dictionaries,
                 )
             }
 
@@ -141,19 +142,41 @@ class SailfishCodecFactory : IPipelineCodecFactory {
         private const val DEFAULT_CODEC_PARAMETERS = "codec_config.yml"
         private val LOGGER = KotlinLogging.logger { }
 
-        private fun IExternalCodecFactory.createSetting(
+        @JvmStatic
+        fun IExternalCodecSettings.fillSettings(
             context: IPipelineCodecContext,
+            defaultParameters: Map<String, String>,
             parameters: Map<String, String>,
             dictionaries: Map<String, String>
         ): IExternalCodecSettings {
-            return createSettings().apply {
-                parameters.forEach { (name, value) ->
-                    convertAndSet(name, value)
-                }
-                LOGGER.info { "Overridden ${parameters.keys} codec settings" }
-
-                loadDictionaries(context, dictionaries)
+            (defaultParameters + parameters).forEach { (name, value) ->
+                convertAndSet(name, value)
             }
+            LOGGER.info { "Overridden ${parameters.keys} codec settings" }
+
+            loadDictionaries(context, dictionaries)
+
+            return this
+        }
+
+        @JvmStatic
+        fun loadDefaultCodecParameters(): Map<String, String> {
+            return Thread.currentThread().contextClassLoader.getResourceAsStream(DEFAULT_CODEC_PARAMETERS)?.use {
+                runCatching {
+                    MAPPER.readValue(it, object : TypeReference<HashMap<String, String>>() {})
+                }.getOrElse { e ->
+                    when (e) {
+                        is IOException -> {
+                            throw ConfigurationException(
+                                "Could not parse '$DEFAULT_CODEC_PARAMETERS' resource file",
+                                e
+                            )
+                        }
+
+                        else -> throw e
+                    }
+                }
+            } ?: emptyMap()
         }
 
         private fun IExternalCodecSettings.loadDictionaries(
@@ -217,25 +240,6 @@ class SailfishCodecFactory : IPipelineCodecFactory {
                     else -> throw IllegalArgumentException("unsupported class '${clazz.name}' for '$name' codec parameter")
                 }
             }
-        }
-
-        private fun loadDefaultCodecParameters(): Map<String, String> {
-            return Thread.currentThread().contextClassLoader.getResourceAsStream(DEFAULT_CODEC_PARAMETERS)?.use {
-                runCatching {
-                    MAPPER.readValue(it, object : TypeReference<HashMap<String, String>>() {})
-                }.getOrElse { e ->
-                    when (e) {
-                        is IOException -> {
-                            throw ConfigurationException(
-                                "Could not parse '$DEFAULT_CODEC_PARAMETERS' resource file",
-                                e
-                            )
-                        }
-
-                        else -> throw e
-                    }
-                }
-            } ?: emptyMap()
         }
 
         private inline fun <reified T : Any> load(codecClassName: String?): T {

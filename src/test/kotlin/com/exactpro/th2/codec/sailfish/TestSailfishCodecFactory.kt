@@ -29,8 +29,11 @@ import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
 import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
 import com.exactpro.sf.externalapi.codec.impl.ExternalCodecSettings
 import com.exactpro.th2.codec.api.IPipelineCodec
+import com.exactpro.th2.codec.api.IPipelineCodecContext
 import com.exactpro.th2.codec.api.IReportingContext
 import com.exactpro.th2.codec.api.impl.PipelineCodecContext
+import com.exactpro.th2.codec.sailfish.SailfishCodecFactory.Companion.fillSettings
+import com.exactpro.th2.codec.sailfish.SailfishCodecFactory.Companion.loadDefaultCodecParameters
 import com.exactpro.th2.codec.sailfish.configuration.SailfishConfiguration
 import com.exactpro.th2.common.grpc.Direction.SECOND
 import com.exactpro.th2.common.grpc.EventID
@@ -38,18 +41,20 @@ import com.exactpro.th2.common.grpc.MessageID
 import com.exactpro.th2.common.message.addField
 import com.exactpro.th2.common.message.toTimestamp
 import com.exactpro.th2.common.schema.dictionary.DictionaryType
+import com.exactpro.th2.common.schema.factory.AbstractCommonFactory.MAPPER
 import com.exactpro.th2.common.schema.factory.CommonFactory
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.Direction.OUTGOING
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.EventId
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.MessageId
 import com.exactpro.th2.common.schema.message.impl.rabbitmq.transport.ParsedMessage
+import com.fasterxml.jackson.core.type.TypeReference
 import com.google.auto.service.AutoService
 import com.google.protobuf.UnsafeByteOperations
 import org.apache.commons.configuration.HierarchicalConfiguration
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.eq
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verifyNoInteractions
 import java.time.Instant
@@ -64,6 +69,7 @@ private const val SCOPE = "test-scope"
 private const val EVENT_ID = "test-id"
 
 private const val MESSAGE_TYPE = "test-message-type"
+private const val MESSAGE_TYPE_FIELD = "test-message-type-field"
 private const val FIELD = "test-field"
 
 class TestSailfishCodecFactory {
@@ -71,6 +77,7 @@ class TestSailfishCodecFactory {
         """<dictionary xmlns="http://exactprosystems.com/dictionary" name="MAIN">
              <messages>
                <message name="$MESSAGE_TYPE">
+                 <field name="$MESSAGE_TYPE_FIELD" type="java.lang.String"/>
                  <field name="$FIELD" type="java.lang.String"/>
                </message>
              </messages>
@@ -90,26 +97,74 @@ class TestSailfishCodecFactory {
         codecClassName = CodecFactory::class.java.name
         dictionaries = mapOf(
             DictionaryType.MAIN.name to DictionaryType.MAIN.name,
-            DictionaryType.LEVEL1.name to DictionaryType.LEVEL1.name,
         )
-        codecParameters = mapOf(
+
+    }
+
+    private val codecFactory = SailfishCodecFactory().apply {
+        init(PipelineCodecContext(commonFactory))
+    }
+
+    private val codec: IPipelineCodec = codecFactory.create(this@TestSailfishCodecFactory.codecSettings)
+
+    private val reportingContext = mock<IReportingContext> { }
+
+    @AfterEach
+    fun afterEach() {
+        verifyNoInteractions(reportingContext)
+    }
+
+    @Test
+    fun `load default parameters test`() {
+        assertEquals(
+            mapOf(
+                "fieldByte" to "10",
+                "fieldShort" to "10",
+                "fieldDouble" to "10.10",
+            ),
+            loadDefaultCodecParameters()
+        )
+    }
+
+    @Test
+    fun `fill settings test`() {
+        val codecContext = mock<IPipelineCodecContext> {
+            on { get(eq(DictionaryType.MAIN.name)) }.thenReturn(mainDictionary.byteInputStream())
+            on { get(eq(DictionaryType.LEVEL1.name)) }.thenReturn(level1Dictionary.byteInputStream())
+        }
+        val defaultParameters = mapOf(
+            "fieldByte" to "10",
+            "fieldShort" to "10",
+            "fieldDouble" to "10.10",
+        )
+        val parameters = mapOf(
             "fieldBoolean" to "true",
             "fieldShort" to "20",
             "fieldLong" to "20",
             "fieldString" to "test",
         )
-    }
-
-    private val codec: IPipelineCodec = SailfishCodecFactory().run {
-        init(PipelineCodecContext(commonFactory))
-        create(this@TestSailfishCodecFactory.codecSettings)
-    }
-
-    private val context = mock<IReportingContext> { }
-
-    @AfterEach
-    fun afterEach() {
-        verifyNoInteractions(context)
+        val settings = ExternalCodecSettings(Settings()).fillSettings(
+            codecContext,
+            defaultParameters,
+            parameters,
+            dictionaries = mapOf(
+                DictionaryType.MAIN.name to DictionaryType.MAIN.name,
+                DictionaryType.LEVEL1.name to DictionaryType.LEVEL1.name,
+            )
+        )
+        assertEquals(true, settings["fieldBoolean"])
+        assertEquals(10.toByte(), settings["fieldByte"])
+        assertEquals(20.toShort(), settings["fieldShort"])
+        assertEquals(0, settings["fieldInteger"])
+        assertEquals(20L, settings["fieldLong"])
+        assertEquals(0.0F, settings["fieldFloat"])
+        assertEquals(10.10, settings["fieldDouble"])
+        assertEquals("test", settings["fieldString"])
+        // main dictionary type is replaced because Sailfish codec external API gets main dictionary by type
+        assertEquals(SailfishURI.unsafeParse("any"), settings["filedMainDictionary"])
+        assertEquals(LEVEL1.toUri(), settings["filedLevel1Dictionary"])
+        assertEquals(mainDictionaryStructure.namespace, settings[MAIN]?.namespace)
+        assertEquals(level1DictionaryStructure.namespace, settings[LEVEL1]?.namespace)
     }
 
     @Test
@@ -142,19 +197,8 @@ class TestSailfishCodecFactory {
                         setProtocol(PROTOCOL)
                         setType(MESSAGE_TYPE)
                         bodyBuilder().apply {
-                            put("fieldBoolean", true)
-                            put("fieldByte", 10.toByte())
-                            put("fieldShort", 20.toShort())
-                            put("fieldInteger", 0)
-                            put("fieldLong", 20L)
-                            put("fieldFloat", 0.0F)
-                            put("fieldDouble", 10.10)
-                            put("fieldString", "test")
-                            // main dictionary type is replaced because Sailfish codec external API gets main dictionary by type
-                            put("filedMainDictionary", SailfishURI.unsafeParse("any"))
-                            put("filedLevel1Dictionary", LEVEL1.toUri())
-                            put(MAIN.name, mainDictionaryStructure.namespace)
-                            put(LEVEL1.name, level1DictionaryStructure.namespace)
+                            put(MESSAGE_TYPE_FIELD, MESSAGE_TYPE)
+                            put(FIELD, "test-value")
                         }
                     }.build()
                 ).build(),
@@ -166,9 +210,9 @@ class TestSailfishCodecFactory {
                             setEventId(eventId)
                             setMetadata(metadata)
                             setProtocol(PROTOCOL)
-                            setBody(byteArrayOf(1, 2, 3))
+                            setBody("""{"$MESSAGE_TYPE_FIELD":"$MESSAGE_TYPE","$FIELD":"test-value"}""".toByteArray())
                         }.build()
-                    ).build(), context
+                    ).build(), reportingContext
             )
         )
     }
@@ -206,19 +250,8 @@ class TestSailfishCodecFactory {
                             .putAllProperties(metadata)
                             .setProtocol(PROTOCOL)
                             .setMessageType(MESSAGE_TYPE)
-                        addField("fieldBoolean", true)
-                        addField("fieldByte", 10.toByte())
-                        addField("fieldShort", 20.toShort())
-                        addField("fieldInteger", 0)
-                        addField("fieldLong", 20L)
-                        addField("fieldFloat", 0.0F)
-                        addField("fieldDouble", 10.10)
-                        addField("fieldString", "test")
-                        // main dictionary type is replaced because Sailfish codec external API gets main dictionary by type
-                        addField("filedMainDictionary", SailfishURI.unsafeParse("any"))
-                        addField("filedLevel1Dictionary", LEVEL1.toUri())
-                        addField(MAIN.name, mainDictionaryStructure.namespace)
-                        addField(LEVEL1.name, level1DictionaryStructure.namespace)
+                        addField(MESSAGE_TYPE_FIELD, MESSAGE_TYPE)
+                        addField(FIELD, "test-value")
                     }
             }.build(),
             codec.decode(
@@ -230,9 +263,11 @@ class TestSailfishCodecFactory {
                                 .setId(messageId)
                                 .putAllProperties(metadata)
                                 .setProtocol(PROTOCOL)
-                            setBody(UnsafeByteOperations.unsafeWrap(byteArrayOf(1, 2, 3)))
+                            setBody(UnsafeByteOperations.unsafeWrap(
+                                """{"$MESSAGE_TYPE_FIELD":"$MESSAGE_TYPE","$FIELD":"test-value"}""".toByteArray()
+                            ))
                         }
-                }.build(), context
+                }.build(), reportingContext
             )
         )
     }
@@ -265,7 +300,7 @@ class TestSailfishCodecFactory {
                         setEventId(eventId)
                         setMetadata(metadata)
                         setProtocol(PROTOCOL)
-                        setBody("test-message-type : test-field=test-value|rawMessage=".toByteArray())
+                        setBody("""{"$MESSAGE_TYPE_FIELD":"$MESSAGE_TYPE","$FIELD":"test-value"}""".toByteArray())
                     }.build()
                 ).build(),
             codec.encode(
@@ -281,7 +316,7 @@ class TestSailfishCodecFactory {
                                 put(FIELD, "test-value")
                             }
                         }.build()
-                    ).build(), context
+                    ).build(), reportingContext
             )
         )
     }
@@ -318,7 +353,9 @@ class TestSailfishCodecFactory {
                             .setId(messageId)
                             .putAllProperties(metadata)
                             .setProtocol(PROTOCOL)
-                        setBody(UnsafeByteOperations.unsafeWrap("test-message-type : test-field=test-value|rawMessage=".toByteArray()))
+                        setBody(UnsafeByteOperations.unsafeWrap(
+                            """{"$MESSAGE_TYPE_FIELD":"$MESSAGE_TYPE","$FIELD":"test-value"}""".toByteArray()
+                        ))
                     }
             }.build(),
             codec.encode(
@@ -333,7 +370,7 @@ class TestSailfishCodecFactory {
                                 .setMessageType(MESSAGE_TYPE)
                             addField(FIELD, "test-value")
                         }
-                }.build(), context
+                }.build(), reportingContext
             )
         )
     }
@@ -344,7 +381,7 @@ internal class CodecFactory : IExternalCodecFactory {
     override val protocolName: String = PROTOCOL
 
     override fun createCodec(settings: IExternalCodecSettings): IExternalCodec = Codec(settings)
-    override fun createSettings(): IExternalCodecSettings = ExternalCodecSettings(Settings())
+    override fun createSettings(): IExternalCodecSettings = ExternalCodecSettings(SimpleSettings())
 
     @Deprecated("Set dictionary on an instance instead", replaceWith = ReplaceWith("createSettings()"))
     override fun createSettings(dictionary: IDictionaryStructure): IExternalCodecSettings =
@@ -352,22 +389,56 @@ internal class CodecFactory : IExternalCodecFactory {
 }
 
 internal class Codec(
-    private val settings: IExternalCodecSettings
+    settings: IExternalCodecSettings
 ) : IExternalCodec {
-    override fun close() {}
-    override fun decode(data: ByteArray): List<IMessage> = listOf(
-        getFactory().createMessage(MESSAGE_TYPE, settings[MAIN]?.namespace).apply {
-            metaData.rawMessage = data
-            settings.propertyTypes.keys.forEach {
-                addField(it, settings[it])
-            }
-            settings.dictionaryTypes.forEach {
-                addField(it.name, settings[it]?.namespace)
-            }
-        }
-    )
+    private val dictionary: IDictionaryStructure = requireNotNull(settings[MAIN]) {
+        "'${MAIN}' dictionary must be set"
+    }
 
-    override fun encode(message: IMessage): ByteArray = message.toString().toByteArray(Charsets.UTF_8)
+    override fun close() {}
+    override fun decode(data: ByteArray): List<IMessage> {
+        val map = MAPPER.readValue(data, object : TypeReference<Map<String, Any?>>() {})
+        val messageType = requireNotNull(map[MESSAGE_TYPE_FIELD]) {
+            "'$MESSAGE_TYPE_FIELD' field is empty or null in the incoming message $map"
+        }
+        check(messageType is String) {
+            "'$MESSAGE_TYPE_FIELD' field has incorrect type, expected: ${String::class.java}, actual: ${messageType.javaClass}"
+        }
+        val structure = requireNotNull(dictionary.messages[messageType]) {
+            "Unsupported '$messageType' message type"
+        }
+        return listOf(
+            getFactory().createMessage(messageType, dictionary.namespace).apply {
+                metaData.rawMessage = data
+                structure.fields.keys.forEach { field ->
+                    addField(field, map[field])
+                }
+            }
+        )
+    }
+
+    override fun encode(message: IMessage): ByteArray {
+        require(message.namespace == dictionary.namespace) {
+            "Unsupported namespace, expected: ${dictionary.namespace}, actual: ${message.namespace}"
+        }
+        val structure = requireNotNull(dictionary.messages[message.name]) {
+            "Unsupported '${message.name}' message type"
+        }
+        val map = buildMap<String, Any?> {
+            structure.fields.keys.forEach { field ->
+                put(field, message.getField(field))
+            }
+            put(MESSAGE_TYPE_FIELD, message.name)
+        }
+        return MAPPER.writeValueAsString(map).toByteArray()
+    }
+}
+
+@Suppress("unused")
+internal class SimpleSettings : ICommonSettings {
+    @DictionaryProperty(MAIN)
+    var dictionary: SailfishURI = SailfishURI.unsafeParse("any")
+    override fun load(config: HierarchicalConfiguration) { }
 }
 
 @Suppress("unused")
