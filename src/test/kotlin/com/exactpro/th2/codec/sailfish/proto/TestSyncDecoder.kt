@@ -1,0 +1,166 @@
+/*
+ * Copyright 2021-2023 Exactpro (Exactpro Systems Limited)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.exactpro.th2.codec.sailfish.proto
+
+import com.exactpro.sf.common.impl.messages.DefaultMessageFactory
+import com.exactpro.sf.externalapi.codec.IExternalCodec
+import com.exactpro.sf.externalapi.codec.IExternalCodecFactory
+import com.exactpro.sf.externalapi.codec.IExternalCodecSettings
+import com.exactpro.th2.codec.api.IReportingContext
+import com.exactpro.th2.common.grpc.AnyMessage
+import com.exactpro.th2.common.grpc.AnyMessage.KindCase
+import com.exactpro.th2.common.grpc.MessageGroup
+import com.exactpro.th2.common.grpc.MessageID
+import com.exactpro.th2.common.grpc.RawMessage
+import com.exactpro.th2.common.grpc.RawMessage.Builder
+import com.exactpro.th2.common.message.sequence
+import com.exactpro.th2.sailfish.utils.IMessageToProtoConverter
+import com.google.protobuf.ByteString
+import com.google.protobuf.TextFormat.shortDebugString
+import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertAll
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.same
+import org.mockito.kotlin.verifyNoMoreInteractions
+import org.mockito.kotlin.whenever
+import kotlin.test.assertNotNull
+
+internal class TestSyncDecoder {
+    private val settings = mock<IExternalCodecSettings> { }
+    private val codec = mock<IExternalCodec> {}
+    private val factory = mock<IExternalCodecFactory> {
+        on { createCodec(same(settings)) }.thenReturn(codec)
+        on { protocolName }.thenReturn("mock")
+    }
+
+    private val processor = ProtoDecodeProcessor(factory, settings, IMessageToProtoConverter())
+    private val protoDecoder = ProtoDecoder(processor)
+
+    private val context = mock<IReportingContext> {  }
+
+    @AfterEach
+    fun afterEach() {
+        verifyNoMoreInteractions(context)
+    }
+
+    @Test
+    internal fun `decode protocol`() {
+        val rawData = byteArrayOf(42, 43)
+        val decodedMessage = DefaultMessageFactory.getFactory().createMessage("test", "test").apply {
+            metaData.rawMessage = rawData
+        }
+
+        whenever(codec.decode(any(), any())).thenReturn(listOf(decodedMessage))
+
+        val rawMessageBuilder = RawMessage.newBuilder().apply {
+            body = ByteString.copyFrom(rawData)
+            metadataBuilder.apply {
+                id = MessageID.newBuilder().setSequence(1).build()
+            }
+        }
+
+        protoDecoder.process(createAnyMessage(rawMessageBuilder, 1), context).let { group -> // empty protocol
+            assertNotNull(group)
+            assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
+            val message = group.getMessages(0)
+            assertAll(
+                {
+                    assertEquals(KindCase.MESSAGE, message.kindCase) {
+                        "Type of first: ${
+                            shortDebugString(
+                                message
+                            )
+                        }"
+                    }
+                },
+                {
+                    assertEquals(
+                        1,
+                        message.message.sequence
+                    ) { "Seq of first: ${shortDebugString(message)}" }
+                }
+            )
+        }
+
+        protoDecoder.process(createAnyMessage(rawMessageBuilder, 2, factory.protocolName), context).let { group -> // codec protocol
+            assertNotNull(group)
+            assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
+            val message = group.getMessages(0)
+            assertAll(
+                {
+                    assertEquals(KindCase.MESSAGE, message.kindCase) {
+                        "Type of second: ${
+                            shortDebugString(
+                                message
+                            )
+                        }"
+                    }
+                },
+                {
+                    assertEquals(
+                        2,
+                        message.message.sequence
+                    ) { "Seq of second: ${shortDebugString(message)}" }
+                }
+            )
+        }
+
+        protoDecoder.process(createAnyMessage(rawMessageBuilder, 3, "test"), context).let { group -> // another protocol
+            assertNotNull(group)
+            assertEquals(1, group.messagesCount) { "Messages count: ${shortDebugString(group)}" }
+            val message = group.getMessages(0)
+            assertAll(
+                {
+                    assertEquals(KindCase.RAW_MESSAGE, message.kindCase) {
+                        "Type of third: ${
+                            shortDebugString(
+                                message
+                            )
+                        }"
+                    }
+                },
+                {
+                    assertEquals(
+                        3,
+                        message.rawMessage.metadata.id.sequence
+                    ) { "Seq of third: ${shortDebugString(message)}" }
+                }
+            )
+        }
+    }
+
+    private fun createAnyMessage(rawMessageBuilder: Builder, sequence: Long, protocol: String? = null) =
+        MessageGroup.newBuilder()
+            .addMessages(
+                AnyMessage.newBuilder().apply {
+                    rawMessage =
+                        rawMessageBuilder.apply {
+                            metadataBuilder.apply {
+                                if (protocol != null) {
+                                    this.protocol = protocol
+                                }
+                                idBuilder.apply {
+                                    this.sequence = sequence
+                                }
+                            }
+                        }.build()
+                }.build()
+            ).build()
+}
