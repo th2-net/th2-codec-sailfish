@@ -116,7 +116,7 @@ dependencies {
         exclude group: 'com.exactpro.th2', module: 'task-utils'
     }
 
-    implementation 'com.exactpro.th2:codec:5.4.1-TH2-5143-+'
+    implementation 'com.exactpro.th2:codec:5.4.1-dev'
     implementation 'com.exactpro.th2:common-utils:2.2.2-dev'
     implementation 'com.exactpro.th2:sailfish-utils:4.1.1-dev'
     implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
