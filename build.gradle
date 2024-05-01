@@ -93,7 +93,7 @@ dependencies {
         exclude group: 'com.exactpro.th2', module: 'task-utils'
     }
 
-    implementation 'com.exactpro.th2:codec:5.5.0-dev'
+    implementation 'com.exactpro.th2:codec:5.5.0-th2-gradle-plugin-8906954919-7c7131e-SNAPSHOT'
     implementation 'com.exactpro.th2:common-utils:2.2.3-dev'
     implementation 'com.exactpro.th2:sailfish-utils:4.1.1-dev'
     implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
