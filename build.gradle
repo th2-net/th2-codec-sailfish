@@ -5,7 +5,6 @@ plugins {
     id("maven-publish")
 
     id "com.exactpro.th2.gradle.publish" version "0.0.6"
-    id "com.exactpro.th2.gradle.component" version "0.0.6"
 }
 
 ext {
