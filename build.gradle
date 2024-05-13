@@ -88,7 +88,7 @@ configurations {
 }
 
 dependencies {
-    implementation('com.exactpro.th2:common:5.10.1-dev') {
+    implementation('com.exactpro.th2:common:5.11.1-map-builder-rm-ops-9051038046-a9b0e92-SNAPSHOT') {
         because('sending to direct queues')
         exclude group: 'com.exactpro.th2', module: 'task-utils'
     }
