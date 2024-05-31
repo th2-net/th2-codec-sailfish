@@ -9,7 +9,7 @@ plugins {
 
 ext {
     genDir = file('src/gen')
-    sailfishVersion = '3.3.202'
+    sailfishVersion = '3.3.225'
     excludeSailfish = { rcd ->
         rcd.excludeModule("com.exactpro.sf", "sailfish-core")
         rcd.excludeModule("com.exactpro.sf", "sailfish-common")
