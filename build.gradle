@@ -88,7 +88,7 @@ configurations {
 }
 
 dependencies {
-    implementation('com.exactpro.th2:common:5.10.1-dev') {
+    implementation('com.exactpro.th2:common:5.14.0-TH2-1988-9806077821-b041ca6-SNAPSHOT') {
         because('sending to direct queues')
         exclude group: 'com.exactpro.th2', module: 'task-utils'
     }
