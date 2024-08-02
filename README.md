@@ -1,4 +1,4 @@
-# How it works (5.1.0)
+# How it works (5.2.0)
 
 The th2 codec sailfish component is responsible for encoding and decoding the messages.
 It operates two instances of encoder/decoder pairs, in which one is used for operational purposes and the other is used for general conversion.
@@ -236,6 +236,12 @@ spec:
 The filtering can also be applied for pins with  `subscribe` attribute.
 
 ## Release notes
+
+### 5.2.0
++ Updated:
+  + th2-gradle-plugin `0.1.1`
+  + common: `5.14.0-dev`
+  + sailfish: `3.3.241`
 
 ### 5.1.0
 + Migrated to th2 gradle plugin: `0.0.6`
