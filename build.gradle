@@ -4,12 +4,12 @@ plugins {
     id("java-library")
     id("maven-publish")
 
-    id "com.exactpro.th2.gradle.publish" version "0.0.6"
+    id "com.exactpro.th2.gradle.publish" version "0.1.1"
 }
 
 ext {
     genDir = file('src/gen')
-    sailfishVersion = '3.3.202'
+    sailfishVersion = '3.3.241'
     excludeSailfish = { rcd ->
         rcd.excludeModule("com.exactpro.sf", "sailfish-core")
         rcd.excludeModule("com.exactpro.sf", "sailfish-common")
@@ -88,7 +88,7 @@ configurations {
 }
 
 dependencies {
-    implementation('com.exactpro.th2:common:5.10.1-dev') {
+    implementation('com.exactpro.th2:common:5.14.0-dev') {
         because('sending to direct queues')
         exclude group: 'com.exactpro.th2', module: 'task-utils'
     }

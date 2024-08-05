@@ -9,6 +9,7 @@ jobs:
       build-target: 'Sonatype'
       devRelease: true
       createTag: true
+      strict-scanner: false
     secrets:
       sonatypeUsername: ${{ secrets.SONATYPE_NEXUS_USERNAME }}
       sonatypePassword: ${{ secrets.SONATYPE_NEXUS_PASSWORD }}
