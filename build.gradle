@@ -95,7 +95,7 @@ dependencies {
 
     implementation 'com.exactpro.th2:codec:5.5.0-dev'
     implementation 'com.exactpro.th2:common-utils:2.2.3-dev'
-    implementation 'com.exactpro.th2:sailfish-utils:4.1.1-dev'
+    implementation 'com.exactpro.th2:sailfish-utils:4.1.1-th2-5060-6171886993-7994c19-SNAPSHOT'
     implementation "com.exactpro.sf:sailfish-core:${sailfishVersion}"
 
     compileOnly 'com.google.auto.service:auto-service-annotations:1.1.1'
